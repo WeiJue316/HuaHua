@@ -21,6 +21,7 @@ from research_agent.router.federation import (
     SearchClient,
     search_sources,
 )
+from research_agent.runtime.enrichment import AbstractResolver
 from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
 from research_agent.storage.pdf_parser import parse_pdf
@@ -44,6 +45,7 @@ class ResearchRunResult:
     document_count: int
     source_counts: dict[str, int]
     source_errors: dict[str, str]
+    variant_errors: dict[str, str]
 
 
 @dataclass
@@ -110,7 +112,7 @@ def render_report(
 
     evidence_index = {
         evidence_id: index
-        for index, (*_prefix, evidence_id) in enumerate(evidence, start=1)
+        for index, (*_prefix, evidence_id, _locator) in enumerate(evidence, start=1)
     }
     lines.extend(
         [
@@ -212,6 +214,7 @@ async def run_federated_research(
     download_pdf: bool = False,
     artifact_root: Path | None = None,
     plan: ResearchPlan | None = None,
+    abstract_resolver: AbstractResolver | None = None,
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -289,6 +292,7 @@ async def run_federated_research(
             context.federated = await search_sources(
                 selected_clients,
                 query=question,
+                query_variants=plan.query_variants,
                 max_results_per_source=max_results_per_source,
                 max_concurrency=plan.max_concurrency,
             )
@@ -351,11 +355,14 @@ async def run_federated_research(
                     context.source_records.append(
                         (candidate, stored_source_record_id)
                     )
-                    if candidate.abstract:
+                    abstract = candidate.abstract
+                    if not abstract and abstract_resolver is not None:
+                        abstract = await abstract_resolver.resolve_abstract(candidate)
+                    if abstract:
                         evidence_id = repository.record_evidence_span(
                             paper_id=paper_id,
                             source_record_id=stored_source_record_id,
-                            quote=candidate.abstract,
+                            quote=abstract,
                             locator={"section": "Abstract"},
                             evidence_level="abstract",
                             extraction_method="rule",
@@ -365,7 +372,7 @@ async def run_federated_research(
                         context.evidence_rows.append(
                             (
                                 candidate.title,
-                                candidate.abstract,
+                                abstract,
                                 stored_source_record_id,
                                 candidate.source,
                                 evidence_id,
@@ -558,6 +565,7 @@ async def run_federated_research(
             document_count=context.document_count,
             source_counts=context.federated.source_counts,
             source_errors=context.federated.errors,
+            variant_errors=context.federated.variant_errors,
         )
 
 

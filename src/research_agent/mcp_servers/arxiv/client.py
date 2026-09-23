@@ -15,7 +15,13 @@ from research_agent.mcp_servers.arxiv.parser import (
     normalize_arxiv_id,
     parse_search_response,
 )
-from research_agent.mcp_servers.common import PaperCandidate, RetryPolicy, SleepFn, get_with_retry
+from research_agent.mcp_servers.common import (
+    PaperCandidate,
+    RetryPolicy,
+    SleepFn,
+    get_with_retry,
+    user_agent,
+)
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 
@@ -97,7 +103,7 @@ class ArxivClient:
             response = await get_with_retry(
                 self.http_client,
                 search_url,
-                headers={"User-Agent": "research-agent/0.1"},
+                headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
                 sleep=self.sleep,
             )
@@ -136,7 +142,7 @@ class ArxivClient:
                 self.http_client,
                 self.api_url,
                 params=params,
-                headers={"User-Agent": "research-agent/0.1"},
+                headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
                 sleep=self.sleep,
             )
@@ -172,7 +178,7 @@ class ArxivClient:
             response = await get_with_retry(
                 self.http_client,
                 url,
-                headers={"User-Agent": "research-agent/0.1"},
+                headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
                 sleep=self.sleep,
             )

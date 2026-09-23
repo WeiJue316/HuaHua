@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Iterable
 
 import httpx
 
 from research_agent.mcp_servers.arxiv.client import ArxivClient
+from research_agent.mcp_servers.common import contact_email
 from research_agent.mcp_servers.crossref.client import CrossrefClient
 from research_agent.mcp_servers.dblp.client import DblpClient
 from research_agent.mcp_servers.openalex.client import OpenAlexClient
@@ -18,11 +20,36 @@ class UnsupportedSourceError(ValueError):
     """Raised when a requested source is not registered."""
 
 
+OPENALEX_API_KEY_ENV_VAR = "OPENALEX_API_KEY"
+SEMANTIC_SCHOLAR_API_KEY_ENV_VAR = "SEMANTIC_SCHOLAR_API_KEY"
+
+
+def _env_value(name: str) -> str | None:
+    value = os.environ.get(name, "").strip()
+    return value or None
+
+
+def build_openalex_client(http_client: httpx.AsyncClient) -> OpenAlexClient:
+    """Build an OpenAlex client carrying the configured polite-pool identity."""
+
+    return OpenAlexClient(
+        http_client=http_client,
+        mailto=contact_email(),
+        api_key=_env_value(OPENALEX_API_KEY_ENV_VAR),
+    )
+
+
 SOURCE_FACTORIES: dict[str, Callable[[httpx.AsyncClient], SearchClient]] = {
     "arxiv": lambda client: ArxivClient(http_client=client),
-    "openalex": lambda client: OpenAlexClient(http_client=client),
-    "crossref": lambda client: CrossrefClient(http_client=client),
-    "semantic_scholar": lambda client: SemanticScholarClient(http_client=client),
+    "openalex": build_openalex_client,
+    "crossref": lambda client: CrossrefClient(
+        http_client=client,
+        mailto=contact_email(),
+    ),
+    "semantic_scholar": lambda client: SemanticScholarClient(
+        http_client=client,
+        api_key=_env_value(SEMANTIC_SCHOLAR_API_KEY_ENV_VAR),
+    ),
     "dblp": lambda client: DblpClient(http_client=client),
 }
 SUPPORTED_SOURCES = tuple(SOURCE_FACTORIES)

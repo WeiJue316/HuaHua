@@ -39,3 +39,14 @@ def test_plan_research_keeps_fallback_order() -> None:
     assert len(plan.selected_sources) == 2
     assert len(plan.fallback_sources) == 3
     assert set(plan.selected_sources).isdisjoint(plan.fallback_sources)
+
+def test_plan_research_builds_content_term_query_variants() -> None:
+    plan = plan_research(
+        "evidence chain in scientific literature",
+        available_sources=ALL_SOURCES,
+    )
+
+    assert plan.query_variants[0] == "evidence chain scientific literature"
+    assert "evidence chain in scientific literature" in plan.query_variants
+    assert "evidence chain" in plan.query_variants
+    assert len(plan.query_variants) == len(set(plan.query_variants))

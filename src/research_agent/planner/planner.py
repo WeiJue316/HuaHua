@@ -44,15 +44,35 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
     return any(term in text for term in terms)
 
 
+STOPWORDS = frozenset(
+    {
+        "a", "about", "an", "and", "are", "as", "at", "be", "by", "can",
+        "do", "does", "for", "from", "how", "in", "into", "is", "it", "its",
+        "of", "on", "or", "that", "the", "their", "there", "these", "this",
+        "to", "using", "what", "when", "which", "with",
+    }
+)
+
+
+def _content_terms(question: str) -> list[str]:
+    """Return query terms with English stopwords removed."""
+
+    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", question)
+    return [token for token in tokens if token.lower() not in STOPWORDS]
+
+
 def _query_variants(question: str) -> tuple[str, ...]:
+    """Build deterministic query variants from most precise to most permissive."""
+
     normalized = " ".join(question.split())
-    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", normalized)
-    variants = [normalized]
-    if len(tokens) > 5:
-        variants.append(" ".join(tokens[:5]))
-    if " " in normalized:
-        variants.append(f'"{normalized}"')
-    return tuple(dict.fromkeys(variants))
+    terms = _content_terms(normalized)
+    variants: list[str] = []
+    if terms:
+        variants.append(" ".join(terms))
+    variants.append(normalized)
+    if len(terms) >= 2:
+        variants.append(" ".join(terms[:2]))
+    return tuple(dict.fromkeys(variant for variant in variants if variant))
 
 
 def plan_research(

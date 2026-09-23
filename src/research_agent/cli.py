@@ -9,7 +9,12 @@ import typer
 
 from . import __version__
 from .planner.planner import ResearchPlan, plan_research
-from .router.registry import SUPPORTED_SOURCES, build_source_clients
+from .router.registry import (
+    SUPPORTED_SOURCES,
+    build_openalex_client,
+    build_source_clients,
+)
+from .runtime.enrichment import OpenAlexAbstractResolver
 from .runtime.research_service import (
     ResearchExecutionError,
     ResearchRunResult,
@@ -107,6 +112,9 @@ def research(
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
             clients = build_source_clients(http_client, source_ids)
+            abstract_resolver = OpenAlexAbstractResolver(
+                build_openalex_client(http_client)
+            )
             return await run_federated_research(
                 question=question,
                 db_path=db,
@@ -115,6 +123,7 @@ def research(
                 max_results_per_source=max_results,
                 download_pdf=download_pdf,
                 plan=plan,
+                abstract_resolver=abstract_resolver,
             )
 
     try:
@@ -133,6 +142,12 @@ def research(
             for source, message in sorted(result.source_errors.items())
         )
         typer.echo(f"source_errors: {errors}")
+    if result.variant_errors:
+        variant_errors = "; ".join(
+            f"{source}: {message}"
+            for source, message in sorted(result.variant_errors.items())
+        )
+        typer.echo(f"variant_errors: {variant_errors}")
     typer.echo(f"papers: {result.paper_count}")
     typer.echo(f"evidence: {result.evidence_count}")
     typer.echo(f"claims: {result.claim_count}")

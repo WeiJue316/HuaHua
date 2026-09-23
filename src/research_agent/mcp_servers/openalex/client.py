@@ -9,9 +9,16 @@ from typing import Any
 
 import httpx
 
-from research_agent.mcp_servers.common import PaperCandidate, RetryPolicy, SleepFn, get_with_retry
+from research_agent.mcp_servers.common import (
+    PaperCandidate,
+    RetryPolicy,
+    SleepFn,
+    get_with_retry,
+    user_agent,
+)
 from research_agent.mcp_servers.openalex.parser import (
     OpenAlexParseError,
+    normalize_doi,
     normalize_openalex_id,
     parse_search_response,
     parse_work,
@@ -59,12 +66,14 @@ class OpenAlexClient:
         http_client: httpx.AsyncClient,
         api_url: str = OPENALEX_API_URL,
         mailto: str | None = None,
+        api_key: str | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url.rstrip("/")
         self.mailto = mailto
+        self.api_key = api_key
         self.retry_policy = retry_policy or RetryPolicy()
         self.sleep = sleep
 
@@ -75,6 +84,8 @@ class OpenAlexClient:
                 params[key] = value
         if self.mailto:
             params["mailto"] = self.mailto
+        if self.api_key:
+            params["api_key"] = self.api_key
         return params
 
     async def _get_json(
@@ -88,7 +99,7 @@ class OpenAlexClient:
                 self.http_client,
                 f"{self.api_url}{path}",
                 params=params,
-                headers={"User-Agent": "research-agent/0.1"},
+                headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
                 sleep=self.sleep,
             )
@@ -156,6 +167,29 @@ class OpenAlexClient:
             return parse_work(payload)
         except OpenAlexParseError as exc:
             raise OpenAlexClientError(f"OpenAlex response parse failed: {exc}") from exc
+
+    async def get_work_by_doi(self, doi: str) -> PaperCandidate | None:
+        """Fetch one OpenAlex work by DOI, or return None when it is unknown."""
+
+        normalized = normalize_doi(doi)
+        if not normalized:
+            return None
+        payload = await self._get_json(
+            "/works",
+            params=self._params({"filter": f"doi:{normalized}", "per-page": 1}),
+        )
+        results = payload.get("results")
+        if not isinstance(results, list) or not results:
+            return None
+        first = results[0]
+        if not isinstance(first, dict):
+            return None
+        try:
+            return parse_work(first)
+        except OpenAlexParseError as exc:
+            raise OpenAlexClientError(
+                f"OpenAlex response parse failed: {exc}"
+            ) from exc
 
     async def resolve_open_access(self, identifier: str) -> PaperCandidate:
         """Resolve open-access metadata through the work record."""

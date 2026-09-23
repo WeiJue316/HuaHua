@@ -14,6 +14,7 @@ from research_agent.mcp_servers.common import (
     RetryPolicy,
     SleepFn,
     get_with_retry,
+    user_agent,
 )
 from research_agent.mcp_servers.dblp.parser import DblpParseError, parse_search_response
 
@@ -67,7 +68,7 @@ class DblpClient:
             self.http_client,
             f"{self.api_url}/search/publ/api",
             params=params,
-            headers={"User-Agent": "research-agent/0.1"},
+            headers={"User-Agent": user_agent()},
             retry_policy=self.retry_policy,
             sleep=self.sleep,
         )

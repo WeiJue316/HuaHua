@@ -17,6 +17,7 @@ from research_agent.mcp_servers.common import (
     RetryPolicy,
     SleepFn,
     get_with_retry,
+    user_agent,
 )
 from research_agent.mcp_servers.crossref.parser import (
     CrossrefParseError,
@@ -89,7 +90,7 @@ class CrossrefClient:
             self.http_client,
             f"{self.api_url}{path}",
             params=params,
-            headers={"User-Agent": "research-agent/0.1"},
+            headers={"User-Agent": user_agent()},
             retry_policy=self.retry_policy,
             sleep=self.sleep,
         )
@@ -118,20 +119,25 @@ class CrossrefClient:
         query: str,
         *,
         max_results: int = 20,
-        cursor: str = "*",
+        cursor: str | None = None,
     ) -> CrossrefSearchResult:
-        """Search Crossref works."""
+        """Search Crossref works.
 
-        payload = await self._get_json(
-            "/works",
-            params=self._params(
-                {
-                    "query": query.strip(),
-                    "rows": max_results,
-                    "cursor": cursor,
-                }
-            ),
-        )
+        A cursor is only sent when the caller asks for deep paging. Crossref
+        silently drops relevance ranking when ``cursor`` is present without an
+        explicit ``sort``, which returns unrelated records, so ``sort`` is
+        always pinned while paging.
+        """
+
+        params: dict[str, str | int | None] = {
+            "query": query.strip(),
+            "rows": max_results,
+        }
+        if cursor is not None:
+            params["cursor"] = cursor
+            params["sort"] = "relevance"
+            params["order"] = "desc"
+        payload = await self._get_json("/works", params=self._params(params))
         try:
             page = parse_search_response(json.dumps(payload))
         except CrossrefParseError as exc:

@@ -3,16 +3,96 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import random
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+import time
+from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, Field
 
 SleepFn = Callable[[float], Awaitable[None]]
 RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+
+CONTACT_ENV_VAR = "RESEARCH_AGENT_CONTACT"
+DEFAULT_CONTACT_URL = "https://github.com/WeiJue316/HuaHua"
+
+
+def contact_email() -> str | None:
+    """Return the operator contact email used for polite API pools."""
+
+    value = os.environ.get(CONTACT_ENV_VAR, "").strip()
+    return value or None
+
+
+def user_agent() -> str:
+    """Return the User-Agent required by arXiv, Crossref and DBLP policies."""
+
+    email = contact_email()
+    if email:
+        return f"research-agent/0.1 (+{DEFAULT_CONTACT_URL}; mailto:{email})"
+    return f"research-agent/0.1 (+{DEFAULT_CONTACT_URL})"
+
+
+@dataclass(frozen=True)
+class RateLimitPolicy:
+    """Per-host minimum interval between consecutive requests."""
+
+    default_interval_seconds: float = 0.0
+    host_intervals: Mapping[str, float] = field(default_factory=dict)
+
+    def interval_for(self, host: str) -> float:
+        """Return the minimum interval that applies to one host."""
+
+        return self.host_intervals.get(host, self.default_interval_seconds)
+
+
+DEFAULT_RATE_LIMIT_POLICY = RateLimitPolicy(
+    host_intervals={
+        "export.arxiv.org": 3.0,
+        "api.semanticscholar.org": 1.0,
+        "dblp.org": 1.0,
+        "api.openalex.org": 0.2,
+        "api.crossref.org": 0.2,
+    }
+)
+
+
+class HostRateLimiter:
+    """Serialize requests per host so published rate limits are respected."""
+
+    def __init__(
+        self,
+        policy: RateLimitPolicy,
+        *,
+        sleep: SleepFn = asyncio.sleep,
+    ) -> None:
+        self._policy = policy
+        self._sleep = sleep
+        self._locks: dict[str, asyncio.Lock] = {}
+        self._last_request_at: dict[str, float] = {}
+
+    async def wait(self, url: str) -> None:
+        """Sleep until the next request to this host is allowed."""
+
+        host = urlparse(url).netloc
+        interval = self._policy.interval_for(host)
+        if interval <= 0:
+            return
+        lock = self._locks.setdefault(host, asyncio.Lock())
+        async with lock:
+            previous = self._last_request_at.get(host)
+            if previous is not None:
+                remaining = interval - (time.monotonic() - previous)
+                if remaining > 0:
+                    await self._sleep(remaining)
+            self._last_request_at[host] = time.monotonic()
+
+
+DEFAULT_RATE_LIMITER = HostRateLimiter(DEFAULT_RATE_LIMIT_POLICY)
 
 
 @dataclass(frozen=True)
@@ -59,14 +139,17 @@ async def get_with_retry(
     params: dict[str, str | int] | None = None,
     headers: dict[str, str] | None = None,
     retry_policy: RetryPolicy | None = None,
+    rate_limiter: HostRateLimiter | None = None,
     sleep: SleepFn = asyncio.sleep,
 ) -> httpx.Response:
-    """GET with bounded retries for transient HTTP failures."""
+    """GET with per-host rate limiting and bounded retries."""
 
     policy = retry_policy or RetryPolicy()
+    limiter = rate_limiter or DEFAULT_RATE_LIMITER
     last_error: httpx.HTTPError | None = None
     for attempt in range(1, policy.max_attempts + 1):
         try:
+            await limiter.wait(url)
             response = await http_client.get(
                 url,
                 params=params,

@@ -15,6 +15,7 @@ from research_agent.mcp_servers.common import (
     RetryPolicy,
     SleepFn,
     get_with_retry,
+    user_agent,
 )
 from research_agent.mcp_servers.semantic_scholar.parser import (
     SemanticScholarParseError,
@@ -72,7 +73,7 @@ class SemanticScholarClient:
         self.sleep = sleep
 
     def _headers(self) -> dict[str, str]:
-        headers = {"User-Agent": "research-agent/0.1"}
+        headers = {"User-Agent": user_agent()}
         if self.api_key:
             headers["x-api-key"] = self.api_key
         return headers
