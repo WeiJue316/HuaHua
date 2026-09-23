@@ -14,6 +14,13 @@ def test_help_lists_commands() -> None:
     assert "doctor" in result.stdout
 
 
+def test_help_is_ascii_safe() -> None:
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    result.stdout.encode("ascii")
+
+
 def test_version() -> None:
     result = runner.invoke(app, ["version"])
 

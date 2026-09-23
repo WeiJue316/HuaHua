@@ -6,8 +6,9 @@ from . import __version__
 
 app = typer.Typer(
     name="research-agent",
-    help="面向计算机/AI 文献调研的可追溯科研 Agent。",
+    help="Traceable research agent for computer science and AI literature.",
     no_args_is_help=True,
+    rich_markup_mode=None,
 )
 
 
