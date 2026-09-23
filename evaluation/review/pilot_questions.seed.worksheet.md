@@ -2,7 +2,7 @@
 
 - 数据集：`evaluation/datasets/pilot_questions.seed.jsonl`
 - 问题数：10
-- 数据集哈希：`7b7957cfee2dc2b1e5014efd9f2d757b88fbe3607ff79db03405c0249715b34d`
+- 数据集哈希：`2c21c0c6b2be87fd67515978997b9c7ea534eb5a90a26a86783d88bb4ac1e399`
 
 复核规则：每道题逐项确认下面的判据，在「决定」处填写 `保留`、`修改` 或 `删除`，
 并在「原因」处写明修改内容或删除理由。复核完成后据此生成冻结版数据集，
@@ -34,9 +34,9 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
-| 2 | `doi:10.18653/v1/2024.eacl-demo.16` | 2024 | 1 | With RAGAs, we introduce a suite of metrics that can evaluate these different dimensions without relying on ground truth human annotations. |
-| 3 | `doi:10.18653/v1/2024.naacl-long.20` | 2024 | 2 | Across eight different knowledge-intensive tasks in KILT, SuperGLUE, and AIS, ARES accurately evaluates RAG systems while using only a few hundred human annotations during evaluation. |
+| 1 | `doi:10.18653/v1/2024.eacl-demo.16` | 2024 | 1 | With RAGAs, we introduce a suite of metrics that can evaluate these different dimensions without relying on ground truth human annotations. |
+| 2 | `doi:10.18653/v1/2024.naacl-long.20` | 2024 | 2 | Across eight different knowledge-intensive tasks in KILT, SuperGLUE, and AIS, ARES accurately evaluates RAG systems while using only a few hundred human annotations during evaluation. |
+| 3 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Furthermore, this paper introduces up-to-date evaluation framework and benchmark. |
 
 复核判据：
 
@@ -67,8 +67,8 @@
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.1145/3586183.3606763` | 2023 | 1 | We demonstrate through ablation that the components of our agent architecture—observation, planning, and reflection—each contribute critically to the believability of agent behavior. |
-| 2 | `doi:10.1109/mlcad65511.2025.11189204` | 2025 | 2 | ORFS-agent adaptively explores parameter configurations, demonstrating clear improvements over standard Bayesian optimization approaches in terms of resource efficiency and final design metrics. |
-| 3 | `doi:10.1007/s10462-022-10246-w` | 2022 | 2 | This collaboration between AI models and humans should not be limited only to the learning process; if we go further, we can see other terms that arise such as Usable and Useful AI. |
+| 2 | `doi:10.48550/arxiv.2402.02716` | 2024 | 1 | We provide a taxonomy of existing works on LLM-Agent planning, which can be categorized into Task Decomposition, Plan Selection, External Module, Reflection and Memory. |
+| 3 | `doi:10.48550/arxiv.2310.08560` | 2023 | 2 | To enable using context beyond limited context windows, we propose virtual context management, a technique drawing inspiration from hierarchical memory systems in traditional operating systems that provide the appearance of large memory resources through data movement between fast and slow memory. |
 
 复核判据：
 
@@ -94,7 +94,7 @@
 1. Which benchmarks expose limitations?
 2. Which failure modes are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1038/s41586-023-06291-2 (subquestion 1); doi:10.1038/s41586-025-09422-z (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
@@ -126,7 +126,7 @@
 1. Which alignment objectives are used?
 2. How is alignment evaluated?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.48550/arxiv.2201.12086 (subquestion 1); doi:10.48550/arxiv.2301.12597 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
@@ -162,9 +162,8 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1609/aaai.v38i16.29728` | 2024 | 2 | Retrieval-Augmented Generation (RAG) is a promising approach for mitigating the hallucination of large language models (LLMs). |
-| 2 | `doi:10.48550/arxiv.2312.10997` | 2023 | 2 | Retrieval-Augmented Generation (RAG) has emerged as a promising solution by incorporating knowledge from external databases. |
-| 3 | `doi:10.1109/slt54892.2023.10023141` | 2023 | 1 | FLEURS is an n-way parallel speech dataset in 102 languages built on top of the machine translation FLoRes-101 benchmark, with approximately 12 hours of speech supervision per language. |
+| 1 | `doi:10.1145/3580501` | 2022 | 1 | Extensive experiments are conducted on two widely used datasets, namely, Flickr30k and MSCOCO, to demonstrate the superiority of the proposed MKVSE approach in achieving state-of-the-art performances. |
+| 2 | `doi:10.18653/v1/2024.emnlp-main.373` | 2024 | 2 | Additionally, in a mixed-modality task of slide retrieval, DSE significantly outperforms OCR text retrieval methods by over 15 points in nDCG@10. |
 
 复核判据：
 
@@ -190,7 +189,7 @@
 1. What are the reported trade-offs?
 2. Which evaluation setups are used?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1093/bioinformatics/btad651 (subquestion 2) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
@@ -257,9 +256,9 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | However, as PLMs scale up, fine-tuning and storing all the parameters is prohibitively costly and eventually becomes practically infeasible. |
-| 2 | `doi:10.48550/arxiv.2203.02155` | 2022 | 1 | In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. |
-| 3 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
+| 1 | `doi:10.48550/arxiv.2203.02155` | 2022 | 1 | In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. |
+| 2 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
+| 3 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | This necessitates a new branch of research focusing on the parameter-efficient adaptation of PLMs, which optimizes a small portion of the model parameters while keeping the rest fixed, drastically cutting down computation and storage costs. |
 
 复核判据：
 
@@ -285,7 +284,7 @@
 1. Which inference-time optimizations are used?
 2. What latency and quality trade-offs are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1201/9781003162810-13 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
@@ -316,7 +315,7 @@
 1. Which artifacts and metadata are shared?
 2. What barriers to reproducibility are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1109/access.2023.3262138 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
