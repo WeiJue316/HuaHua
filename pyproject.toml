@@ -24,6 +24,7 @@ arxiv-mcp = "research_agent.mcp_servers.arxiv.server:main"
 openalex-mcp = "research_agent.mcp_servers.openalex.server:main"
 crossref-mcp = "research_agent.mcp_servers.crossref.server:main"
 semantic-scholar-mcp = "research_agent.mcp_servers.semantic_scholar.server:main"
+dblp-mcp = "research_agent.mcp_servers.dblp.server:main"
 
 [dependency-groups]
 dev = [

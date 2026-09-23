@@ -1,0 +1,42 @@
+{
+  "result": {
+    "query": "evidence chain",
+    "status": {
+      "@code": "200",
+      "text": "OK"
+    },
+    "hits": {
+      "@total": "1",
+      "@computed": "1",
+      "@sent": "1",
+      "@first": "0",
+      "hit": [
+        {
+          "@id": "1",
+          "info": {
+            "authors": {
+              "author": [
+                {
+                  "@pid": "1/1",
+                  "text": "Alice Example"
+                },
+                {
+                  "@pid": "2/2",
+                  "text": "Bob Example"
+                }
+              ]
+            },
+            "title": "Traceable Retrieval for Scientific Agents",
+            "venue": "Example Conference",
+            "year": "2024",
+            "type": "Conference and Workshop Papers",
+            "doi": "10.1000/example",
+            "ee": "https://example.org/paper",
+            "url": "https://dblp.org/rec/conf/example/paper",
+            "key": "conf/example/paper"
+          }
+        }
+      ]
+    }
+  }
+}

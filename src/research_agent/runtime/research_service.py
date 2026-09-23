@@ -409,4 +409,6 @@ def _source_endpoint(source: str) -> str:
         return "https://api.crossref.org/works"
     if source == "semantic_scholar":
         return "https://api.semanticscholar.org/graph/v1"
+    if source == "dblp":
+        return "https://dblp.org/search/publ/api"
     return source

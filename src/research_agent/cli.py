@@ -10,6 +10,7 @@ import typer
 from . import __version__
 from .mcp_servers.arxiv.client import ArxivClient
 from .mcp_servers.crossref.client import CrossrefClient
+from .mcp_servers.dblp.client import DblpClient
 from .mcp_servers.openalex.client import OpenAlexClient
 from .mcp_servers.semantic_scholar.client import SemanticScholarClient
 from .router.federation import SearchClient
@@ -64,7 +65,7 @@ def research(
         str,
         typer.Option(
             "--sources",
-            help="Comma-separated source IDs: arxiv, openalex, crossref, semantic_scholar.",
+            help="Comma-separated source IDs: arxiv, openalex, crossref, semantic_scholar, dblp.",
         ),
     ] = "arxiv,openalex",
     download_pdf: Annotated[
@@ -78,7 +79,7 @@ def research(
     """Run the federated research flow and write a traceable report."""
 
     source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
-    supported = {"arxiv", "openalex", "crossref", "semantic_scholar"}
+    supported = {"arxiv", "openalex", "crossref", "semantic_scholar", "dblp"}
     unsupported = sorted(set(source_ids) - supported)
     if not source_ids:
         raise typer.BadParameter("at least one source is required")
@@ -98,6 +99,8 @@ def research(
                 clients["semantic_scholar"] = SemanticScholarClient(
                     http_client=http_client
                 )
+            if "dblp" in source_ids:
+                clients["dblp"] = DblpClient(http_client=http_client)
             return await run_federated_research(
                 question=question,
                 db_path=db,

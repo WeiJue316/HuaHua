@@ -99,7 +99,11 @@
 │   │   │   ├── client.py
 │   │   │   ├── parser.py
 │   │   │   └── server.py
-│   │   └── semantic_scholar/    # Semantic Scholar 适配与 MCP server
+│   │   ├── semantic_scholar/    # Semantic Scholar 适配与 MCP server
+│   │   │   ├── client.py
+│   │   │   ├── parser.py
+│   │   │   └── server.py
+│   │   └── dblp/                # DBLP 适配与 MCP server
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py
