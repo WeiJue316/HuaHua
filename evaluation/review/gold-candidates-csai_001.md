@@ -34,7 +34,7 @@
 ## 候选清单
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
-|---:|---:|---|---|---|---:|---|---:|---|---:|---|
+|---:|---:|---|---|---|---:|---|---:|---|---:|---|---|
 | 1 | 2025 | A self-correcting Agentic Graph RAG for clinical decision support in h | 面向肝病学临床决策支持的自校正智能体图RAG | `10.3389/fmed.2025.1716327` | 9 | 引用了种子 | 8 | 建议采纳(两个子问题) | | | 该论文明确报告了RAG评估所用的指标（faithfulness、context recall、answer relevancy）以及常见基线（GPT-4、standard RAG、Graph RAG）和自建临床问答数据集，可直接作为两个子问题的证据。 |
 | 2 | 2025 | Improving large language model applications in biomedicine with retrie | 利用检索增强生成改进生物医学中的大语言模型应用：系统综述、元分析与临床开发指南 | `10.1093/jamia/ocaf008` | 173 | 引用了种子 | 6 | 建议采纳(两个子问题) | | | 该综述系统报告了RAG在生物医学中的评估方法、基线LLM及检索策略，可为指标与常用基线/数据集子问题提供证据。 |
 | 3 | 2025 | The Great Nugget Recall: Automating Fact Extraction and RAG Evaluation | 伟大的要点召回：利用大语言模型实现事实抽取与RAG评估的自动化 | `10.1145/3726302.3730090` | 13 | 引用了种子 | 6 | 建议采纳(子问题1) | | | The abstract directly addresses RAG evaluation metrics by proposing an automatic nugget-based evaluation framework (atomic facts, nugget recall, automatic nugget creation/assignment), but it does not discuss common datasets and baselines beyond using the TREC 2024 RAG Track as a case study. |

@@ -34,7 +34,7 @@
 ## 候选清单
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
-|---:|---:|---|---|---|---:|---|---:|---|---:|---|
+|---:|---:|---|---|---|---:|---|---:|---|---:|---|---|
 | 1 | 2023 | The Art of SOCRATIC QUESTIONING: Recursive Thinking with Large Languag | 苏格拉底式提问的艺术：基于大语言模型的递归思维 | `10.18653/v1/2023.emnlp-main.255` | 24 | 引用了种子 | 4 | 建议采纳(两个子问题) | | | 摘要明确报告CoT受单遍顺序生成和早期错误累积限制，并在MMLU、MATH、LogiQA和视觉问答等推理基准上通过优于CoT的表现暴露这些局限。 |
 | 2 | 2023 | Faithful Chain-of-Thought Reasoning | 忠实的思维链推理 | `10.18653/v1/2023.ijcnlp-main.20` | 111 | 引用了种子 | 3 | 建议不采纳 | | | 摘要仅为作者与会议信息，未含任何关于基准、失败模式或局限性的实质内容；标题涉及CoT故属主题相邻而非完全无关。 |
 | 3 | 2023 | On Second Thought, Let’s Not Think Step by Step! Bias and Toxicity in  | 转念一想，还是别一步步思考了！零样本推理中的偏见与毒性 | `10.18653/v1/2023.acl-long.244` | 68 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | The paper identifies limitation benchmarks (harmful questions and stereotype benchmarks) and reports failure modes (increased harmful, toxic, or undesirable CoT outputs) for zero-shot chain-of-thought prompting. |

@@ -34,7 +34,7 @@
 ## 候选清单
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
-|---:|---:|---|---|---|---:|---|---:|---|---:|---|
+|---:|---:|---|---|---|---:|---|---:|---|---:|---|---|
 | 1 | 2023 | Q-Diffusion: Quantizing Diffusion Models | Q-Diffusion：扩散模型的量化 | `10.1109/iccv51070.2023.01608` | 135 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该论文研究扩散模型的训练后量化以加速生成，未涉及 Transformer 推理加速，不能直接回答子问题。 |
 | 2 | 2023 | I-ViT: Integer-only Quantization for Efficient Vision Transformer Infe | I-ViT：面向高效视觉Transformer推理的纯整数量化 | `10.1109/iccv51070.2023.01565` | 126 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | 该论文提出 I-ViT 整数量化方案（推理时优化，无需重训练），并报告了 INT8 量化与全精度基线相当的精度以及 3.72~4.11 倍的推理加速，同时覆盖推理时优化技术与延迟/质量权衡两个子问题。 |
 | 3 | 2025 | Edge Intelligence: A Review of Deep Neural Network Inference in Resour | 边缘智能：资源受限环境下深度神经网络推理综述 | `10.3390/electronics14122495` | 80 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | This review surveys inference acceleration techniques (model compression, compiler optimizations, hardware-software co-design) and explicitly analyzes latency/energy/accuracy trade-offs, providing evidence for both which inference-time optimizations exist and what trade-offs are reported, though it targets edge DNNs broadly rather than transformers specifically. |
