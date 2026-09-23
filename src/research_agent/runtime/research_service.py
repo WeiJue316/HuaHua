@@ -14,6 +14,7 @@ from research_agent.evidence.claims import (
 )
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.planner.planner import ResearchPlan
 from research_agent.router.federation import SearchClient, search_sources
 from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
@@ -175,6 +176,7 @@ async def run_federated_research(
     max_results_per_source: int = 10,
     download_pdf: bool = False,
     artifact_root: Path | None = None,
+    plan: ResearchPlan | None = None,
 ) -> ResearchRunResult:
     """Query multiple sources, preserve provenance, and render one report."""
 
@@ -195,8 +197,35 @@ async def run_federated_research(
                 "max_results_per_source": max_results_per_source,
                 "sources": sorted(clients),
                 "download_pdf": download_pdf,
+                "plan": plan.to_dict() if plan else None,
             },
         )
+        if plan is not None:
+            plan_id = repository.record_plan(
+                run_id=run_id,
+                plan_json=plan.to_dict(),
+                strategy="template",
+                status="active",
+            )
+            repository.record_plan_step(
+                plan_id=plan_id,
+                step_key="route_sources",
+                step_type="route_sources",
+                depends_on=[],
+                input_json={"question": question},
+            )
+            repository.record_audit_event(
+                run_id=run_id,
+                action="route_sources",
+                target_type="plan",
+                target_id=plan_id,
+                decision="allowed",
+                details={
+                    "selected_sources": list(plan.selected_sources),
+                    "fallback_sources": list(plan.fallback_sources),
+                    "reason": plan.reason,
+                },
+            )
         connection.commit()
 
     federated = await search_sources(

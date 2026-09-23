@@ -72,6 +72,7 @@
 │   ├── runtime/
 │   │   └── research_service.py  # M1 纵向编排
 │   ├── planner/
+│   │   └── planner.py           # 确定性源选择、查询变体和预算计划
 │   ├── executor/
 │   ├── memory/
 │   ├── router/

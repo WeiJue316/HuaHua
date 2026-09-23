@@ -10,6 +10,7 @@ from reportlab.pdfgen import canvas
 
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.openalex.client import OpenAlexClient
+from research_agent.planner.planner import plan_research
 from research_agent.runtime.research_service import run_federated_research
 from research_agent.storage.migrations import connect_database
 
@@ -50,6 +51,12 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
         raise AssertionError(f"unexpected request: {request.url}")
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        plan = plan_research(
+            "evidence chain",
+            available_sources=("arxiv", "openalex"),
+            max_results_per_source=5,
+            max_sources=2,
+        )
         result = await run_federated_research(
             question="evidence chain",
             db_path=tmp_path / "research_agent.db",
@@ -61,6 +68,7 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
             max_results_per_source=5,
             download_pdf=True,
             artifact_root=tmp_path / "archive",
+            plan=plan,
         )
 
     assert result.source_counts == {"arxiv": 2, "openalex": 1}
@@ -86,6 +94,11 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
         assert conn.execute("SELECT COUNT(*) FROM claim_evidence").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM file").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM document").fetchone()[0] == 2
+        assert conn.execute("SELECT COUNT(*) FROM plan").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM plan_step").fetchone()[0] == 1
+        assert conn.execute(
+            "SELECT COUNT(*) FROM audit_event WHERE action = 'route_sources'"
+        ).fetchone()[0] == 1
         full_text_count = conn.execute(
             "SELECT COUNT(*) FROM evidence_span WHERE evidence_level = 'full_text'"
         ).fetchone()[0]

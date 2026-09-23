@@ -8,6 +8,7 @@ import httpx
 import typer
 
 from . import __version__
+from .planner.planner import ResearchPlan, plan_research
 from .router.registry import SUPPORTED_SOURCES, build_source_clients
 from .runtime.research_service import ResearchRunResult, run_federated_research
 
@@ -60,9 +61,9 @@ def research(
         str,
         typer.Option(
             "--sources",
-            help="Comma-separated source IDs: arxiv, openalex, crossref, semantic_scholar, dblp.",
+            help="auto, or comma-separated source IDs.",
         ),
-    ] = "arxiv,openalex",
+    ] = "auto",
     download_pdf: Annotated[
         bool,
         typer.Option(
@@ -73,13 +74,31 @@ def research(
 ) -> None:
     """Run the federated research flow and write a traceable report."""
 
-    source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
-    supported = set(SUPPORTED_SOURCES)
-    unsupported = sorted(set(source_ids) - supported)
-    if not source_ids:
-        raise typer.BadParameter("at least one source is required")
-    if unsupported:
-        raise typer.BadParameter(f"unsupported sources: {', '.join(unsupported)}")
+    source_text = sources.strip().lower()
+    plan: ResearchPlan
+    if source_text == "auto":
+        plan = plan_research(
+            question,
+            available_sources=SUPPORTED_SOURCES,
+            max_results_per_source=max_results,
+        )
+        source_ids = list(plan.selected_sources)
+    else:
+        source_ids = [
+            item.strip().lower() for item in source_text.split(",") if item.strip()
+        ]
+        supported = set(SUPPORTED_SOURCES)
+        unsupported = sorted(set(source_ids) - supported)
+        if not source_ids:
+            raise typer.BadParameter("at least one source is required")
+        if unsupported:
+            raise typer.BadParameter(f"unsupported sources: {', '.join(unsupported)}")
+        plan = plan_research(
+            question,
+            available_sources=tuple(source_ids),
+            max_results_per_source=max_results,
+            max_sources=len(source_ids),
+        )
 
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
@@ -91,6 +110,7 @@ def research(
                 clients=clients,
                 max_results_per_source=max_results,
                 download_pdf=download_pdf,
+                plan=plan,
             )
 
     result = asyncio.run(run())

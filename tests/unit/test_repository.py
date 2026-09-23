@@ -298,3 +298,37 @@ def test_repository_deduplicates_five_sources_by_doi(tmp_path: Path) -> None:
             conn.execute("SELECT COUNT(*) FROM paper_source_record").fetchone()[0]
             == 5
         )
+
+def test_repository_records_plan_and_audit_event(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+        plan_id = repo.record_plan(
+            run_id=run_id,
+            plan_json={"selected_sources": ["openalex", "semantic_scholar"]},
+        )
+        step_id = repo.record_plan_step(
+            plan_id=plan_id,
+            step_key="route_sources",
+            step_type="route_sources",
+            depends_on=[],
+        )
+        audit_id = repo.record_audit_event(
+            run_id=run_id,
+            action="route_sources",
+            target_type="plan",
+            target_id=plan_id,
+            details={"reason": "citations"},
+        )
+
+        assert plan_id
+        assert step_id
+        assert audit_id
+        assert conn.execute("SELECT COUNT(*) FROM plan").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM plan_step").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM audit_event").fetchone()[0] == 1

@@ -472,6 +472,102 @@ class ResearchRepository:
         )
         return evidence_id
 
+    def record_plan(
+        self,
+        *,
+        run_id: str,
+        plan_json: Any,
+        strategy: str = "template",
+        status: str = "active",
+    ) -> str:
+        plan_id = str(uuid4())
+        version_row = self.connection.execute(
+            "SELECT COALESCE(MAX(version), 0) + 1 FROM plan WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        version = int(version_row[0]) if version_row is not None else 1
+        self.connection.execute(
+            """
+            INSERT INTO plan
+                (id, run_id, version, strategy, status, plan_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                plan_id,
+                run_id,
+                version,
+                strategy,
+                status,
+                json_text(plan_json),
+                utc_now(),
+            ),
+        )
+        return plan_id
+
+    def record_plan_step(
+        self,
+        *,
+        plan_id: str,
+        step_key: str,
+        step_type: str,
+        depends_on: list[str] | None = None,
+        status: str = "PENDING",
+        input_json: Any | None = None,
+    ) -> str:
+        step_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO plan_step
+                (id, plan_id, step_key, step_type, status, depends_on_json, input_json,
+                 output_json, attempt_count, started_at, finished_at, error_code,
+                 checkpoint_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, NULL, NULL, NULL)
+            """,
+            (
+                step_id,
+                plan_id,
+                step_key,
+                step_type,
+                status,
+                json_text(depends_on or []),
+                json_text(input_json) if input_json is not None else None,
+            ),
+        )
+        return step_id
+
+    def record_audit_event(
+        self,
+        *,
+        run_id: str | None,
+        action: str,
+        target_type: str,
+        target_id: str | None = None,
+        actor: str = "system",
+        decision: str | None = None,
+        details: Any | None = None,
+    ) -> str:
+        audit_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO audit_event
+                (id, run_id, actor, action, target_type, target_id, decision,
+                 details_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                audit_id,
+                run_id,
+                actor,
+                action,
+                target_type,
+                target_id,
+                decision,
+                json_text(details) if details is not None else None,
+                utc_now(),
+            ),
+        )
+        return audit_id
+
     def record_claim(self, *, report_id: str, claim: ClaimDraft) -> str:
         claim_id = str(uuid4())
         self.connection.execute(
