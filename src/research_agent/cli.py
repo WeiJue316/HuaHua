@@ -10,7 +10,11 @@ import typer
 from . import __version__
 from .planner.planner import ResearchPlan, plan_research
 from .router.registry import SUPPORTED_SOURCES, build_source_clients
-from .runtime.research_service import ResearchRunResult, run_federated_research
+from .runtime.research_service import (
+    ResearchExecutionError,
+    ResearchRunResult,
+    run_federated_research,
+)
 
 app = typer.Typer(
     name="research-agent",
@@ -113,7 +117,11 @@ def research(
                 plan=plan,
             )
 
-    result = asyncio.run(run())
+    try:
+        result = asyncio.run(run())
+    except ResearchExecutionError as exc:
+        typer.echo(f"research run failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
     summary = ", ".join(
         f"{source}={count}" for source, count in sorted(result.source_counts.items())
     )

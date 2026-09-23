@@ -8,7 +8,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 - 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则、GitHub Actions 配置、SQLite 初始 schema 和迁移 runner。
 - M1 已实现：arXiv MCP server、arXiv Atom 解析、SourceRecord/Paper/EvidenceSpan 持久化、CLI 纵向流程和 Markdown 报告。
-- M3 已实现第三站：五源 MCP server、source registry、Federation 并发预算、部分源错误可见性、确定性 Planner、Plan/AuditEvent 持久化，以及带 StepAttempt 和重试预算的 Executor 核心。
+- M3 已实现第三站：五源 MCP server、source registry、Federation 并发预算、部分源错误可见性、确定性 Planner、Plan/AuditEvent 持久化，以及由 Executor 驱动的六步 Run 流程、StepAttempt 和重试预算。
 - M2 已实现：OpenAlex MCP server（含 citations/references）、并行 Federation、DOI 跨源合并、双源 provenance 保留、双源 CLI、Evidence → Claim 构建与引用校验、限流/网络错误的有界重试与 `Retry-After` 支持，以及内容寻址 PDF 归档、Document 解析、full-text Evidence 和 File provenance。
 - 未完成：真实 arXiv smoke test 当前被 429 限流阻断；Agent Core、Claim 综合、评测和实验尚未开始。
 - 已通过：Ruff、mypy、pytest（83 passed）、`research-agent research --help` 和 `python scripts/check_docs.py`。
