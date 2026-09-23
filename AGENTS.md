@@ -75,7 +75,8 @@
 │   ├── executor/
 │   ├── memory/
 │   ├── router/
-│   │   └── federation.py        # 多源并行搜索与部分失败处理
+│   │   ├── federation.py        # 多源并行搜索、并发预算与部分失败处理
+│   │   └── registry.py          # 五源 client registry
 │   ├── policy/
 │   ├── evaluator/
 │   ├── evidence/

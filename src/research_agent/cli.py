@@ -8,12 +8,7 @@ import httpx
 import typer
 
 from . import __version__
-from .mcp_servers.arxiv.client import ArxivClient
-from .mcp_servers.crossref.client import CrossrefClient
-from .mcp_servers.dblp.client import DblpClient
-from .mcp_servers.openalex.client import OpenAlexClient
-from .mcp_servers.semantic_scholar.client import SemanticScholarClient
-from .router.federation import SearchClient
+from .router.registry import SUPPORTED_SOURCES, build_source_clients
 from .runtime.research_service import ResearchRunResult, run_federated_research
 
 app = typer.Typer(
@@ -79,7 +74,7 @@ def research(
     """Run the federated research flow and write a traceable report."""
 
     source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
-    supported = {"arxiv", "openalex", "crossref", "semantic_scholar", "dblp"}
+    supported = set(SUPPORTED_SOURCES)
     unsupported = sorted(set(source_ids) - supported)
     if not source_ids:
         raise typer.BadParameter("at least one source is required")
@@ -88,19 +83,7 @@ def research(
 
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
-            clients: dict[str, SearchClient] = {}
-            if "arxiv" in source_ids:
-                clients["arxiv"] = ArxivClient(http_client=http_client)
-            if "openalex" in source_ids:
-                clients["openalex"] = OpenAlexClient(http_client=http_client)
-            if "crossref" in source_ids:
-                clients["crossref"] = CrossrefClient(http_client=http_client)
-            if "semantic_scholar" in source_ids:
-                clients["semantic_scholar"] = SemanticScholarClient(
-                    http_client=http_client
-                )
-            if "dblp" in source_ids:
-                clients["dblp"] = DblpClient(http_client=http_client)
+            clients = build_source_clients(http_client, source_ids)
             return await run_federated_research(
                 question=question,
                 db_path=db,

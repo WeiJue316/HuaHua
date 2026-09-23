@@ -41,17 +41,23 @@ async def search_sources(
     *,
     query: str,
     max_results_per_source: int = 10,
+    max_concurrency: int = 5,
 ) -> FederatedSearchResult:
     """Query all configured sources concurrently."""
 
+    if max_concurrency < 1:
+        raise ValueError("max_concurrency must be at least 1")
     source_names = list(clients)
-    tasks = [
-        clients[source].search(
-            query,
-            max_results=max_results_per_source,
-        )
-        for source in source_names
-    ]
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def search_one(source: str) -> Any:
+        async with semaphore:
+            return await clients[source].search(
+                query,
+                max_results=max_results_per_source,
+            )
+
+    tasks = [search_one(source) for source in source_names]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     papers: list[PaperCandidate] = []
