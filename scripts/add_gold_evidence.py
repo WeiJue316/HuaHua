@@ -93,12 +93,25 @@ def describe(paper: PaperCandidate, *, quote: str | None) -> str:
     return "\n".join(lines)
 
 
+def wrap(text: str, width: int = 96, indent: str = "      ") -> str:
+    """Wrap a long abstract so the candidate list stays readable."""
+
+    import textwrap
+
+    return "\n".join(
+        textwrap.fill(paragraph, width=width, initial_indent=indent, subsequent_indent=indent)
+        for paragraph in text.splitlines()
+        if paragraph.strip()
+    )
+
+
 async def search_mode(
     row: dict[str, Any],
     query: str,
     *,
     limit: int,
     show_all: bool,
+    show_abstract: bool,
 ) -> int:
     """Print candidate papers for a question so the reviewer can pick one."""
 
@@ -112,6 +125,7 @@ async def search_mode(
     existing = set(row.get("gold_papers") or [])
 
     kept: list[tuple[PaperCandidate, str, int]] = []
+    abstracts: dict[str, str] = {}
     for paper in result.papers:
         if not show_all and not within_year_range(paper, year_range):
             continue
@@ -130,14 +144,25 @@ async def search_mode(
         annotation = paper_to_annotation(paper, supports_subquestion=best_index)
         quote = annotation["quote"] if annotation else None
         kept.append((paper, quote or "", best_index))
+        abstracts[key] = paper.abstract or ""
 
     print(f"candidates for {row['question_id']} (year_range={year_range}):")
     if not kept:
         print("  none passed the year-range and quote filters; try --show-all")
         return 0
+    subquestion_labels = "\n".join(
+        f"    {index}. {value}" for index, value in enumerate(subquestions, start=1)
+    )
+    print(subquestion_labels)
+    print()
     for paper, quote, best_index in kept:
         print(describe(paper, quote=quote))
-        print(f"      suggested subquestion: {best_index}")
+        if show_abstract:
+            abstract = abstracts.get(paper_key(paper), "")
+            if abstract:
+                print("      full abstract:")
+                print(wrap(abstract))
+        print(f"      suggested subquestion: {best_index} (keyword overlap only)")
     print()
     print("add one with:")
     print(
@@ -232,6 +257,11 @@ def main() -> int:
     parser.add_argument("--remove", help="paper key to drop, e.g. doi:10.1/xyz")
     parser.add_argument("--limit", type=int, default=10, help="search result limit")
     parser.add_argument("--show-all", action="store_true", help="ignore year range in search")
+    parser.add_argument(
+        "--show-abstract",
+        action="store_true",
+        help="print the full abstract so a better sentence can be chosen",
+    )
     parser.add_argument("--force", action="store_true", help="allow an out-of-range paper")
     parser.add_argument("--dry-run", action="store_true", help="do not write the dataset")
     args = parser.parse_args()
@@ -245,7 +275,13 @@ def main() -> int:
 
     if args.search:
         return asyncio.run(
-            search_mode(row, args.search, limit=args.limit, show_all=args.show_all)
+            search_mode(
+                row,
+                args.search,
+                limit=args.limit,
+                show_all=args.show_all,
+                show_abstract=args.show_abstract,
+            )
         )
 
     if args.remove:
