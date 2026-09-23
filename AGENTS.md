@@ -124,7 +124,8 @@
 ├── configs/                      # 非密钥配置
 ├── scripts/                      # 开发与运维脚本
 ├── data/                         # 本地运行数据，禁止提交
-└── reports/                      # 生成的报告，默认禁止提交
+├── reports/                      # 生成的报告，默认禁止提交
+└── local/                        # 个人与学位材料，禁止提交
 ```
 
 ### 命名约定
@@ -141,6 +142,9 @@
 ## 5. 数据与文件纪律
 
 - `data/`、`reports/`、下载的 PDF、API 缓存和数据库文件不得进入 Git。
+- `local/` 存放个人与学位材料（开题报告、论文草稿、导师反馈、评审记录等），
+  不得进入 Git。这些材料包含姓名、学号等个人信息，且属于未定稿的学位材料，
+  公开发布会带来隐私与学术规范风险。`local/` 只保留 `.gitkeep`，其余内容被忽略。
 - 原始 PDF 只追加、不原地覆盖；更新版本时新建文件并保留哈希。
 - 每个 Paper 必须通过 `PaperSourceRecord` 关联 `source`、`source_id`、`retrieved_at` 和 provenance。
 - 每个 File 必须记录 SHA-256、路径、MIME type、大小和来源 URL。

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP_DIRS = {".git", ".venv", "data", "reports", "__pycache__"}
+SKIP_DIRS = {".git", ".venv", "data", "reports", "local", "__pycache__"}
 REQUIRED_FILES = [
     "AGENTS.md",
     "README.md",

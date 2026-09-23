@@ -18,3 +18,7 @@ reports/*
 *.db
 *.sqlite
 *.sqlite3
+
+# Personal and degree materials: never publish
+local/*
+!local/.gitkeep
