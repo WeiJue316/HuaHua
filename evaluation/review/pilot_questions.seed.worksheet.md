@@ -2,7 +2,7 @@
 
 - 数据集：`evaluation/datasets/pilot_questions.seed.jsonl`
 - 问题数：10
-- 数据集哈希：`904108e0b340482d0c504f4e49b9b7289e23edbe0f6e58e50b42b62869bdfcca`
+- 数据集哈希：`d45c6b473c56127c821fcfea984a65a4229a308adbaa77a8b061b930285e9ae6`
 
 复核规则：每道题逐项确认下面的判据，在「决定」处填写 `保留`、`修改` 或 `删除`，
 并在「原因」处写明修改内容或删除理由。复核完成后据此生成冻结版数据集，
@@ -32,11 +32,11 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.48550/arxiv.2312.10997` | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
-| 2 | `doi:10.1609/aaai.v38i16.29728` | 1 | Retrieval-Augmented Generation (RAG) is a promising approach for mitigating the hallucination of large language models (LLMs). |
-| 3 | `doi:10.18653/v1/2024.findings-acl.372` | 1 | While large language models (LLMs) have achieved state-of-the-art performance on a wide range of medical question answering (QA) tasks, they still face challenges with hallucinations and outdated knowledge. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
+| 2 | `doi:10.1609/aaai.v38i16.29728` | 2024 | 1 | Retrieval-Augmented Generation (RAG) is a promising approach for mitigating the hallucination of large language models (LLMs). |
+| 3 | `doi:10.18653/v1/2024.findings-acl.372` | 2024 | 1 | While large language models (LLMs) have achieved state-of-the-art performance on a wide range of medical question answering (QA) tasks, they still face challenges with hallucinations and outdated knowledge. |
 
 复核判据：
 
@@ -62,13 +62,11 @@
 1. How is planning represented?
 2. How is long-term state retained?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.7249/mr1626` | 2 | The checkered history of predicting the future — e.g., “Man will never fly” — has dissuaded policymakers from considering the long-term effects of decisions. |
-| 2 | `doi:10.1613/jair.575` | 1 | Planning under uncertainty is a central problem in the study of automated sequential decision making, and has been addressed by researchers in many different fields, including AI planning, decision analysis, operations research, control theory and economics. |
-| 3 | `doi:10.1080/00461520.2016.1207538` | 1 | Much has been written in the educational psychology literature about effective feedback and how to deliver it. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.1145/3586183.3606763` | 2023 | 1 | We demonstrate through ablation that the components of our agent architecture—observation, planning, and reflection—each contribute critically to the believability of agent behavior. |
 
 复核判据：
 
@@ -96,10 +94,11 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.1038/s41586-023-06291-2` | 1 | Large language models (LLMs) have demonstrated impressive capabilities, but the bar for clinical applications is high. |
-| 2 | `doi:10.1038/s41586-025-09422-z` | 1 | General reasoning represents a long-standing and formidable challenge in artificial intelligence (AI). |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.1038/s41586-023-06291-2` | 2023 | 1 | Attempts to assess the clinical knowledge of models typically rely on automated evaluations based on limited benchmarks. |
+| 2 | `doi:10.18653/v1/2023.acl-long.147` | 2023 | 1 | Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers). |
+| 3 | `doi:10.1038/s41586-025-09422-z` | 2025 | 1 | General reasoning represents a long-standing and formidable challenge in artificial intelligence (AI). |
 
 复核判据：
 
@@ -127,11 +126,11 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.48550/arxiv.2102.05918` | 1 | Pre-trained representations are becoming crucial for many NLP and perception tasks. |
-| 2 | `doi:10.48550/arxiv.1910.10683` | 1 | Transfer learning, where a model is first pre-trained on a data-rich task before being fine-tuned on a downstream task, has emerged as a powerful technique in natural language processing (NLP). |
-| 3 | `doi:10.48550/arxiv.2107.07651` | 1 | Large-scale vision and language representation learning has shown promising improvements on various vision-language tasks. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.48550/arxiv.2201.12086` | 2022 | 1 | Vision-Language Pre-training (VLP) has advanced the performance for many vision-language tasks. |
+| 2 | `doi:10.48550/arxiv.2301.12597` | 2023 | 1 | The cost of vision-and-language pre-training has become increasingly prohibitive due to end-to-end training of large-scale models. |
+| 3 | `doi:10.1109/cvpr52688.2022.01631` | 2022 | 1 | With the rise of powerful pre-trained vision-language models like CLIP, it becomes essential to investigate ways to adapt these models to downstream datasets. |
 
 复核判据：
 
@@ -157,13 +156,12 @@
 1. Which datasets are used?
 2. Which retrieval metrics are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 1 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.1109/cvpr.2016.85` | 2 | Over the years, datasets and benchmarks have proven their fundamental importance in computer vision research, enabling targeted progress and objective comparisons in many fields. |
-| 2 | `doi:10.18653/v1/2020.findings-emnlp.445` | 2 | In this paper, we introduce NLP resources for 11 major Indian languages from two major language families. |
-| 3 | `doi:10.48550/arxiv.1412.6632` | 2 | In this paper, we present a multimodal Recurrent Neural Network (m-RNN) model for generating novel image captions. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.1038/s41591-022-01981-2` | 2022 | 1 | The increasing availability of biomedical data from large biobanks, electronic health records, medical imaging, wearable and ambient biosensors, and the lower cost of genome and microbiome sequencing have set the stage for the development of multimodal artificial intelligence solutions that capture the complexity of human health and disease. |
+| 2 | `doi:10.1109/tpami.2023.3275156` | 2023 | 1 | Transformer is a promising neural network learner, and has achieved great success in various machine learning tasks. |
 
 复核判据：
 
@@ -191,11 +189,10 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.18653/v1/2023.acl-long.99` | 1 | While dense retrieval has been shown to be effective and efficient across tasks and languages, it remains difficult to create effective fully zero-shot dense retrieval systems when no relevance labels are available. |
-| 2 | `doi:10.1109/tkde.2007.22` | 1 | Semantic search has been one of the motivations of the semantic Web since it was envisioned. |
-| 3 | `doi:10.48550/arxiv.2112.09118` | 1 | Recently, information retrieval has seen the emergence of dense retrievers, using neural networks, as an alternative to classical sparse methods based on term-frequency. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.18653/v1/2023.acl-long.99` | 2023 | 1 | While dense retrieval has been shown to be effective and efficient across tasks and languages, it remains difficult to create effective fully zero-shot dense retrieval systems when no relevance labels are available. |
+| 2 | `doi:10.48550/arxiv.2308.07107` | 2023 | 1 | As a primary means of information acquisition, information retrieval (IR) systems, such as search engines, have integrated themselves into our daily lives. |
 
 复核判据：
 
@@ -221,13 +218,11 @@
 1. What are the main query expansion families?
 2. What evidence supports their effectiveness?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.48550/arxiv.1511.05879` | 1 | Recently, image representation built upon Convolutional Neural Network (CNN) has been shown to provide effective descriptors for image search, outperforming pre-CNN features as short-vector representations. |
-| 2 | `doi:10.48550/arxiv.1904.08375` | 1 | One technique to improve the retrieval effectiveness of a search engine is to expand documents with terms that are related or representative of the documents' content. |
-| 3 | `doi:10.1145/3404835.3463238` | 2 | Pyserini is a Python toolkit for reproducible information retrieval research with sparse and dense representations. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
 
 复核判据：
 
@@ -255,11 +250,11 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.1038/s42256-023-00626-4` | 1 | With the prevalence of pre-trained language models (PLMs) and the pre-training–fine-tuning paradigm, it has been continuously shown that larger models tend to yield better performance. |
-| 2 | `doi:10.48550/arxiv.2203.02155` | 1 | Making language models bigger does not inherently make them better at following a user's intent. |
-| 3 | `doi:10.18653/v1/2022.acl-short.8` | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | With the prevalence of pre-trained language models (PLMs) and the pre-training–fine-tuning paradigm, it has been continuously shown that larger models tend to yield better performance. |
+| 2 | `doi:10.48550/arxiv.2203.02155` | 2022 | 1 | In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. |
+| 3 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
 
 复核判据：
 
@@ -287,10 +282,10 @@
 
 > 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 1 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.48550/arxiv.2206.01191` | 2 | Vision Transformers (ViT) have shown rapid progress in computer vision tasks, achieving promising results on various benchmarks. |
-| 2 | `doi:10.1109/jproc.2022.3226481` | 2 | Successful integration of deep neural networks (DNNs) or deep learning (DL) has resulted in breakthroughs in many areas. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.48550/arxiv.2206.01191` | 2022 | 2 | Our fastest model, EfficientFormer-L1, achieves $79.2\%$ top-1 accuracy on ImageNet-1K with only $1.6$ ms inference latency on iPhone 12 (compiled with CoreML), which runs as fast as MobileNetV2$\times 1.4$ ($1.6$ ms, $74.7\%$ top-1), and our largest model, EfficientFormer-L7, obtains $83.3\%$ accuracy with only $7.0$ ms latency. |
+| 2 | `doi:10.1109/jproc.2022.3226481` | 2022 | 2 | Data transmission to the cloud results in high latency, round-trip delay, security and privacy concerns, and the inability of real-time decisions. |
 
 复核判据：
 
@@ -316,13 +311,12 @@
 1. Which artifacts and metadata are shared?
 2. What barriers to reproducibility are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
-| # | gold paper | 子问题 | quote |
-|---:|---|---:|---|
-| 1 | `doi:10.3390/app9204396` | 1 | Networks play important roles in modern life, and cyber security has become a vital research area. |
-| 2 | `doi:10.48550/arxiv.2005.00687` | 1 | We present the Open Graph Benchmark (OGB), a diverse set of challenging and realistic benchmark datasets to facilitate scalable, robust, and reproducible graph machine learning (ML) research. |
-| 3 | `doi:10.1371/journal.pbio.1002333` | 2 | There is a growing movement to encourage reproducibility and transparency practices in the scientific community, including public access to raw data and protocols, the conduct of replication studies, systematic integration of evidence in systematic reviews, and the documentation of funding and potential conflicts of interest. |
+| # | gold paper | 年份 | 子问题 | quote |
+|---:|---|---:|---:|---|
+| 1 | `doi:10.1109/access.2023.3262138` | 2023 | 1 | The final goal of all industrial machine learning (ML) projects is to develop ML products and rapidly bring them into production. |
+| 2 | `doi:10.1145/3582302.3582306` | 2023 | 1 | The explorative and iterative nature of developing and operating ML applications leads to a variety of artifacts, such as datasets, features, models, hyperparameters, metrics, software, configurations, and logs. |
 
 复核判据：
 

@@ -93,19 +93,22 @@ def render_worksheet(dataset_path: Path) -> str:
 
         lines.extend(
             [
-                "| # | gold paper | 子问题 | quote |",
-                "|---:|---|---:|---|",
+                "| # | gold paper | 年份 | 子问题 | quote |",
+                "|---:|---|---:|---:|---|",
             ]
         )
         for evidence_index, evidence in enumerate(question.gold_evidence, start=1):
             paper_key = _cell(str(evidence.get("paper_key", "")))
             subquestion = _cell(str(evidence.get("supports_subquestion", "")))
+            paper_year = evidence.get("paper_year")
+            year_cell = str(paper_year) if paper_year is not None else "未记录"
             quote = _cell(str(evidence.get("quote", "")))
             lines.append(
-                f"| {evidence_index} | `{paper_key}` | {subquestion} | {quote} |"
+                f"| {evidence_index} | `{paper_key}` | {year_cell} | {subquestion} "
+                f"| {quote} |"
             )
         if not question.gold_evidence:
-            lines.append("| — | （无 gold evidence） | — | — |")
+            lines.append("| — | （无 gold evidence） | — | — | — |")
         lines.extend(
             [
                 "",

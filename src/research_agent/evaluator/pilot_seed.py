@@ -248,41 +248,71 @@ def _repair_missing_sentence_spaces(value: str) -> str:
     return re.sub(r"([.!?])(?=[A-Z])", r"\1 ", value)
 
 
-def usable_evidence_sentence(abstract: str | None) -> str | None:
-    """Return one citable sentence, or None when the text is not usable.
-
-    Oversized candidates are rejected rather than truncated so that a recorded
-    quote always ends on a real sentence boundary.
-    """
+def _split_sentences(abstract: str | None) -> list[str]:
+    """Split a reconstructed abstract into candidate sentences."""
 
     if not abstract:
-        return None
+        return []
     cleaned = _repair_missing_sentence_spaces(_strip_abstract_prefix(abstract))
-    sentence = re.split(r"(?<=[.!?])\s+", cleaned, maxsplit=1)[0].strip()
-    if not sentence:
-        return None
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+
+
+def _is_usable_sentence(sentence: str) -> bool:
+    """Reject fragments, author lists and oversized run-on text."""
+
     if len(re.findall(r"[A-Za-z0-9][A-Za-z0-9'-]*", sentence)) < MIN_EVIDENCE_WORDS:
-        return None
+        return False
     if not sentence.endswith(SENTENCE_ENDINGS):
-        return None
+        return False
     if len(sentence) > MAX_EVIDENCE_CHARS:
+        return False
+    return not is_author_list(sentence)
+
+
+def _term_overlap(sentence: str, terms: set[str]) -> int:
+    words = set(re.findall(r"[a-z0-9][a-z0-9_-]*", sentence.lower()))
+    return len(terms & words)
+
+
+def usable_evidence_sentence(
+    abstract: str | None,
+    *,
+    prefer_terms: set[str] | None = None,
+) -> str | None:
+    """Return one citable sentence, or None when the text is not usable.
+
+    The first usable sentence is the default. When ``prefer_terms`` is given the
+    sentence with the largest overlap with those terms wins, so the recorded
+    quote supports the subquestion instead of restating the abstract's
+    background. Ties keep the earliest sentence.
+    """
+
+    sentences = [item for item in _split_sentences(abstract) if _is_usable_sentence(item)]
+    if not sentences:
         return None
-    if is_author_list(sentence):
-        return None
-    return sentence
+    if prefer_terms:
+        best_index = max(
+            range(len(sentences)),
+            key=lambda index: (_term_overlap(sentences[index], prefer_terms), -index),
+        )
+        return sentences[best_index]
+    return sentences[0]
 
 
 def paper_to_annotation(
     paper: PaperCandidate,
     *,
     supports_subquestion: int,
+    prefer_terms: set[str] | None = None,
 ) -> dict[str, Any] | None:
     """Convert a paper into one gold-evidence annotation.
 
-    Returns None when the record has no sentence that can carry evidence.
+    Returns None when the record has no sentence that can carry evidence. The
+    paper year is recorded so the review can check the year range without
+    re-querying the source.
     """
 
-    quote = usable_evidence_sentence(paper.abstract)
+    quote = usable_evidence_sentence(paper.abstract, prefer_terms=prefer_terms)
     if quote is None:
         return None
     return {
@@ -291,7 +321,23 @@ def paper_to_annotation(
         "quote": quote,
         "locator": {"section": "Abstract"},
         "supports_subquestion": supports_subquestion,
+        "paper_year": paper.year,
     }
+
+
+def _within_year_range(
+    paper: PaperCandidate,
+    year_range: tuple[int, int] | None,
+) -> bool:
+    """Return True when a paper is inside the declared year range.
+
+    Papers with an unknown year are kept; they are rare and the review can
+    judge them individually.
+    """
+
+    if year_range is None or paper.year is None:
+        return True
+    return year_range[0] <= paper.year <= year_range[1]
 
 
 async def build_seed_questions(
@@ -336,8 +382,27 @@ async def build_seed_questions(
         relevance_terms = _content_terms(" ".join([question, *subquestions]))
         subquestion_terms = [_content_terms(item) for item in subquestions]
 
+        year_range = seed.get("year_range")
+        parsed_year_range: tuple[int, int] | None = None
+        if (
+            isinstance(year_range, (list, tuple))
+            and len(year_range) == 2
+            and all(isinstance(value, int) for value in year_range)
+        ):
+            parsed_year_range = (int(year_range[0]), int(year_range[1]))
+
+        in_range = [
+            paper for paper in candidates if _within_year_range(paper, parsed_year_range)
+        ]
+        year_filter_relaxed = False
+        if not in_range and candidates:
+            # The declared range excluded everything; keep the candidates so the
+            # question is not silently empty, and flag it for the review.
+            in_range = list(candidates)
+            year_filter_relaxed = True
+
         scored = [
-            (paper, _relevance_score(paper, relevance_terms)) for paper in candidates
+            (paper, _relevance_score(paper, relevance_terms)) for paper in in_range
         ]
         selected = [item for item in scored if item[1] >= MIN_RELEVANCE_TERMS]
         relaxed = False
@@ -356,9 +421,11 @@ async def build_seed_questions(
         gold_papers: list[str] = []
         gold_evidence: list[dict[str, Any]] = []
         for paper, _score in selected:
+            subquestion_index = assignment[paper_key(paper)]
             annotation = paper_to_annotation(
                 paper,
-                supports_subquestion=assignment[paper_key(paper)],
+                supports_subquestion=subquestion_index,
+                prefer_terms=subquestion_terms[subquestion_index - 1],
             )
             if annotation is None:
                 continue
@@ -378,6 +445,8 @@ async def build_seed_questions(
         )
         if relaxed:
             notes += " Relevance threshold relaxed: no strong match was found."
+        if year_filter_relaxed:
+            notes += " Year range excluded every candidate; range not enforced."
         if uncovered:
             missing = ", ".join(str(index) for index in uncovered)
             notes += f" Subquestion(s) {missing} have no supporting evidence."

@@ -116,6 +116,79 @@ def test_usable_evidence_sentence_rejects_oversized_run_on_text() -> None:
     assert usable_evidence_sentence(abstract) is None
 
 
+def test_usable_evidence_sentence_prefers_the_sentence_answering_a_subquestion() -> None:
+    abstract = (
+        "Retrieval augmented generation has become a popular research topic. "
+        "We evaluate our systems on Natural Questions and TriviaQA using EM and F1. "
+        "The results show consistent improvements over strong baselines."
+    )
+
+    sentence = usable_evidence_sentence(
+        abstract, prefer_terms={"datasets", "metrics", "triviaqa"}
+    )
+
+    assert sentence == (
+        "We evaluate our systems on Natural Questions and TriviaQA using EM and F1."
+    )
+
+
+def test_usable_evidence_sentence_falls_back_to_the_first_sentence() -> None:
+    abstract = (
+        "Retrieval augmented generation has become a popular research topic. "
+        "We evaluate our systems on Natural Questions and TriviaQA using EM and F1."
+    )
+
+    assert usable_evidence_sentence(abstract) == (
+        "Retrieval augmented generation has become a popular research topic."
+    )
+
+
+def test_paper_to_annotation_records_the_paper_year() -> None:
+    paper = _paper(
+        title="Evaluation methods for retrieval augmented generation",
+        abstract=(
+            "We survey evaluation methods for retrieval augmented generation "
+            "systems and compare reported metrics across benchmarks."
+        ),
+    )
+    paper = paper.model_copy(update={"year": 2024})
+
+    annotation = paper_to_annotation(paper, supports_subquestion=1)
+
+    assert annotation is not None
+    assert annotation["paper_year"] == 2024
+
+
+@pytest.mark.asyncio
+async def test_build_seed_questions_drops_papers_outside_the_year_range() -> None:
+    inside = _paper(
+        record_id="W1",
+        doi="10.1/inside",
+        title="Evaluation methods for retrieval augmented generation systems",
+        abstract=(
+            "We survey evaluation methods for retrieval augmented generation "
+            "systems and compare reported metrics across benchmarks."
+        ),
+    ).model_copy(update={"year": 2024})
+    outside = _paper(
+        record_id="W2",
+        doi="10.1/outside",
+        title="Evaluation methods for retrieval augmented generation systems",
+        abstract=(
+            "We survey evaluation methods for retrieval augmented generation "
+            "systems and compare reported metrics across benchmarks."
+        ),
+    ).model_copy(update={"year": 2003})
+    client = FakeOpenAlexClient([outside, inside])
+
+    records = await build_seed_questions(
+        client,  # type: ignore[arg-type]
+        seeds=[PILOT_SEEDS[0]],
+    )
+
+    assert records[0]["gold_papers"] == ["doi:10.1/inside"]
+
+
 def test_paper_to_annotation_returns_none_without_usable_evidence() -> None:
     paper = _paper(abstract="Shahul Es, Jithin James, Luis Espinosa Anke.")
 
