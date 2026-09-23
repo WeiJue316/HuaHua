@@ -19,6 +19,11 @@ from research_agent.mcp_servers.openalex.parser import (
 
 OPENALEX_API_URL = "https://api.openalex.org"
 
+def clean_openalex_search_query(value: str) -> str:
+    """Remove characters OpenAlex treats as wildcards in normal search."""
+
+    return " ".join(value.replace("?", " ").replace("*", " ").split())
+
 
 class OpenAlexClientError(RuntimeError):
     """Raised when OpenAlex cannot satisfy a request."""
@@ -124,7 +129,7 @@ class OpenAlexClient:
             "/works",
             params=self._params(
                 {
-                    "search": query.strip(),
+                    "search": clean_openalex_search_query(query),
                     "per-page": max_results,
                     "cursor": cursor,
                 }

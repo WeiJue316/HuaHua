@@ -156,3 +156,17 @@ async def test_openalex_client_retries_rate_limit_then_succeeds() -> None:
     assert calls == 2
     assert delays == [1.0]
     assert result.papers[0].source_record_id == "W123456789"
+
+@pytest.mark.asyncio
+async def test_openalex_client_sanitizes_wildcard_punctuation() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["search"] == "What is retrieval augmented generation"
+        return httpx.Response(
+            200,
+            json={"meta": {"count": 0, "next_cursor": None}, "results": []},
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        client = OpenAlexClient(http_client=http_client)
+        await client.search("What is retrieval augmented generation?")

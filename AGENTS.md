@@ -82,6 +82,7 @@
 │   ├── policy/
 │   ├── evaluator/
 │   │   ├── dataset.py             # JSONL 问题集加载与哈希
+│   │   ├── pilot_seed.py          # Pilot 种子问题与 OpenAlex 标注草稿
 │   │   └── runner.py              # EvaluationRun/Case 矩阵调度
 │   ├── evidence/
 │   │   └── claims.py            # Evidence → Claim 与引用校验
