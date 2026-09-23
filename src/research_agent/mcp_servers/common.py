@@ -52,8 +52,12 @@ class RateLimitPolicy:
 
 DEFAULT_RATE_LIMIT_POLICY = RateLimitPolicy(
     host_intervals={
+        # arXiv asks for one request every three seconds.
         "export.arxiv.org": 3.0,
-        "api.semanticscholar.org": 1.0,
+        # Semantic Scholar allows 1 request per second across all endpoints and
+        # asks for a rate below that threshold, so leave deliberate margin
+        # instead of sitting exactly on the boundary.
+        "api.semanticscholar.org": 1.2,
         "dblp.org": 1.0,
         "api.openalex.org": 0.2,
         "api.crossref.org": 0.2,
