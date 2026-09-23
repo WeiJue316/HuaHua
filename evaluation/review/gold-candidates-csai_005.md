@@ -20,6 +20,10 @@
 一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。
 按子问题分别判定，因为证据是按子问题分配的。
 
+**「初审建议」是模型预判，只是给你省时间，不是结论。**
+最终「判定」必须由你确认——金标是评测系统的尺子，
+由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。
+
 逐条检查：
 
 1. 论文是否真正回答某个子问题（不是主题相邻）
@@ -29,33 +33,33 @@
 
 ## 候选清单
 
-| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
-|---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2024 | Multimodal Knowledge Graph-Guided Cross-Modal Graph Network for Image- | 面向图文检索的多模态知识图谱引导跨模态图网络 | `10.1109/bigcomp60711.2024.00024` | 6 | 引用了种子 | 4 | | |
-| 2 | 2024 | Knowledge Graph Enhanced Multimodal Transformer for Image-Text Retriev | 知识图谱增强的多模态Transformer用于图文检索 | `10.1109/icde60146.2024.00013` | 13 | 引用了种子 | 3 | | |
-| 3 | 2025 | Bridging Modalities: Improving Universal Multimodal Retrieval by Multi | 跨越模态：利用多模态大语言模型改进通用多模态检索 | `10.1109/cvpr52734.2025.00866` | 13 | 引用了种子 | 3 | | |
-| 4 | 2025 | Docopilot: Improving Multimodal Models for Document-Level Understandin | Docopilot：提升多模态模型的文档级理解能力 | `10.1109/cvpr52734.2025.00381` | 11 | 引用了种子 | 3 | | |
-| 5 | 2025 | Tevatron 2.0: Unified Document Retrieval Toolkit across Scale, Languag | Tevatron 2.0：跨规模、跨语言、跨模态的统一文档检索工具包 | `10.1145/3726302.3730135` | 5 | 引用了种子 | 3 | | |
-| 6 | 2025 | Beyond Semantic Matching: Structure-Aware Fusion for Multi-Modal Retri | 超越语义匹配：面向结构丰富的核电行业规程多模态检索的结构感知融合 | `10.1109/imcec66174.2025.11331939` | 0 | 引用了种子 | 3 | | |
-| 7 | 2026 | Gaze-based Personal Memory: Leveraging Eye Tracking to Improve Relevan | 基于注视的个人记忆：利用眼动追踪提升文本检索系统的相关性 | `10.1145/3806027` | 0 | 引用了种子 | 3 | | |
-| 8 | 2023 | Building Multimodal Knowledge Bases With Multimodal Computational Sequ | 利用多模态计算序列与生成对抗网络构建多模态知识库 | `10.1109/tmm.2023.3291503` | 22 | 引用了种子 | 2 | | |
-| 9 | 2024 | Self-Supervised Multi-Modal Knowledge Graph Contrastive Hashing for Cr | 面向跨模态搜索的自监督多模态知识图谱对比哈希 | `10.1609/aaai.v38i12.29280` | 22 | 引用了种子 | 2 | | |
-| 10 | 2024 | Semantic deep learning and adaptive clustering for handling multimodal | 面向多模态多媒体信息检索的语义深度学习与自适应聚类 | `10.1007/s11042-024-19312-7` | 13 | 引用了种子 | 2 | | |
-| 11 | 2025 | Dynamic Visual Semantic Sub-Embeddings and Fast Re-Ranking for Image-T | 面向图像-文本检索的动态视觉语义子嵌入与快速重排序 | `10.1109/tmm.2025.3535373` | 12 | 引用了种子 | 2 | | |
-| 12 | 2025 | M3DocVQA: Multi-Modal Multi-Page Multi-Document Understanding | M3DocVQA：多模态多页多文档理解 | `10.1109/iccvw69036.2025.00649` | 10 | 引用了种子 | 2 | | |
-| 13 | 2023 | Knowledge-integrated Multi-modal Movie Turning Point Identification | 知识集成的多模态电影转折点识别 | `10.1145/3638557` | 9 | 引用了种子 | 2 | | |
-| 14 | 2023 | Multiple Pseudo-Siamese Network with Supervised Contrast Learning for  | 用于医学多模态检索的基于监督对比学习的多重伪孪生网络 | `10.1145/3637441` | 8 | 引用了种子 | 2 | | |
-| 15 | 2025 | SGG-MVAR: Cross-Modal Retrieval With Scene Graph Generation and Multiv | SGG-MVAR：基于场景图生成和多视图属性关系引导的跨模态检索 | `10.1109/tcss.2024.3524297` | 6 | 引用了种子 | 2 | | |
-| 16 | 2025 | Multimodal multimedia information retrieval through the integration of | 通过融合模糊聚类、基于OWA的融合与孪生神经网络的多模态多媒体信息检索 | `10.1016/j.fss.2025.109419` | 6 | 引用了种子 | 2 | | |
-| 17 | 2025 | Construction of a multimodal knowledge graph for LNG carrier port stat | 基于改进视觉提示微调构建面向LNG运输船港口国监督检查的多模态知识图谱 | `10.1016/j.oceaneng.2025.121963` | 4 | 引用了种子 | 2 | | |
-| 18 | 2025 | VisualRAG: Knowledge-Guided Retrieval Augmentation for Image-Text Matc | VisualRAG：面向图文匹配的知识引导检索增强 | `10.1109/tcsvt.2025.3597097` | 3 | 引用了种子 | 2 | | |
-| 19 | 2025 | MuralAgent: Enhancing Ancient Mural Outpainting with RAG-Based Texts a | MuralAgent：基于RAG文本与多模态集成增强古壁画外绘 | `10.1145/3743679` | 3 | 引用了种子 | 2 | | |
-| 20 | 2025 | R 2 LLMs: Retrieval and Ranking with LLMs | R2LLMs：基于大语言模型的检索与排序 | `10.1145/3726302.3731689` | 3 | 引用了种子 | 2 | | |
-| 21 | 2025 | CoFi-VisRAG: Coarse-to-Fine Visual Retrieval-Augmented Generation for  | CoFi-VisRAG：面向多模态文档的由粗到细视觉检索增强生成 | `10.1007/978-981-95-4088-4_5` | 0 | 引用了种子 | 2 | | |
-| 22 | 2025 | Improving Multimodal Speech-To-Slide Alignment for Academic Lectures w | 利用视觉大语言模型改进学术讲座中的多模态语音到幻灯片对齐 | `10.1109/asru65441.2025.11434615` | 0 | 引用了种子 | 2 | | |
-| 23 | 2026 | Multigranularity Information Fusion for Multimodal Retrieval in Prefab | 面向装配式建筑多模态检索的多粒度信息融合 | `10.1109/tii.2026.3692747` | 0 | 引用了种子 | 2 | | |
-| 24 | 2026 | MURE: Hierarchical Multi-Resolution Encoding via Vision-Language Model | MURE：基于视觉-语言模型的分层多分辨率编码用于视觉文档检索 | `10.1145/3805622.3810864` | 0 | 引用了种子 | 2 | | |
-| 25 | 2026 | CMDR: Contextual Multimodal Document Retrieval | CMDR：上下文多模态文档检索 | `10.1007/978-3-032-37035-8_5` | 0 | 引用了种子 | 2 | | |
+| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
+|---:|---:|---|---|---|---:|---|---:|---|---:|---|
+| 1 | 2024 | Multimodal Knowledge Graph-Guided Cross-Modal Graph Network for Image- | 多模态知识图谱引导的跨模态图网络用于图文检索 | `10.1109/bigcomp60711.2024.00024` | 6 | 引用了种子 | 4 | 建议采纳(子问题1) | | | 摘要明确说明在 MS-COCO 和 Flickr30K 基准数据集上实验，可作为多模态检索评估所用数据集的证据，但未具体报告检索指标。 |
+| 2 | 2024 | Knowledge Graph Enhanced Multimodal Transformer for Image-Text Retriev | 知识图谱增强的多模态Transformer用于图文检索 | `10.1109/icde60146.2024.00013` | 13 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：论文虽涉及图像-文本检索评估，但仅笼统提及使用两个常用数据集和匹配指标，未给出具体数据集名称或检索指标，无法作为任一子问题的证据。 |
+| 3 | 2025 | Bridging Modalities: Improving Universal Multimodal Retrieval by Multi | 桥接模态：利用多模态大语言模型改进通用多模态检索 | `10.1109/cvpr52734.2025.00866` | 13 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 该论文构建了面向通用多模态检索的 UMR Benchmark（UMRB），可作为评估基准/数据集使用的证据，但摘要未提及具体检索指标。 |
+| 4 | 2025 | Docopilot: Improving Multimodal Models for Document-Level Understandin | Docopilot：提升多模态模型的文档级理解能力 | `10.1109/cvpr52734.2025.00381` | 11 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该文聚焦文档级多模态理解数据集（Doc-750K）与模型，仅提及RAG的局限，未使用或报告任何多模态检索基准数据集或检索评价指标。 |
+| 5 | 2025 | Tevatron 2.0: Unified Document Retrieval Toolkit across Scale, Languag | Tevatron 2.0：跨规模、跨语言、跨模态的统一文档检索工具包 | `10.1145/3726302.3730135` | 5 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该摘要描述了一个支持评估的多模态检索工具包，但未指明任何具体数据集或检索指标。 |
+| 6 | 2025 | Beyond Semantic Matching: Structure-Aware Fusion for Multi-Modal Retri | 超越语义匹配：面向结构丰富核工业规程多模态检索的结构感知融合 | `10.1109/imcec66174.2025.11331939` | 0 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 该论文构建并使用了面向核工业程序的多模态图像-文本数据集（13,000条）进行检索评估，因此可作为数据集证据，但未报告检索指标（如Recall、mAP、nDCG），只报告生成内容的正确性、完整性和合规性。 |
+| 7 | 2026 | Gaze-based Personal Memory: Leveraging Eye Tracking to Improve Relevan | 基于注视的个人记忆：利用眼动追踪提高文本检索系统的相关性 ETRA013 | `10.1145/3806027` | 0 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：论文研究基于眼动信号提升文本检索，而非多模态检索评测基准，尽管使用了g-Rel-READER数据集并报告MAP。 |
+| 8 | 2023 | Building Multimodal Knowledge Bases With Multimodal Computational Sequ | 使用多模态计算序列和生成对抗网络构建多模态知识库 | `10.1109/tmm.2023.3291503` | 22 | 引用了种子 | 2 | 建议不采纳 | | | 该论文讨论构建多模态知识库与多模态特征表示方法，虽涉及多模态数据但与多模态检索评测基准无关，未提及检索数据集或检索指标，属于主题相邻。 |
+| 9 | 2024 | Self-Supervised Multi-Modal Knowledge Graph Contrastive Hashing for Cr | 面向跨模态搜索的自监督多模态知识图谱对比哈希 | `10.1609/aaai.v38i12.29280` | 22 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：摘要仅泛泛提及跨模态基准数据集，未列出具体数据集名称或检索指标。 |
+| 10 | 2024 | Semantic deep learning and adaptive clustering for handling multimodal | 用于处理多模态多媒体信息检索的语义深度学习和自适应聚类 | `10.1007/s11042-024-19312-7` | 13 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
+| 11 | 2025 | Dynamic Visual Semantic Sub-Embeddings and Fast Re-Ranking for Image-T | 面向图像-文本检索的动态视觉语义子嵌入与快速重排序 | `10.1109/tmm.2025.3535373` | 12 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 摘要明确列出了用于图像-文本检索评测的三个基准数据集（MSCOCO、Flickr30K、CUB Captions），可作为子问题1（使用哪些数据集）的证据，但未提及任何具体检索指标（如Recall@K、mAP），故不支撑子问题2。 |
+| 12 | 2025 | M3DocVQA: Multi-Modal Multi-Page Multi-Document Understanding | M3DocVQA：多模态多页面多文档理解 | `10.1109/iccvw69036.2025.00649` | 10 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 该文提出了用于多模态文档理解/检索评估的新基准数据集 M3DocVQA（并用到 MMLongBench-Doc、MP-DocVQA），可作为「使用哪些数据集」的证据，但摘要未提及任何检索指标（如 Recall@k、nDCG），故不支持子问题2。 |
+| 13 | 2023 | Knowledge-integrated Multi-modal Movie Turning Point Identification | 知识融合的多模态电影转折点识别 | `10.1145/3638557` | 9 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：该文研究多模态电影转折点识别/场景角色识别，未涉及多模态检索任务，也未报告任何检索数据集或检索指标。 |
+| 14 | 2023 | Multiple Pseudo-Siamese Network with Supervised Contrast Learning for  | 面向医学多模态检索的监督对比学习多重伪孪生网络 | `10.1145/3637441` | 8 | 引用了种子 | 2 | 建议采纳(两个子问题) | | | 摘要明确指出使用四个基准数据集（ADNI1、ADNI2、ADNI3、OASIS3）并报告mAP指标，直接回答了所用数据集与检索度量两个子问题。 |
+| 15 | 2025 | SGG-MVAR: Cross-Modal Retrieval With Scene Graph Generation and Multiv | SGG-MVAR：结合场景图生成与多视图属性关系引导的跨模态检索 | `10.1109/tcss.2024.3524297` | 6 | 引用了种子 | 2 | 建议采纳(两个子问题) | | | 摘要明确提到使用RichDataset以及Flickr30k和MS-COCO等数据集，并报告了跨模态检索的recall指标，因此可同时回答数据集和检索指标两个子问题。 |
+| 16 | 2025 | Multimodal multimedia information retrieval through the integration of | 集成模糊聚类、基于OWA的融合与孪生神经网络的多模态多媒体信息检索 | `10.1016/j.fss.2025.109419` | 6 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
+| 17 | 2025 | Construction of a multimodal knowledge graph for LNG carrier port stat | 基于改进视觉提示微调的LNG运输船港口国监督检查多模态知识图谱构建 | `10.1016/j.oceaneng.2025.121963` | 4 | 引用了种子 | 2 | 建议不采纳 | | | 该文聚焦LNG运输船港口国监督检验的多模态知识图谱构建（图像分类与实体识别），未涉及任何多模态检索基准数据集或检索指标，属于主题相邻。 |
+| 18 | 2025 | VisualRAG: Knowledge-Guided Retrieval Augmentation for Image-Text Matc | VisualRAG：面向图像-文本匹配的知识引导检索增强 | `10.1109/tcsvt.2025.3597097` | 3 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 摘要明确使用MSCOCO和Flickr30K数据集进行图像-文本检索实验，可作为数据集证据，但未报告具体检索指标（如Recall@K、mAP），故不支持指标子问题。 |
+| 19 | 2025 | MuralAgent: Enhancing Ancient Mural Outpainting with RAG-Based Texts a | MuralAgent：利用基于RAG的文本与多模态集成增强古代壁画外绘 | `10.1145/3743679` | 3 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：论文涉及RAG与多模态，但未使用多模态检索评测基准或报告检索指标，不能回答数据集或检索指标子问题。 |
+| 20 | 2025 | R 2 LLMs: Retrieval and Ranking with LLMs | R 2 LLMs：基于大语言模型的检索与排序 | `10.1145/3726302.3731689` | 3 | 引用了种子 | 2 | 建议不采纳 | | | 这是一篇关于LLM检索器与排序器的教程综述，仅泛泛提及多模态应用，摘要中未列出任何具体数据集或检索评价指标，属于主题相邻而非直接证据。 |
+| 21 | 2025 | CoFi-VisRAG: Coarse-to-Fine Visual Retrieval-Augmented Generation for  | CoFi-VisRAG：面向多模态文档的由粗到细视觉检索增强生成 | `10.1007/978-981-95-4088-4_5` | 0 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
+| 22 | 2025 | Improving Multimodal Speech-To-Slide Alignment for Academic Lectures w | 利用视觉大语言模型改进学术讲座中的多模态语音-幻灯片对齐 | `10.1109/asru65441.2025.11434615` | 0 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：论文关注讲座语音与幻灯片对齐，虽使用MaViLS等数据集和F1指标，但并非针对多模态检索的评估基准或检索指标。 |
+| 23 | 2026 | Multigranularity Information Fusion for Multimodal Retrieval in Prefab | 面向装配式建筑多模态检索的多粒度信息融合 | `10.1109/tii.2026.3692747` | 0 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 摘要提到构建PCKB并用于多模态检索实验，可作为所用数据集的证据；但未报告具体检索评价指标。 |
+| 24 | 2026 | MURE: Hierarchical Multi-Resolution Encoding via Vision-Language Model | MURE：基于视觉语言模型的层次化多分辨率编码用于视觉文档检索 | `10.1145/3805622.3810864` | 0 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：讨论视觉文档检索基准，但未提及具体数据集名称或检索指标。 |
+| 25 | 2026 | CMDR: Contextual Multimodal Document Retrieval | CMDR：上下文感知的多模态文档检索 | `10.1007/978-3-032-37035-8_5` | 0 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
 
 ## 摘要（判定用）
 

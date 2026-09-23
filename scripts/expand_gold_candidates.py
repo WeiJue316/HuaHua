@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json as _json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +61,9 @@ from research_agent.router.registry import build_openalex_client  # noqa: E402
 
 DEFAULT_DATASET = ROOT / "evaluation" / "datasets" / "pilot_questions.v1.jsonl"
 DEFAULT_OUTPUT_DIR = ROOT / "evaluation" / "review"
+
+# 模型常把 JSON 包在说明文字里，解析前先取出对象
+_JSON_OBJECT = re.compile(r"\{.*\}", re.S)
 
 
 def paper_key(paper: PaperCandidate) -> str:
@@ -195,6 +200,7 @@ def render_worksheet(
     years: tuple[int, int] | None,
     translations: dict[int, str] | None = None,
     header_translations: dict[int, str] | None = None,
+    prescreen: dict[int, tuple[str, str]] | None = None,
 ) -> str:
     """把候选渲染成人工复核表。
 
@@ -204,6 +210,7 @@ def render_worksheet(
 
     translations = translations or {}
     header_translations = header_translations or {}
+    prescreen = prescreen or {}
     lines = [
         f"# 金标候选：{question.question_id}",
         "",
@@ -233,6 +240,10 @@ def render_worksheet(
             "一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。",
             "按子问题分别判定，因为证据是按子问题分配的。",
             "",
+            "**「初审建议」是模型预判，只是给你省时间，不是结论。**",
+            "最终「判定」必须由你确认——金标是评测系统的尺子，",
+            "由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。",
+            "",
             "逐条检查：",
             "",
             "1. 论文是否真正回答某个子问题（不是主题相邻）",
@@ -242,8 +253,9 @@ def render_worksheet(
             "",
             "## 候选清单",
             "",
-            "| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |",
-            "|---:|---:|---|---|---|---:|---|---:|---|---:|",
+            "| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 "
+            "| 初审建议 | 判定 | 子问题 | 备注 |",
+            "|---:|---:|---|---|---|---:|---|---:|---|---:|---|",
         ]
     )
     for index, item in enumerate(candidates, start=1):
@@ -251,10 +263,11 @@ def render_worksheet(
         title = " ".join((paper.title or "").replace("|", "\\|").split())
         cited = paper.raw.get("cited_by_count") or 0
         zh = translations.get(index, "")
+        draft, draft_reason = prescreen.get(index, ("", ""))
         lines.append(
             f"| {index} | {paper.year or '?'} | {title[:70]} | {zh} "
             f"| `{paper.doi or ''}` | {cited} | {item.relation} "
-            f"| {item.topic_overlap} | | |"
+            f"| {item.topic_overlap} | {draft} | | | {draft_reason} |"
         )
     lines.extend(
         [
@@ -322,7 +335,8 @@ async def run(args: argparse.Namespace) -> int:
     written: list[Path] = []
     async with httpx.AsyncClient(timeout=60.0) as http_client:
         client = build_openalex_client(http_client, cache=cache)
-        gateway = DeepSeekGateway(http_client=http_client) if args.translate else None
+        needs_model = args.translate or args.prescreen
+        gateway = DeepSeekGateway(http_client=http_client) if needs_model else None
         for question in questions:
             years = (
                 tuple(args.years)
@@ -355,12 +369,20 @@ async def run(args: argparse.Namespace) -> int:
                 )
                 for message in header_failures:
                     print(f"    问题翻译失败：{message}", file=sys.stderr)
+            prescreen: dict[int, tuple[str, str]] = {}
+            if args.prescreen:
+                prescreen, prescreen_failures = await prescreen_candidates(
+                    gateway, question=question, candidates=candidates
+                )
+                for message in prescreen_failures:
+                    print(f"    初审失败：{message}", file=sys.stderr)
             content = render_worksheet(
                 question=question,
                 candidates=candidates,
                 years=years,  # type: ignore[arg-type]
                 translations=translations,
                 header_translations=header_translations,
+                prescreen=prescreen,
             )
             out = args.output_dir / f"gold-candidates-{question.question_id}.md"
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -400,14 +422,9 @@ async def translate_texts(
     看起来像"模型没翻"而不是"调用失败了"。
     """
 
-    import json as _json
-    import re as _re
-
     from research_agent.llm.gateway import ModelGatewayError
 
-    # 模型常把 JSON 包在说明文字或 ``` 代码块里，裸 loads 会直接失败。
-    # 和 policy/relevance 的解析保持同一策略：先取出 JSON 对象再解析。
-    json_block = _re.compile(r"\{.*\}", _re.S)
+    json_block = _JSON_OBJECT
 
     result: dict[int, str] = {}
     failures: list[str] = []
@@ -480,6 +497,95 @@ async def translate_texts(
     return result, failures
 
 
+async def prescreen_candidates(
+    gateway: object,
+    *,
+    question: EvaluationQuestion,
+    candidates: list[Candidate],
+) -> tuple[dict[int, tuple[str, str]], list[str]]:
+    """对候选做**初审**，给出建议与理由。
+
+    这不是最终标注。金标是评测系统的尺子，如果由同一个模型判定，
+    "过滤器提升了 precision" 这类结论就变成拿答案对答案（循环论证）。
+    项目自己的评测设计也写明"标注者不得只凭模型输出确认证据"。
+
+    所以这里产出的只是"待人工确认的建议"：把 250 条从零判断，
+    变成 250 条带理由的核对——后者快得多，而且责任仍在标注人。
+    """
+
+    from research_agent.llm.gateway import ModelGatewayError
+
+    subs = "\n".join(
+        f"  {i}. {s}" for i, s in enumerate(question.subquestions, start=1)
+    )
+    system = (
+        "你在为系统性文献综述筛选金标论文。金标的定义是："
+        "**领域专家会把它作为回答某个子问题的证据引用**。"
+        "只依据摘要判断，不要依据标题推断内容；"
+        "读完整段摘要再下结论。只输出 JSON。"
+    )
+    result: dict[int, tuple[str, str]] = {}
+    failures: list[str] = []
+
+    for index, item in enumerate(candidates, start=1):
+        abstract = " ".join((item.paper.abstract or "").split())
+        if not abstract:
+            result[index] = ("无法判断", "源站未提供摘要，需另行获取")
+            continue
+        user = (
+            f"研究问题：{question.question}\n"
+            f"子问题：\n{subs}\n\n"
+            f"候选论文\n标题：{item.paper.title}\n"
+            f"年份：{item.paper.year or '未知'}\n"
+            f"摘要：{abstract}\n\n"
+            "判断这篇论文是否可作为某个子问题的证据。"
+            "support 取值：1 / 2 / both / none。"
+            "若为 none，请在 reason 里说明它是「主题相邻」还是「完全无关」。"
+            '返回格式：{"support":"1|2|both|none","reason":"一句话"}'
+        )
+        suggestion = reason = None
+        last_error = ""
+        for _ in range(2):
+            try:
+                response = await gateway.complete(  # type: ignore[attr-defined]
+                    prompt_hash="gold-prescreen-v1",
+                    system=system,
+                    user=user,
+                    max_output_tokens=3000,
+                    json_output=True,
+                )
+            except ModelGatewayError as exc:
+                last_error = str(exc)
+                continue
+            match = _JSON_OBJECT.search(response.content or "")
+            if match is None:
+                last_error = "返回里没有 JSON"
+                continue
+            try:
+                payload = _json.loads(match.group(0))
+            except _json.JSONDecodeError as exc:
+                last_error = f"JSON 解析失败（{exc}）"
+                continue
+            support = str(payload.get("support", "")).strip()
+            suggestion = {
+                "1": "建议采纳(子问题1)",
+                "2": "建议采纳(子问题2)",
+                "both": "建议采纳(两个子问题)",
+                "none": "建议不采纳",
+            }.get(support)
+            reason = str(payload.get("reason") or "").strip()
+            if suggestion:
+                break
+            last_error = f"support 取值无法识别：{support!r}"
+        if suggestion is None:
+            failures.append(f"第 {index} 条：{last_error}")
+            suggestion, reason = "待人工判断", ""
+        result[index] = (suggestion, reason or "")
+        await asyncio.sleep(0.3)
+
+    return result, failures
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -502,6 +608,11 @@ def main() -> int:
         "--translate",
         action="store_true",
         help="用模型为标题加中文注释（仅供复核，不写入数据集，需 DEEPSEEK_API_KEY）",
+    )
+    parser.add_argument(
+        "--prescreen",
+        action="store_true",
+        help="用模型初审候选并填入建议与理由，供人工确认（需 DEEPSEEK_API_KEY）",
     )
     args = parser.parse_args()
 

@@ -2,7 +2,7 @@
 
 **问题**：What techniques accelerate transformer inference without retraining?
 
-　　→ 哪些技术可以在无需重新训练的情况下加速 Transformer 推理？
+　　→ 哪些技术可以在不重新训练的情况下加速 Transformer 推理？
 
 **子问题**：
 
@@ -10,7 +10,7 @@
 　　→ 使用了哪些推理时优化？
 
 2. What latency and quality trade-offs are reported?
-　　→ 报告了哪些延迟与质量的权衡？
+　　→ 报告了哪些延迟与质量之间的权衡？
 
 
 **现有 gold**：2 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
@@ -19,6 +19,10 @@
 
 一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。
 按子问题分别判定，因为证据是按子问题分配的。
+
+**「初审建议」是模型预判，只是给你省时间，不是结论。**
+最终「判定」必须由你确认——金标是评测系统的尺子，
+由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。
 
 逐条检查：
 
@@ -29,33 +33,33 @@
 
 ## 候选清单
 
-| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
-|---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2023 | Q-Diffusion: Quantizing Diffusion Models | Q-Diffusion：量化扩散模型 | `10.1109/iccv51070.2023.01608` | 135 | 引用了种子 | 3 | | |
-| 2 | 2023 | I-ViT: Integer-only Quantization for Efficient Vision Transformer Infe | I-ViT：面向高效视觉Transformer推理的纯整数量化 | `10.1109/iccv51070.2023.01565` | 126 | 引用了种子 | 3 | | |
-| 3 | 2025 | Edge Intelligence: A Review of Deep Neural Network Inference in Resour | 边缘智能：资源受限环境下深度神经网络推理综述 | `10.3390/electronics14122495` | 80 | 引用了种子 | 3 | | |
-| 4 | 2024 | Fluctuation-Based Adaptive Structured Pruning for Large Language Model | 面向大语言模型的基于波动的自适应结构化剪枝 | `10.1609/aaai.v38i10.28960` | 43 | 引用了种子 | 3 | | |
-| 5 | 2024 | Agile-Quant: Activation-Guided Quantization for Faster Inference of LL | Agile-Quant：激活引导的量化以实现大语言模型在边缘端的快速推理 | `10.1609/aaai.v38i17.29860` | 34 | 引用了种子 | 3 | | |
-| 6 | 2024 | Efficient LLMs Training and Inference: An Introduction | 高效大语言模型训练与推理：导论 | `10.1109/access.2024.3501358` | 27 | 引用了种子 | 3 | | |
-| 7 | 2024 | One-Shot Sensitivity-Aware Mixed Sparsity Pruning for Large Language M | 面向大语言模型的一次性敏感度感知混合稀疏剪枝 | `10.1109/icassp48485.2024.10445737` | 26 | 引用了种子 | 3 | | |
-| 8 | 2024 | 8-bit Transformer Inference and Fine-tuning for Edge Accelerators | 面向边缘加速器的 8 位 Transformer 推理与微调 | `10.1145/3620666.3651368` | 26 | 引用了种子 | 3 | | |
-| 9 | 2025 | AWQ: Activation-aware Weight Quantization for On-Device LLM Compressio | AWQ：面向端侧大语言模型压缩与加速的激活感知权重量化 | `10.1145/3714983.3714987` | 223 | 引用了种子 | 2 | | |
-| 10 | 2025 | Empowering Edge Intelligence: A Comprehensive Survey on On-Device AI M | 赋能边缘智能：端侧 AI 模型综合综述 | `10.1145/3724420` | 189 | 引用了种子 | 2 | | |
-| 11 | 2023 | LLMLingua: Compressing Prompts for Accelerated Inference of Large Lang | LLMLingua：压缩提示以加速大语言模型推理 | `10.18653/v1/2023.emnlp-main.825` | 137 | 引用了种子 | 2 | | |
-| 12 | 2023 | Deep Learning Workload Scheduling in GPU Datacenters: A Survey | GPU数据中心中的深度学习工作负载调度：综述 | `10.1145/3638757` | 122 | 引用了种子 | 2 | | |
-| 13 | 2023 | RepQ-ViT: Scale Reparameterization for Post-Training Quantization of V | RepQ-ViT：面向视觉Transformer训练后量化的尺度重参数化 | `10.1109/iccv51070.2023.01580` | 108 | 引用了种子 | 2 | | |
-| 14 | 2022 | Learned Token Pruning for Transformers | 面向Transformer的可学习词元剪枝 | `10.1145/3534678.3539260` | 107 | 引用了种子 | 2 | | |
-| 15 | 2024 | OWQ: Outlier-Aware Weight Quantization for Efficient Fine-Tuning and I | OWQ：面向大语言模型高效微调与推理的离群值感知权重量化 | `10.1609/aaai.v38i12.29237` | 70 | 引用了种子 | 2 | | |
-| 16 | 2025 | A survey of model compression techniques: past, present, and future | 模型压缩技术综述：过去、现在与未来 | `10.3389/frobt.2025.1518965` | 69 | 引用了种子 | 2 | | |
-| 17 | 2024 | FIGNA: Integer Unit-Based Accelerator Design for FP-INT GEMM Preservin | FIGNA：面向保持数值精度的 FP-INT GEMM 的基于整数单元的加速器设计 | `10.1109/hpca57654.2024.00064` | 40 | 引用了种子 | 2 | | |
-| 18 | 2024 | Exploring Post-training Quantization in LLMs from Comprehensive Study  | 探索大语言模型中的训练后量化：从全面研究到低秩补偿 | `10.1609/aaai.v38i17.29908` | 22 | 引用了种子 | 2 | | |
-| 19 | 2022 | Generative Adversarial Networks | 生成对抗网络 | `10.1017/9781108891530.013` | 2579 | 被种子引用 | 1 | | |
-| 20 | 2024 | AI and Memory Wall | AI 与内存墙 | `10.1109/mm.2024.3373763` | 321 | 引用了种子 | 1 | | |
-| 21 | 2024 | Lightweight Deep Learning for Resource-Constrained Environments: A Sur | 资源受限环境下的轻量级深度学习：综述 | `10.1145/3657282` | 252 | 引用了种子 | 1 | | |
-| 22 | 2023 | A Comprehensive Survey on Model Quantization for Deep Neural Networks  | 图像分类中深度神经网络模型量化的全面综述 | `10.1145/3623402` | 224 | 引用了种子 | 1 | | |
-| 23 | 2024 | LLM-Based Edge Intelligence: A Comprehensive Survey on Architectures,  | 基于大语言模型的边缘智能：架构、应用、安全与可信性全面综述 | `10.1109/ojcoms.2024.3456549` | 184 | 引用了种子 | 1 | | |
-| 24 | 2023 | Tiny Machine Learning: Progress and Futures [Feature] | 微型机器学习：进展与未来 [专题] | `10.1109/mcas.2023.3302182` | 179 | 引用了种子 | 1 | | |
-| 25 | 2025 | A Review on Edge Large Language Models: Design, Execution, and Applica | 边缘大语言模型综述：设计、执行与应用 | `10.1145/3719664` | 150 | 引用了种子 | 1 | | |
+| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
+|---:|---:|---|---|---|---:|---|---:|---|---:|---|
+| 1 | 2023 | Q-Diffusion: Quantizing Diffusion Models | Q-Diffusion：扩散模型的量化 | `10.1109/iccv51070.2023.01608` | 135 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该论文研究扩散模型的训练后量化以加速生成，未涉及 Transformer 推理加速，不能直接回答子问题。 |
+| 2 | 2023 | I-ViT: Integer-only Quantization for Efficient Vision Transformer Infe | I-ViT：面向高效视觉Transformer推理的纯整数量化 | `10.1109/iccv51070.2023.01565` | 126 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | 该论文提出 I-ViT 整数量化方案（推理时优化，无需重训练），并报告了 INT8 量化与全精度基线相当的精度以及 3.72~4.11 倍的推理加速，同时覆盖推理时优化技术与延迟/质量权衡两个子问题。 |
+| 3 | 2025 | Edge Intelligence: A Review of Deep Neural Network Inference in Resour | 边缘智能：资源受限环境下深度神经网络推理综述 | `10.3390/electronics14122495` | 80 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | This review surveys inference acceleration techniques (model compression, compiler optimizations, hardware-software co-design) and explicitly analyzes latency/energy/accuracy trade-offs, providing evidence for both which inference-time optimizations exist and what trade-offs are reported, though it targets edge DNNs broadly rather than transformers specifically. |
+| 4 | 2024 | Fluctuation-Based Adaptive Structured Pruning for Large Language Model | 面向大语言模型的基于波动的自适应结构化剪枝 | `10.1609/aaai.v38i10.28960` | 43 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 该论文提出免重训练（retraining-free）的结构化剪枝框架FLAP，通过压缩模型加速推理，可作为子问题1中推理优化技术的证据，但摘要未给出具体延迟-质量权衡数值。 |
+| 5 | 2024 | Agile-Quant: Activation-Guided Quantization for Faster Inference of LL | Agile-Quant：面向边缘端大语言模型加速推理的激活引导量化 | `10.1609/aaai.v38i17.29860` | 34 | 引用了种子 | 3 | 建议采纳(两个子问题) | | | 该摘要提出激活引导量化、token剪枝及基于SIMD的4-bit矩阵乘法等推理时优化，并报告了最高2.55倍端侧加速且保持与权重仅量化相当的任务性能，因此可为两个子问题提供证据。 |
+| 6 | 2024 | Efficient LLMs Training and Inference: An Introduction | 高效大语言模型的训练与推理：导论 | `10.1109/access.2024.3501358` | 27 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 摘要表明该综述总结了推理阶段的优化技术，可作为子问题1的证据，但未提及延迟与质量权衡，不能作为子问题2的证据。 |
+| 7 | 2024 | One-Shot Sensitivity-Aware Mixed Sparsity Pruning for Large Language M | 面向大语言模型的一次性敏感度感知混合稀疏剪枝 | `10.1109/icassp48485.2024.10445737` | 26 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 该摘要提出无需重训练的一次性混合稀疏剪枝（兼容量化）作为加速LLM推理的优化技术，但未报告具体的延迟与质量权衡指标。 |
+| 8 | 2024 | 8-bit Transformer Inference and Fine-tuning for Edge Accelerators | 面向边缘加速器的8位Transformer推理与微调 | `10.1145/3620666.3651368` | 26 | 引用了种子 | 3 | 建议采纳(子问题1) | | | 摘要讨论8-bit量化作为减少Transformer推理计算和内存的优化技术，属于推理时优化，但未报告延迟与质量权衡。 |
+| 9 | 2025 | AWQ: Activation-aware Weight Quantization for On-Device LLM Compressio | AWQ：面向端侧大语言模型压缩与加速的激活感知权重量化 | `10.1145/3714983.3714987` | 223 | 引用了种子 | 2 | 建议采纳(两个子问题) | | | AWQ/TinyChat 摘要报告了无需重训练的量化与推理优化技术（on-the-fly dequantization、SIMD-aware weight packing、kernel fusion），并给出 3-4x 加速与保持性能的延迟/质量权衡，故同时支持两个子问题。 |
+| 10 | 2025 | Empowering Edge Intelligence: A Comprehensive Survey on On-Device AI M | 赋能边缘智能：端侧AI模型综合综述 | `10.1145/3724420` | 189 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：该综述关注边缘端AI模型部署与通用优化（模型压缩、硬件加速），摘要未涉及Transformer推理、免重训练技术或延迟-质量权衡，不能直接回答任一子问题。 |
+| 11 | 2023 | LLMLingua: Compressing Prompts for Accelerated Inference of Large Lang | LLMLingua：压缩提示以实现大语言模型的加速推理 | `10.18653/v1/2023.emnlp-main.825` | 137 | 引用了种子 | 2 | 建议采纳(两个子问题) | | | LLMLingua is an inference-time prompt compression technique that accelerates LLM inference without retraining and reports compression/performance trade-offs (up to 20x compression with little performance loss). |
+| 12 | 2023 | Deep Learning Workload Scheduling in GPU Datacenters: A Survey | GPU数据中心中的深度学习工作负载调度：综述 | `10.1145/3638757` | 122 | 引用了种子 | 2 | 建议不采纳 | | | 该文关注 GPU 数据中心的深度学习训练/推理工作负载调度，而非免重训练的 Transformer 推理优化技术或时延-质量权衡，属于主题相邻。 |
+| 13 | 2023 | RepQ-ViT: Scale Reparameterization for Post-Training Quantization of V | RepQ-ViT：面向视觉Transformer训练后量化的尺度重参数化 | `10.1109/iccv51070.2023.01580` | 108 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 论文提出一种无需重训练的训练后量化（PTQ）推理优化技术，直接回应子问题1中使用的推理时优化方法，但摘要未报告具体延迟数据或延迟与质量的权衡，故不支持子问题2。 |
+| 14 | 2022 | Learned Token Pruning for Transformers | 面向Transformer的可学习词元剪枝 | `10.1145/3534678.3539260` | 107 | 引用了种子 | 2 | 建议采纳(两个子问题) | | | 该论文提出基于学习阈值的令牌剪枝作为推理时优化，并报告了FLOPs减少、吞吐量提升与精度下降之间的权衡，可直接回答两个子问题。 |
+| 15 | 2024 | OWQ: Outlier-Aware Weight Quantization for Efficient Fine-Tuning and I | OWQ：面向大语言模型高效微调与推理的离群值感知权重量化 | `10.1609/aaai.v38i12.29237` | 70 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 该论文提出用于LLM高效推理的离群值感知权重量化，属于推理时优化，但摘要未明确报告延迟指标，因此仅支持子问题1。 |
+| 16 | 2025 | A survey of model compression techniques: past, present, and future | 模型压缩技术综述：过去、现在与未来 | `10.3389/frobt.2025.1518965` | 69 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 该综述系统梳理了量化、剪枝、低秩分解等无需重新训练即可在推理阶段应用的压缩优化技术，可作为子问题1（推理期优化手段）的证据，但摘要未报告具体的延迟与质量权衡数据，故不支撑子问题2。 |
+| 17 | 2024 | FIGNA: Integer Unit-Based Accelerator Design for FP-INT GEMM Preservin | FIGNA：面向FP-INT GEMM的整数单元加速器设计，保持数值精度 | `10.1109/hpca57654.2024.00064` | 40 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 该论文提出面向FP-INT GEMM的INT单元加速器，属于无需重训练的LLM推理期硬件优化；但仅报告面积效率和能效，未报告延迟-质量权衡。 |
+| 18 | 2024 | Exploring Post-training Quantization in LLMs from Comprehensive Study  | 探索大语言模型中的训练后量化：从综合研究到低秩补偿 | `10.1609/aaai.v38i17.29908` | 22 | 引用了种子 | 2 | 建议采纳(子问题1) | | | 该论文研究训练后量化（PTQ）作为推理时优化技术，符合子问题1；但摘要未报告延迟相关数据，故不直接支持子问题2。 |
+| 19 | 2022 | Generative Adversarial Networks | 生成对抗网络 | `10.1017/9781108891530.013` | 2579 | 被种子引用 | 1 | 建议不采纳 | | | 主题相邻：该书泛泛涵盖Transformer等深度学习主题，但未涉及Transformer推理加速、推理时优化或不重训练技术。 |
+| 20 | 2024 | AI and Memory Wall | 人工智能与内存墙 | `10.1109/mm.2024.3373763` | 321 | 引用了种子 | 1 | 建议不采纳 | | | 主题相邻：讨论LLM服务的内存墙瓶颈并呼吁架构/部署重设计，但未提出具体免重训练推理加速技术或报告延迟-质量权衡。 |
+| 21 | 2024 | Lightweight Deep Learning for Resource-Constrained Environments: A Sur | 资源受限环境下的轻量级深度学习：综述 | `10.1145/3657282` | 252 | 引用了种子 | 1 | 建议不采纳 | | | 主题相邻：该综述讨论轻量模型、压缩与硬件加速，但未聚焦Transformer推理的无重训练加速，也未报告延迟与质量权衡。 |
+| 22 | 2023 | A Comprehensive Survey on Model Quantization for Deep Neural Networks  | 面向图像分类的深度神经网络模型量化综合综述 | `10.1145/3623402` | 224 | 引用了种子 | 1 | 建议不采纳 | | | 主题相邻但无关：该文综述的是面向图像分类DNN的量化（含量化训练），未涉及Transformer推理加速或不重训练场景，也未报告推理延迟与质量权衡。 |
+| 23 | 2024 | LLM-Based Edge Intelligence: A Comprehensive Survey on Architectures,  | 基于大语言模型的边缘智能：架构、应用、安全与可信性综合综述 | `10.1109/ojcoms.2024.3456549` | 184 | 引用了种子 | 1 | 建议采纳(子问题1) | | | 该综述对面向资源受限边缘环境的LLM优化技术进行了比较分析，可覆盖推理时优化技术，但摘要未提及延迟与质量权衡。 |
+| 24 | 2023 | Tiny Machine Learning: Progress and Futures [Feature] | 微型机器学习：进展与未来 [专题] | `10.1109/mcas.2023.3302182` | 179 | 引用了种子 | 1 | 建议不采纳 | | | 主题相邻：该综述聚焦MCU上的TinyML与系统-算法协同设计，涉及边缘端高效推理与端侧训练，但未针对transformer推理加速（无重训练）的具体推理时优化或延迟-质量权衡，故不能作为任一子问题的证据。 |
+| 25 | 2025 | A Review on Edge Large Language Models: Design, Execution, and Applica | 边缘大语言模型综述：设计、执行与应用 | `10.1145/3719664` | 150 | 引用了种子 | 1 | 建议采纳(子问题1) | | | 该综述涵盖端侧LLM的运行时推理优化，可直接作为推理时优化技术的证据，但摘要未提及延迟与质量权衡。 |
 
 ## 摘要（判定用）
 
