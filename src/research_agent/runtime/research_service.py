@@ -33,6 +33,7 @@ class ResearchRunResult:
     file_count: int
     document_count: int
     source_counts: dict[str, int]
+    source_errors: dict[str, str]
 
 
 def _md_cell(value: str | None) -> str:
@@ -395,6 +396,7 @@ async def run_federated_research(
         file_count=len(file_rows),
         document_count=document_count,
         source_counts=federated.source_counts,
+        source_errors=federated.errors,
     )
 
 
@@ -405,4 +407,6 @@ def _source_endpoint(source: str) -> str:
         return "https://api.openalex.org/works"
     if source == "crossref":
         return "https://api.crossref.org/works"
+    if source == "semantic_scholar":
+        return "https://api.semanticscholar.org/graph/v1"
     return source

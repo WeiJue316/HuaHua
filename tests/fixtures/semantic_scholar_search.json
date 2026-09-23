@@ -1,0 +1,40 @@
+{
+  "total": 1,
+  "offset": 0,
+  "next": 1,
+  "data": [
+    {
+      "paperId": "abc123paper",
+      "corpusId": 987654,
+      "title": "Traceable Retrieval for Scientific Agents",
+      "abstract": "We study evidence chains for scientific literature agents.",
+      "authors": [
+        {
+          "authorId": "author-1",
+          "name": "Alice Example"
+        },
+        {
+          "authorId": "author-2",
+          "name": "Bob Example"
+        }
+      ],
+      "year": 2024,
+      "venue": "Example Conference",
+      "publicationDate": "2024-07-26",
+      "externalIds": {
+        "DOI": "10.1000/example",
+        "ArXiv": "2407.18940"
+      },
+      "url": "https://www.semanticscholar.org/paper/abc123paper",
+      "openAccessPdf": {
+        "url": "https://example.org/paper.pdf",
+        "status": "GOLD"
+      },
+      "fieldsOfStudy": [
+        "Computer Science"
+      ],
+      "citationCount": 12,
+      "referenceCount": 30
+    }
+  ]
+}

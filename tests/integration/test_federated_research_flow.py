@@ -64,6 +64,7 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
         )
 
     assert result.source_counts == {"arxiv": 2, "openalex": 1}
+    assert result.source_errors == {}
     assert result.paper_count == 2
     assert result.evidence_count == 5
     assert result.claim_count == 5

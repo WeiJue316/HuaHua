@@ -95,7 +95,11 @@
 │   │   │   ├── client.py
 │   │   │   ├── parser.py
 │   │   │   └── server.py
-│   │   └── crossref/            # Crossref 适配与 MCP server
+│   │   ├── crossref/            # Crossref 适配与 MCP server
+│   │   │   ├── client.py
+│   │   │   ├── parser.py
+│   │   │   └── server.py
+│   │   └── semantic_scholar/    # Semantic Scholar 适配与 MCP server
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py

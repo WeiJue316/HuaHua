@@ -11,6 +11,7 @@ from . import __version__
 from .mcp_servers.arxiv.client import ArxivClient
 from .mcp_servers.crossref.client import CrossrefClient
 from .mcp_servers.openalex.client import OpenAlexClient
+from .mcp_servers.semantic_scholar.client import SemanticScholarClient
 from .router.federation import SearchClient
 from .runtime.research_service import ResearchRunResult, run_federated_research
 
@@ -63,7 +64,7 @@ def research(
         str,
         typer.Option(
             "--sources",
-            help="Comma-separated source IDs: arxiv, openalex, crossref.",
+            help="Comma-separated source IDs: arxiv, openalex, crossref, semantic_scholar.",
         ),
     ] = "arxiv,openalex",
     download_pdf: Annotated[
@@ -77,7 +78,7 @@ def research(
     """Run the federated research flow and write a traceable report."""
 
     source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
-    supported = {"arxiv", "openalex", "crossref"}
+    supported = {"arxiv", "openalex", "crossref", "semantic_scholar"}
     unsupported = sorted(set(source_ids) - supported)
     if not source_ids:
         raise typer.BadParameter("at least one source is required")
@@ -93,6 +94,10 @@ def research(
                 clients["openalex"] = OpenAlexClient(http_client=http_client)
             if "crossref" in source_ids:
                 clients["crossref"] = CrossrefClient(http_client=http_client)
+            if "semantic_scholar" in source_ids:
+                clients["semantic_scholar"] = SemanticScholarClient(
+                    http_client=http_client
+                )
             return await run_federated_research(
                 question=question,
                 db_path=db,
@@ -108,6 +113,12 @@ def research(
     )
     typer.echo(f"run_id: {result.run_id}")
     typer.echo(f"sources: {summary}")
+    if result.source_errors:
+        errors = "; ".join(
+            f"{source}: {message}"
+            for source, message in sorted(result.source_errors.items())
+        )
+        typer.echo(f"source_errors: {errors}")
     typer.echo(f"papers: {result.paper_count}")
     typer.echo(f"evidence: {result.evidence_count}")
     typer.echo(f"claims: {result.claim_count}")
