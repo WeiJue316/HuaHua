@@ -41,3 +41,26 @@ def test_reconstruct_abstract_orders_words() -> None:
 def test_normalize_openalex_id_accepts_urls() -> None:
     assert normalize_openalex_id("https://openalex.org/W123456789") == "W123456789"
     assert normalize_openalex_id("W123456789") == "W123456789"
+
+
+def test_parse_work_preserves_the_citation_count() -> None:
+    """OpenAlex returns cited_by_count; it used to be dropped.
+
+    Citation counts feed the citation-graph candidate ranking and appear in
+    the thesis, so they must survive parsing.
+    """
+
+    from research_agent.mcp_servers.openalex.parser import parse_work
+
+    paper = parse_work(
+        {
+            "id": "https://openalex.org/W123",
+            "doi": "https://doi.org/10.1/example",
+            "display_name": "A paper",
+            "publication_year": 2024,
+            "cited_by_count": 42,
+            "primary_location": {},
+        }
+    )
+
+    assert paper.raw["cited_by_count"] == 42

@@ -137,6 +137,8 @@ def parse_work(work: dict[str, Any]) -> PaperCandidate:
             "doi": work.get("doi"),
             "display_name": title,
             "publication_year": work.get("publication_year"),
+            # OpenAlex 返回被引数但此前被丢弃；引用图扩展和论文报告都需要它
+            "cited_by_count": work.get("cited_by_count"),
             "publication_date": work.get("publication_date"),
             "type": work.get("type"),
             "language": work.get("language"),
