@@ -51,7 +51,7 @@ GitHub Actions 配置位于 `.github/workflows/ci.yml`。工作流在 Windows、
 - `uv run python scripts/check_docs.py`
 - `uv run research-agent --help`
 
-当前只在本地 Windows 环境完成验证；CI 首次运行后才能确认三个平台的真实兼容性。
+CI 已通过 Windows、Linux 和 macOS 三个平台的首轮验证。
 ## 文档入口
 
 - [工作规范](AGENTS.md)
