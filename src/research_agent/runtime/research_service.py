@@ -403,4 +403,6 @@ def _source_endpoint(source: str) -> str:
         return "https://export.arxiv.org/api/query"
     if source == "openalex":
         return "https://api.openalex.org/works"
+    if source == "crossref":
+        return "https://api.crossref.org/works"
     return source

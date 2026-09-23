@@ -91,7 +91,11 @@
 │   │   │   ├── client.py
 │   │   │   ├── parser.py
 │   │   │   └── server.py
-│   │   └── openalex/            # OpenAlex 适配与 MCP server
+│   │   ├── openalex/            # OpenAlex 适配与 MCP server
+│   │   │   ├── client.py
+│   │   │   ├── parser.py
+│   │   │   └── server.py
+│   │   └── crossref/            # Crossref 适配与 MCP server
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py

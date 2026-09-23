@@ -1,0 +1,49 @@
+{
+  "status": "ok",
+  "message-type": "work-list",
+  "message": {
+    "items": [
+      {
+        "DOI": "10.1145/1234567.1234568",
+        "title": [
+          "Traceable Retrieval for Scientific Agents"
+        ],
+        "abstract": "<jats:p>We study evidence chains for scientific literature agents.</jats:p>",
+        "author": [
+          {
+            "given": "Alice",
+            "family": "Example",
+            "ORCID": "https://orcid.org/0000-0000-0000-0001"
+          },
+          {
+            "given": "Bob",
+            "family": "Example"
+          }
+        ],
+        "published": {
+          "date-parts": [
+            [
+              2024,
+              7,
+              26
+            ]
+          ]
+        },
+        "container-title": [
+          "Proceedings of the Example Conference"
+        ],
+        "type": "proceedings-article",
+        "publisher": "Example Publisher",
+        "URL": "https://doi.org/10.1145/1234567.1234568",
+        "link": [
+          {
+            "URL": "https://example.org/paper.pdf",
+            "content-type": "application/pdf",
+            "content-version": "vor"
+          }
+        ]
+      }
+    ],
+    "next-cursor": "next-page"
+  }
+}

@@ -22,6 +22,7 @@ dependencies = [
 research-agent = "research_agent.cli:main"
 arxiv-mcp = "research_agent.mcp_servers.arxiv.server:main"
 openalex-mcp = "research_agent.mcp_servers.openalex.server:main"
+crossref-mcp = "research_agent.mcp_servers.crossref.server:main"
 
 [dependency-groups]
 dev = [

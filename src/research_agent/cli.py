@@ -9,6 +9,7 @@ import typer
 
 from . import __version__
 from .mcp_servers.arxiv.client import ArxivClient
+from .mcp_servers.crossref.client import CrossrefClient
 from .mcp_servers.openalex.client import OpenAlexClient
 from .router.federation import SearchClient
 from .runtime.research_service import ResearchRunResult, run_federated_research
@@ -62,7 +63,7 @@ def research(
         str,
         typer.Option(
             "--sources",
-            help="Comma-separated source IDs: arxiv, openalex.",
+            help="Comma-separated source IDs: arxiv, openalex, crossref.",
         ),
     ] = "arxiv,openalex",
     download_pdf: Annotated[
@@ -76,7 +77,7 @@ def research(
     """Run the federated research flow and write a traceable report."""
 
     source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
-    supported = {"arxiv", "openalex"}
+    supported = {"arxiv", "openalex", "crossref"}
     unsupported = sorted(set(source_ids) - supported)
     if not source_ids:
         raise typer.BadParameter("at least one source is required")
@@ -90,6 +91,8 @@ def research(
                 clients["arxiv"] = ArxivClient(http_client=http_client)
             if "openalex" in source_ids:
                 clients["openalex"] = OpenAlexClient(http_client=http_client)
+            if "crossref" in source_ids:
+                clients["crossref"] = CrossrefClient(http_client=http_client)
             return await run_federated_research(
                 question=question,
                 db_path=db,
