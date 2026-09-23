@@ -189,6 +189,99 @@ async def test_build_seed_questions_drops_papers_outside_the_year_range() -> Non
     assert records[0]["gold_papers"] == ["doi:10.1/inside"]
 
 
+def test_paper_to_annotation_rejects_a_container_title_as_quote() -> None:
+    venue = (
+        "Proceedings of the 61st Annual Meeting of the Association for "
+        "Computational Linguistics (Volume 1: Long Papers)"
+    )
+    paper = _paper(
+        title="A reasoning paper",
+        abstract=venue + ".",
+    ).model_copy(update={"venue": venue})
+
+    assert paper_to_annotation(paper, supports_subquestion=1) is None
+
+
+def test_paper_to_annotation_rejects_a_title_echoed_as_quote() -> None:
+    title = (
+        "Retrieval augmented generation for scientific literature agents "
+        "with traceable evidence chains"
+    )
+    paper = _paper(title=title, abstract=title + ".")
+
+    assert paper_to_annotation(paper, supports_subquestion=1) is None
+
+
+@pytest.mark.asyncio
+async def test_build_seed_questions_can_assign_a_dataset_subquestion() -> None:
+    metrics_paper = _paper(
+        record_id="W1",
+        doi="10.1/metrics",
+        title="Evaluation metrics for retrieval augmented generation",
+        abstract=(
+            "We report faithfulness and answer relevance metrics for retrieval "
+            "augmented generation systems across several benchmarks."
+        ),
+    )
+    dataset_paper = _paper(
+        record_id="W2",
+        doi="10.1/datasets",
+        title="Benchmark datasets for retrieval augmented generation",
+        abstract=(
+            "We compare benchmark datasets and baseline systems used for "
+            "retrieval augmented generation evaluation in our study."
+        ),
+    )
+    client = FakeOpenAlexClient([metrics_paper, dataset_paper])
+
+    records = await build_seed_questions(
+        client,  # type: ignore[arg-type]
+        seeds=[PILOT_SEEDS[0]],
+    )
+
+    assigned = {
+        item["paper_key"]: item["supports_subquestion"]
+        for item in records[0]["gold_evidence"]
+    }
+    assert assigned.get("doi:10.1/datasets") == 2
+
+
+def test_content_terms_treat_hyphens_as_word_boundaries() -> None:
+    from research_agent.evaluator.pilot_seed import _content_terms
+
+    assert _content_terms("retrieval-augmented generation") == {
+        "retrieval",
+        "augmented",
+        "generation",
+    }
+
+
+def test_usable_evidence_sentence_rejects_container_titles() -> None:
+    for container in (
+        "Proceedings of the 61st Annual Meeting of the Association for "
+        "Computational Linguistics (Volume 1: Long Papers).",
+        "Findings of the Association for Computational Linguistics: EMNLP 2024.",
+        "IEEE Transactions on Pattern Analysis and Machine Intelligence.",
+        "Advances in Neural Information Processing Systems 36.",
+        "Journal of Machine Learning Research.",
+    ):
+        assert usable_evidence_sentence("Authors, And More Authors. " + container) is None
+
+
+def test_content_terms_fold_simple_plurals() -> None:
+    from research_agent.evaluator.pilot_seed import _content_terms, _tokenize
+
+    # "dataset" is a generic term and is dropped, but the fold must still happen
+    # before filtering so that plural and singular forms compare equal.
+    assert _content_terms("datasets and baselines") == {"baseline"}
+    assert _tokenize("datasets baselines metrics") == [
+        "dataset",
+        "baseline",
+        "metric",
+    ]
+    assert _tokenize("analysis class") == ["analysis", "class"]
+
+
 def test_paper_to_annotation_returns_none_without_usable_evidence() -> None:
     paper = _paper(abstract="Shahul Es, Jithin James, Luis Espinosa Anke.")
 

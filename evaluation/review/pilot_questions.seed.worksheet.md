@@ -2,7 +2,7 @@
 
 - 数据集：`evaluation/datasets/pilot_questions.seed.jsonl`
 - 问题数：10
-- 数据集哈希：`d45c6b473c56127c821fcfea984a65a4229a308adbaa77a8b061b930285e9ae6`
+- 数据集哈希：`e7ed21c8567713f7341fafccf64242d030b05b4c4ef1b212ebd1f57a3a9be46b`
 
 复核规则：每道题逐项确认下面的判据，在「决定」处填写 `保留`、`修改` 或 `删除`，
 并在「原因」处写明修改内容或删除理由。复核完成后据此生成冻结版数据集，
@@ -35,8 +35,6 @@
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
-| 2 | `doi:10.1609/aaai.v38i16.29728` | 2024 | 1 | Retrieval-Augmented Generation (RAG) is a promising approach for mitigating the hallucination of large language models (LLMs). |
-| 3 | `doi:10.18653/v1/2024.findings-acl.372` | 2024 | 1 | While large language models (LLMs) have achieved state-of-the-art performance on a wide range of medical question answering (QA) tasks, they still face challenges with hallucinations and outdated knowledge. |
 
 复核判据：
 
@@ -62,11 +60,13 @@
 1. How is planning represented?
 2. How is long-term state retained?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.1145/3586183.3606763` | 2023 | 1 | We demonstrate through ablation that the components of our agent architecture—observation, planning, and reflection—each contribute critically to the believability of agent behavior. |
+| 2 | `doi:10.1109/mlcad65511.2025.11189204` | 2025 | 2 | ORFS-agent adaptively explores parameter configurations, demonstrating clear improvements over standard Bayesian optimization approaches in terms of resource efficiency and final design metrics. |
+| 3 | `doi:10.1007/s10462-022-10246-w` | 2022 | 2 | This collaboration between AI models and humans should not be limited only to the learning process; if we go further, we can see other terms that arise such as Usable and Useful AI. |
 
 复核判据：
 
@@ -96,9 +96,8 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1038/s41586-023-06291-2` | 2023 | 1 | Attempts to assess the clinical knowledge of models typically rely on automated evaluations based on limited benchmarks. |
-| 2 | `doi:10.18653/v1/2023.acl-long.147` | 2023 | 1 | Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers). |
-| 3 | `doi:10.1038/s41586-025-09422-z` | 2025 | 1 | General reasoning represents a long-standing and formidable challenge in artificial intelligence (AI). |
+| 1 | `doi:10.1038/s41586-023-06291-2` | 2023 | 1 | Here, to address these limitations, we present MultiMedQA, a benchmark combining six existing medical question answering datasets spanning professional medicine, research and consumer queries and a new dataset of medical questions searched online, HealthSearchQA. |
+| 2 | `doi:10.1038/s41586-025-09422-z` | 2025 | 1 | General reasoning represents a long-standing and formidable challenge in artificial intelligence (AI). |
 
 复核判据：
 
@@ -130,7 +129,6 @@
 |---:|---|---:|---:|---|
 | 1 | `doi:10.48550/arxiv.2201.12086` | 2022 | 1 | Vision-Language Pre-training (VLP) has advanced the performance for many vision-language tasks. |
 | 2 | `doi:10.48550/arxiv.2301.12597` | 2023 | 1 | The cost of vision-and-language pre-training has become increasingly prohibitive due to end-to-end training of large-scale models. |
-| 3 | `doi:10.1109/cvpr52688.2022.01631` | 2022 | 1 | With the rise of powerful pre-trained vision-language models like CLIP, it becomes essential to investigate ways to adapt these models to downstream datasets. |
 
 复核判据：
 
@@ -156,12 +154,13 @@
 1. Which datasets are used?
 2. Which retrieval metrics are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1038/s41591-022-01981-2` | 2022 | 1 | The increasing availability of biomedical data from large biobanks, electronic health records, medical imaging, wearable and ambient biosensors, and the lower cost of genome and microbiome sequencing have set the stage for the development of multimodal artificial intelligence solutions that capture the complexity of human health and disease. |
-| 2 | `doi:10.1109/tpami.2023.3275156` | 2023 | 1 | Transformer is a promising neural network learner, and has achieved great success in various machine learning tasks. |
+| 1 | `doi:10.1609/aaai.v38i16.29728` | 2024 | 2 | Retrieval-Augmented Generation (RAG) is a promising approach for mitigating the hallucination of large language models (LLMs). |
+| 2 | `doi:10.48550/arxiv.2312.10997` | 2023 | 2 | Retrieval-Augmented Generation (RAG) has emerged as a promising solution by incorporating knowledge from external databases. |
+| 3 | `doi:10.1109/slt54892.2023.10023141` | 2023 | 1 | FLEURS is an n-way parallel speech dataset in 102 languages built on top of the machine translation FLoRes-101 benchmark, with approximately 12 hours of speech supervision per language. |
 
 复核判据：
 
@@ -187,12 +186,13 @@
 1. What are the reported trade-offs?
 2. Which evaluation setups are used?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.18653/v1/2023.acl-long.99` | 2023 | 1 | While dense retrieval has been shown to be effective and efficient across tasks and languages, it remains difficult to create effective fully zero-shot dense retrieval systems when no relevance labels are available. |
-| 2 | `doi:10.48550/arxiv.2308.07107` | 2023 | 1 | As a primary means of information acquisition, information retrieval (IR) systems, such as search engines, have integrated themselves into our daily lives. |
+| 2 | `doi:10.1109/tpami.2022.3218591` | 2022 | 2 | Our survey considers a wide variety of recent methods, whereby we identify milestone work, reveal connections among various methods and present the commonly used benchmarks, evaluation results, common challenges, and propose promising future directions. |
+| 3 | `doi:10.1093/bioinformatics/btad651` | 2023 | 2 | In addition, MedCPT also generates better biomedical article and sentence representations for semantic evaluations. |
 
 复核判据：
 
@@ -218,11 +218,12 @@
 1. What are the main query expansion families?
 2. What evidence supports their effectiveness?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Relevance threshold relaxed: no strong match was found. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.48550/arxiv.2312.10997` | 2023 | 1 | Large Language Models (LLMs) showcase impressive capabilities but encounter challenges like hallucination, outdated knowledge, and non-transparent, untraceable reasoning processes. |
+| 1 | `doi:10.18653/v1/2023.emnlp-main.585` | 2023 | 1 | This paper introduces a simple yet effective query expansion approach, denoted as query2doc, to improve both sparse and dense retrieval systems. |
+| 2 | `doi:10.1093/gpbjnl/qzaf072` | 2025 | 1 | The Genome Sequence Archive family (GSA family) provides a comprehensive suite of database resources for archiving, retrieving, and sharing multi-omics data for the global academic and industrial communities. |
 
 复核判据：
 
@@ -252,7 +253,7 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | With the prevalence of pre-trained language models (PLMs) and the pre-training–fine-tuning paradigm, it has been continuously shown that larger models tend to yield better performance. |
+| 1 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | However, as PLMs scale up, fine-tuning and storing all the parameters is prohibitively costly and eventually becomes practically infeasible. |
 | 2 | `doi:10.48550/arxiv.2203.02155` | 2022 | 1 | In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. |
 | 3 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
 
@@ -280,12 +281,12 @@
 1. Which inference-time optimizations are used?
 2. What latency and quality trade-offs are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 1 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.48550/arxiv.2206.01191` | 2022 | 2 | Our fastest model, EfficientFormer-L1, achieves $79.2\%$ top-1 accuracy on ImageNet-1K with only $1.6$ ms inference latency on iPhone 12 (compiled with CoreML), which runs as fast as MobileNetV2$\times 1.4$ ($1.6$ ms, $74.7\%$ top-1), and our largest model, EfficientFormer-L7, obtains $83.3\%$ accuracy with only $7.0$ ms latency. |
-| 2 | `doi:10.1109/jproc.2022.3226481` | 2022 | 2 | Data transmission to the cloud results in high latency, round-trip delay, security and privacy concerns, and the inability of real-time decisions. |
+| 1 | `doi:10.1201/9781003162810-13` | 2022 | 1 | Achieving efficient, real-time NNs with optimal accuracy requires rethinking the design, training, and deployment of NN models. |
+| 2 | `doi:10.48550/arxiv.2206.01191` | 2022 | 1 | Our fastest model, EfficientFormer-L1, achieves $79.2\%$ top-1 accuracy on ImageNet-1K with only $1.6$ ms inference latency on iPhone 12 (compiled with CoreML), which runs as fast as MobileNetV2$\times 1.4$ ($1.6$ ms, $74.7\%$ top-1), and our largest model, EfficientFormer-L7, obtains $83.3\%$ accuracy with only $7.0$ ms latency. |
 
 复核判据：
 
@@ -311,12 +312,13 @@
 1. Which artifacts and metadata are shared?
 2. What barriers to reproducibility are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1109/access.2023.3262138` | 2023 | 1 | The final goal of all industrial machine learning (ML) projects is to develop ML products and rapidly bring them into production. |
-| 2 | `doi:10.1145/3582302.3582306` | 2023 | 1 | The explorative and iterative nature of developing and operating ML applications leads to a variety of artifacts, such as datasets, features, models, hyperparameters, metrics, software, configurations, and logs. |
+| 1 | `doi:10.1016/j.patter.2023.100804` | 2023 | 2 | We systematically investigate reproducibility issues in ML-based science. |
+| 2 | `doi:10.1109/access.2023.3262138` | 2023 | 1 | The final goal of all industrial machine learning (ML) projects is to develop ML products and rapidly bring them into production. |
+| 3 | `doi:10.1145/3582302.3582306` | 2023 | 1 | The explorative and iterative nature of developing and operating ML applications leads to a variety of artifacts, such as datasets, features, models, hyperparameters, metrics, software, configurations, and logs. |
 
 复核判据：
 

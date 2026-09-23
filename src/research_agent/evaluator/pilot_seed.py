@@ -149,6 +149,20 @@ GENERIC_TERMS = frozenset(
     }
 )
 
+CONTAINER_TITLE_PATTERN = re.compile(
+    r"^(?:"
+    r"proceedings of\b"
+    r"|findings of\b"
+    r"|conference on\b"
+    r"|journal of\b"
+    r"|ieee transactions on\b"
+    r"|acm transactions on\b"
+    r"|advances in neural information processing systems\b"
+    r"|volume \d+\b"
+    r")",
+    re.IGNORECASE,
+)
+
 COMMON_WORDS = frozenset(
     {
         "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has",
@@ -166,10 +180,39 @@ def paper_key(paper: PaperCandidate) -> str:
     return f"openalex:{paper.source_record_id}"
 
 
+def _tokenize(value: str) -> list[str]:
+    """Split text into comparable words.
+
+    Hyphens and underscores separate words so that "retrieval-augmented" in a
+    question matches "retrieval augmented" in an abstract.
+    """
+
+    flattened = value.lower().replace("-", " ").replace("_", " ")
+    return [_singularize(token) for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9]*", flattened)]
+
+
+def _singularize(token: str) -> str:
+    """Fold simple English plurals so "datasets" matches "dataset".
+
+    Only unambiguous endings are folded; words such as "analysis" or "class"
+    are left alone.
+    """
+
+    if len(token) <= 4:
+        return token
+    if token.endswith("ies"):
+        return token[:-3] + "y"
+    if token.endswith(("ss", "us", "is", "as")):
+        return token
+    if token.endswith("s"):
+        return token[:-1]
+    return token
+
+
 def _content_terms(value: str) -> set[str]:
     """Return distinctive question terms, dropping stopwords and generic words."""
 
-    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]*", value.lower())
+    tokens = _tokenize(value)
     return {
         token
         for token in tokens
@@ -177,11 +220,22 @@ def _content_terms(value: str) -> set[str]:
     }
 
 
+def _match_terms(value: str) -> set[str]:
+    """Terms used to match a paper against a subquestion.
+
+    Unlike :func:`_content_terms` this keeps generic words such as
+    ``datasets`` or ``evaluation``. Filtering them out would make a subquestion
+    like "Which datasets are used?" impossible to match at all.
+    """
+
+    tokens = _tokenize(value)
+    return {token for token in tokens if token not in STOPWORDS and len(token) > 2}
+
+
 def _relevance_score(paper: PaperCandidate, terms: set[str]) -> int:
     """Count distinctive question terms that appear as whole words in the paper."""
 
-    haystack = f"{paper.title} {paper.abstract or ''}".lower()
-    words = set(re.findall(r"[a-z0-9][a-z0-9_-]*", haystack))
+    words = set(_tokenize(f"{paper.title} {paper.abstract or ''}"))
     return sum(1 for term in terms if term in words)
 
 
@@ -266,18 +320,26 @@ def _is_usable_sentence(sentence: str) -> bool:
         return False
     if len(sentence) > MAX_EVIDENCE_CHARS:
         return False
-    return not is_author_list(sentence)
+    if is_author_list(sentence):
+        return False
+    # Crossref and OpenAlex records for some venues prepend the author list and
+    # the container title, so the "abstract" is pure metadata.
+    return not CONTAINER_TITLE_PATTERN.match(sentence.strip())
 
 
 def _term_overlap(sentence: str, terms: set[str]) -> int:
-    words = set(re.findall(r"[a-z0-9][a-z0-9_-]*", sentence.lower()))
-    return len(terms & words)
+    return len(terms & set(_tokenize(sentence)))
+
+
+def _normalize_for_compare(value: str) -> str:
+    return " ".join(value.lower().rstrip(".").split())
 
 
 def usable_evidence_sentence(
     abstract: str | None,
     *,
     prefer_terms: set[str] | None = None,
+    reject_exact: set[str] | None = None,
 ) -> str | None:
     """Return one citable sentence, or None when the text is not usable.
 
@@ -288,6 +350,13 @@ def usable_evidence_sentence(
     """
 
     sentences = [item for item in _split_sentences(abstract) if _is_usable_sentence(item)]
+    if reject_exact:
+        blocked = {
+            _normalize_for_compare(value) for value in reject_exact if value and value.strip()
+        }
+        sentences = [
+            item for item in sentences if _normalize_for_compare(item) not in blocked
+        ]
     if not sentences:
         return None
     if prefer_terms:
@@ -312,7 +381,11 @@ def paper_to_annotation(
     re-querying the source.
     """
 
-    quote = usable_evidence_sentence(paper.abstract, prefer_terms=prefer_terms)
+    quote = usable_evidence_sentence(
+        paper.abstract,
+        prefer_terms=prefer_terms,
+        reject_exact={paper.venue or "", paper.title},
+    )
     if quote is None:
         return None
     return {
@@ -344,7 +417,7 @@ async def build_seed_questions(
     client: OpenAlexClient,
     *,
     seeds: Sequence[dict[str, Any]] = PILOT_SEEDS,
-    results_per_question: int = 10,
+    results_per_question: int = 25,
     max_gold_papers: int = MAX_GOLD_PAPERS,
 ) -> list[dict[str, Any]]:
     """Query OpenAlex and build seed annotations for each question.
@@ -362,7 +435,7 @@ async def build_seed_questions(
         question_terms = sorted(_content_terms(question))
         variants: list[str] = list(plan.query_variants)
         for subquestion in subquestions:
-            sub_terms = sorted(_content_terms(subquestion))
+            sub_terms = sorted(_match_terms(subquestion))
             if sub_terms:
                 variants.append(
                     " ".join(dict.fromkeys([*question_terms, *sub_terms]))
@@ -380,7 +453,7 @@ async def build_seed_questions(
                 candidates.append(paper)
 
         relevance_terms = _content_terms(" ".join([question, *subquestions]))
-        subquestion_terms = [_content_terms(item) for item in subquestions]
+        subquestion_terms = [_match_terms(item) for item in subquestions]
 
         year_range = seed.get("year_range")
         parsed_year_range: tuple[int, int] | None = None
