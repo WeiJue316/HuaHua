@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import httpx
 import pytest
+from reportlab.pdfgen import canvas
 
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.openalex.client import OpenAlexClient
@@ -14,6 +16,12 @@ from research_agent.storage.migrations import connect_database
 ARXIV_FIXTURE = Path(__file__).parents[1] / "fixtures" / "arxiv_search.xml"
 OPENALEX_FIXTURE = Path(__file__).parents[1] / "fixtures" / "openalex_search.json"
 
+def _pdf_bytes(text: str) -> bytes:
+    buffer = io.BytesIO()
+    document = canvas.Canvas(buffer)
+    document.drawString(72, 720, text)
+    document.save()
+    return buffer.getvalue()
 
 @pytest.mark.asyncio
 async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path) -> None:
@@ -22,7 +30,7 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
             if "/pdf/" in request.url.path:
                 return httpx.Response(
                     200,
-                    content=("%PDF-1.4\n" + request.url.path).encode(),
+                    content=_pdf_bytes(f"Full text evidence for {request.url.path}"),
                     headers={"content-type": "application/pdf"},
                     request=request,
                 )
@@ -57,20 +65,27 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
 
     assert result.source_counts == {"arxiv": 2, "openalex": 1}
     assert result.paper_count == 2
-    assert result.evidence_count == 3
-    assert result.claim_count == 3
+    assert result.evidence_count == 5
+    assert result.claim_count == 5
     assert result.file_count == 2
+    assert result.document_count == 2
     assert result.report_path.is_file()
     report = result.report_path.read_text(encoding="utf-8")
     assert "arxiv" in report
     assert "openalex" in report
     assert "## Claims" in report
+    assert "page 1" in report
 
     with connect_database(tmp_path / "research_agent.db") as conn:
         assert conn.execute("SELECT COUNT(*) FROM source_record").fetchone()[0] == 3
         assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM paper_source_record").fetchone()[0] == 3
-        assert conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0] == 3
-        assert conn.execute("SELECT COUNT(*) FROM claim").fetchone()[0] == 3
-        assert conn.execute("SELECT COUNT(*) FROM claim_evidence").fetchone()[0] == 3
+        assert conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0] == 5
+        assert conn.execute("SELECT COUNT(*) FROM claim").fetchone()[0] == 5
+        assert conn.execute("SELECT COUNT(*) FROM claim_evidence").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM file").fetchone()[0] == 2
+        assert conn.execute("SELECT COUNT(*) FROM document").fetchone()[0] == 2
+        full_text_count = conn.execute(
+            "SELECT COUNT(*) FROM evidence_span WHERE evidence_level = 'full_text'"
+        ).fetchone()[0]
+        assert full_text_count == 2

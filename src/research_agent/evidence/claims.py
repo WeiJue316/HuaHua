@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-EvidenceRow = tuple[str, str, str, str, str]
+EvidenceRow = tuple[str, str, str, str, str, str]
 
 
 class CitationValidationError(ValueError):
@@ -36,7 +36,7 @@ def build_claims_from_evidence(evidence: list[EvidenceRow]) -> list[ClaimDraft]:
     """Create one traceable claim per recorded evidence span."""
 
     claims: list[ClaimDraft] = []
-    for title, quote, _source_record_id, _source, evidence_id in evidence:
+    for title, quote, _source_record_id, _source, evidence_id, _locator in evidence:
         sentence = first_sentence(quote)
         if not sentence:
             continue

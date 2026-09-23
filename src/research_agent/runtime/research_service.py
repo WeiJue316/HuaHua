@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from research_agent.evidence.claims import (
     ClaimDraft,
@@ -16,7 +17,8 @@ from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.router.federation import SearchClient, search_sources
 from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
-from research_agent.storage.repository import ResearchRepository, utc_now
+from research_agent.storage.pdf_parser import parse_pdf
+from research_agent.storage.repository import ResearchRepository, sha256_text, utc_now
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ class ResearchRunResult:
     evidence_count: int
     claim_count: int
     file_count: int
+    document_count: int
     source_counts: dict[str, int]
 
 
@@ -43,7 +46,7 @@ def render_report(
     question: str,
     run_id: str,
     source_records: list[tuple[PaperCandidate, str]],
-    evidence: list[tuple[str, str, str, str, str]],
+    evidence: list[tuple[str, str, str, str, str, str]],
     claims: list[ClaimDraft],
     files: list[tuple[str, str, str, str]],
 ) -> str:
@@ -81,12 +84,17 @@ def render_report(
             "|---:|---|---|---|---|---|",
         ]
     )
-    for index, (title, quote, source_record_id, source, _evidence_id) in enumerate(
-        evidence, start=1
-    ):
+    for index, (
+        title,
+        quote,
+        source_record_id,
+        source,
+        _evidence_id,
+        locator,
+    ) in enumerate(evidence, start=1):
         lines.append(
             f"| E{index} | {_md_cell(title)} | {_md_cell(source)} "
-            f"| {_md_cell(quote)} | Abstract | `{source_record_id}` |"
+            f"| {_md_cell(quote)} | {_md_cell(locator)} | `{source_record_id}` |"
         )
 
     lines.extend(
@@ -197,9 +205,10 @@ async def run_federated_research(
     )
 
     source_records: list[tuple[PaperCandidate, str]] = []
-    evidence_rows: list[tuple[str, str, str, str, str]] = []
+    evidence_rows: list[tuple[str, str, str, str, str, str]] = []
     file_rows: list[tuple[str, str, str, str]] = []
     paper_ids: set[str] = set()
+    document_count = 0
     with connect_database(db_path) as connection:
         repository = ResearchRepository(connection)
         for source in clients:
@@ -263,6 +272,7 @@ async def run_federated_research(
                             stored_source_record_id,
                             candidate.source,
                             evidence_id,
+                            "Abstract",
                         )
                     )
 
@@ -283,7 +293,7 @@ async def run_federated_research(
                         sha256=artifact.sha256,
                         suffix=".pdf",
                     )
-                    repository.record_file(
+                    file_id = repository.record_file(
                         paper_id=paper_id,
                         kind="pdf",
                         sha256=artifact.sha256,
@@ -303,6 +313,53 @@ async def run_federated_research(
                             final_path.as_posix(),
                         )
                     )
+                    parse_result = parse_pdf(final_path)
+                    document_id = str(uuid4())
+                    parsed_dir = archive_root / project_id / "parsed"
+                    parsed_dir.mkdir(parents=True, exist_ok=True)
+                    text_path = parsed_dir / f"{document_id}.txt"
+                    text_path.write_text(parse_result.text, encoding="utf-8")
+                    document_id = repository.record_document(
+                        document_id=document_id,
+                        file_id=file_id,
+                        parser=parse_result.parser,
+                        parser_version=parse_result.parser_version,
+                        text_path=text_path.as_posix(),
+                        text_sha256=sha256_text(parse_result.text),
+                        locator_scheme="page_paragraph",
+                        parse_status="success",
+                    )
+                    document_count += 1
+                    full_text_quote = parse_result.text.split("\n\n", 1)[0].strip()
+                    if full_text_quote:
+                        full_text_evidence_id = repository.record_evidence_span(
+                            paper_id=paper_id,
+                            source_record_id=stored_source_record_id,
+                            document_id=document_id,
+                            file_id=file_id,
+                            quote=full_text_quote,
+                            locator={
+                                "page": 1,
+                                "paragraph_index": 0,
+                                "char_start": 0,
+                                "char_end": len(full_text_quote),
+                            },
+                            evidence_level="full_text",
+                            extraction_method="pdf_parser",
+                            extractor_version=parse_result.parser_version,
+                            confidence=0.8,
+                            verified=1,
+                        )
+                        evidence_rows.append(
+                            (
+                                candidate.title,
+                                full_text_quote,
+                                stored_source_record_id,
+                                candidate.source,
+                                full_text_evidence_id,
+                                "page 1",
+                            )
+                        )
 
         claims = build_claims_from_evidence(evidence_rows)
         available_evidence_ids = {row[4] for row in evidence_rows}
@@ -336,6 +393,7 @@ async def run_federated_research(
         evidence_count=len(evidence_rows),
         claim_count=len(claims),
         file_count=len(file_rows),
+        document_count=document_count,
         source_counts=federated.source_counts,
     )
 

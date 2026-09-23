@@ -83,6 +83,7 @@
 │   ├── storage/                 # 迁移、repository、不可变文件归档
 │   │   ├── migrations/
 │   │   ├── artifacts.py
+│   │   ├── pdf_parser.py
 │   │   └── repository.py
 │   ├── mcp_servers/
 │   │   ├── common.py            # 公共 envelope 与数据模型

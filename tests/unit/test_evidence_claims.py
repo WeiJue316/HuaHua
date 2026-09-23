@@ -18,6 +18,7 @@ def test_build_claims_from_evidence_creates_traceable_claims() -> None:
             "source-record-1",
             "arxiv",
             "evidence-1",
+            "Abstract",
         )
     ]
 

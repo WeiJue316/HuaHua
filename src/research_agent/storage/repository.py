@@ -400,13 +400,14 @@ class ResearchRepository:
         *,
         file_id: str,
         parser: str,
+        document_id: str | None = None,
         parser_version: str,
         text_path: str,
         text_sha256: str,
         locator_scheme: str,
         parse_status: str,
     ) -> str:
-        document_id = str(uuid4())
+        document_id = document_id or str(uuid4())
         self.connection.execute(
             """
             INSERT INTO document
