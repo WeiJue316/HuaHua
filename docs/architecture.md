@@ -389,6 +389,11 @@ Report
 - 支持本地模型或不同云模型的替换。
 - 对包含未发表内容的请求执行数据边界策略。
 
+网关实现位于 `src/research_agent/llm/`，由 `ModelGateway` 协议与具体 provider 实现组成。
+依赖规则：语义步骤（`policy`、`planner`、`evidence`）只依赖 `ModelGateway` 协议，
+不得导入任何具体 provider；具体 provider 由 `runtime` 在组装时注入。这样新增或替换
+模型只需新增一个实现，并满足本文件第 13 节"Policy → 具体模型 provider"的禁止条款。
+
 ## 10. 并发、重试与失败恢复
 
 - 源站查询按源站独立并发，默认每源并发不超过其限流上限。
@@ -437,6 +442,8 @@ Report
 
 ```text
 interfaces → runtime → planner / executor / policy / evaluator
+runtime → llm（仅用于注入具体 provider）
+planner / policy / evidence → llm（仅协议）
 executor → router / memory / storage / evidence
 router → mcp_common + mcp clients
 evidence → storage

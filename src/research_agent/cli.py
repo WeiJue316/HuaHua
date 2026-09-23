@@ -8,7 +8,10 @@ import httpx
 import typer
 
 from . import __version__
+from .llm.deepseek import DeepSeekGateway
+from .llm.gateway import ModelGatewayError
 from .planner.planner import ResearchPlan, plan_research
+from .policy.relevance import RelevanceJudge
 from .router.registry import (
     SUPPORTED_SOURCES,
     build_openalex_client,
@@ -80,6 +83,13 @@ def research(
             help="Archive open arXiv PDFs and record File provenance.",
         ),
     ] = False,
+    relevance_filter: Annotated[
+        bool,
+        typer.Option(
+            "--relevance-filter/--no-relevance-filter",
+            help="Judge candidate relevance with a language model before claims.",
+        ),
+    ] = True,
 ) -> None:
     """Run the federated research flow and write a traceable report."""
 
@@ -115,6 +125,11 @@ def research(
             abstract_resolver = OpenAlexAbstractResolver(
                 build_openalex_client(http_client)
             )
+            judge = (
+                RelevanceJudge(DeepSeekGateway(http_client=http_client))
+                if relevance_filter
+                else None
+            )
             return await run_federated_research(
                 question=question,
                 db_path=db,
@@ -124,10 +139,18 @@ def research(
                 download_pdf=download_pdf,
                 plan=plan,
                 abstract_resolver=abstract_resolver,
+                relevance_judge=judge,
             )
 
     try:
         result = asyncio.run(run())
+    except ModelGatewayError as exc:
+        typer.echo(
+            f"relevance filter unavailable: {exc}\n"
+            "Set DEEPSEEK_API_KEY, or pass --no-relevance-filter to run without it.",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
     except ResearchExecutionError as exc:
         typer.echo(f"research run failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
@@ -153,6 +176,14 @@ def research(
     typer.echo(f"claims: {result.claim_count}")
     typer.echo(f"files: {result.file_count}")
     typer.echo(f"documents: {result.document_count}")
+    if result.relevance_skipped:
+        typer.echo("relevance: skipped (--no-relevance-filter)")
+    else:
+        typer.echo(
+            f"relevance: judged={result.relevance_judged} "
+            f"dropped={result.relevance_dropped} "
+            f"failures={result.relevance_failures}"
+        )
     typer.echo(f"report: {result.report_path}")
 
 

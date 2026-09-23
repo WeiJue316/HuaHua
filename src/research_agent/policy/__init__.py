@@ -1,1 +1,1 @@
-"""policy package."""
+"""Policy decisions applied before and after execution."""

@@ -79,6 +79,7 @@
 │   ├── router/
 │   │   ├── federation.py        # 多源并行搜索、并发预算与部分失败处理
 │   │   └── registry.py          # 五源 client registry
+│   ├── llm/                     # 模型网关协议与 provider 实现
 │   ├── policy/
 │   ├── evaluator/
 │   │   ├── dataset.py             # JSONL 问题集加载与哈希

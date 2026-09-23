@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import uuid4
@@ -16,6 +16,7 @@ from research_agent.executor.executor import Executor, StepSpec
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.planner.planner import ResearchPlan
+from research_agent.policy.relevance import RelevanceJudge, RelevanceVerdict
 from research_agent.router.federation import (
     FederatedSearchResult,
     SearchClient,
@@ -46,6 +47,10 @@ class ResearchRunResult:
     source_counts: dict[str, int]
     source_errors: dict[str, str]
     variant_errors: dict[str, str]
+    relevance_judged: int = 0
+    relevance_dropped: int = 0
+    relevance_failures: int = 0
+    relevance_skipped: bool = False
 
 
 @dataclass
@@ -70,6 +75,10 @@ class _RunContext:
     paper_ids: set[str] = field(default_factory=set)
     document_count: int = 0
     claims: list[ClaimDraft] = field(default_factory=list)
+    dropped_source_record_ids: set[str] = field(default_factory=set)
+    verdicts: list[RelevanceVerdict] = field(default_factory=list)
+    relevance_failures: int = 0
+    relevance_skipped: bool = False
     report_path: Path | None = None
     report_id: str | None = None
 
@@ -215,6 +224,8 @@ async def run_federated_research(
     artifact_root: Path | None = None,
     plan: ResearchPlan | None = None,
     abstract_resolver: AbstractResolver | None = None,
+    relevance_judge: RelevanceJudge | None = None,
+    subquestions: Sequence[str] = (),
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -472,8 +483,79 @@ async def run_federated_research(
                 "documents": context.document_count,
             }
 
+        async def judge_relevance_step() -> dict[str, object]:
+            """Apply semantic relevance filtering before claims are built."""
+
+            if relevance_judge is None:
+                context.relevance_skipped = True
+                return {"judged": 0, "dropped": 0, "skipped": True}
+
+            failures = 0
+            for candidate, stored_source_record_id in context.source_records:
+                verdict, response = await relevance_judge.judge(
+                    question=question,
+                    subquestions=subquestions,
+                    paper=candidate,
+                )
+                context.verdicts.append(verdict)
+                if response is not None:
+                    repository.record_model_call(
+                        run_id=run_id,
+                        provider=response.provider,
+                        model=response.model,
+                        purpose="semantic_relevance",
+                        prompt_hash=response.prompt_hash,
+                        prompt_version=relevance_judge.prompt_version,
+                        response_hash=response.response_hash,
+                        input_tokens=response.input_tokens,
+                        output_tokens=response.output_tokens,
+                        latency_ms=response.latency_ms,
+                        status="success",
+                    )
+                else:
+                    failures += 1
+                    repository.record_model_call(
+                        run_id=run_id,
+                        provider="deepseek",
+                        model="unknown",
+                        purpose="semantic_relevance",
+                        prompt_hash="",
+                        prompt_version=relevance_judge.prompt_version,
+                        status="failed",
+                        error_code=verdict.reason[:120],
+                    )
+                repository.record_audit_event(
+                    run_id=run_id,
+                    action="semantic_relevance",
+                    target_type="paper",
+                    target_id=stored_source_record_id,
+                    decision="allowed" if verdict.keep else "denied",
+                    details={
+                        "paper_key": verdict.paper_key,
+                        "domain_scope": verdict.domain_scope,
+                        "answer_role": verdict.answer_role,
+                        "abstract_available": verdict.abstract_available,
+                        "reason": verdict.reason,
+                        "failed": verdict.failed,
+                    },
+                )
+                if not verdict.keep:
+                    context.dropped_source_record_ids.add(stored_source_record_id)
+
+            context.relevance_failures = failures
+            return {
+                "judged": len(context.verdicts),
+                "dropped": len(context.dropped_source_record_ids),
+                "failures": failures,
+            }
+
         async def synthesize_claims_step() -> dict[str, object]:
-            context.claims = build_claims_from_evidence(context.evidence_rows)
+            usable = [
+                row
+                for row in context.evidence_rows
+                if row[2] not in context.dropped_source_record_ids
+            ]
+            context.claims = build_claims_from_evidence(usable)
             return {"claim_count": len(context.claims)}
 
         async def validate_citations_step() -> dict[str, object]:
@@ -524,9 +606,15 @@ async def run_federated_research(
                 handler=persist_results_step,
             ),
             StepSpec(
+                step_key="judge_relevance",
+                step_type="judge_relevance",
+                depends_on=("persist_results",),
+                handler=judge_relevance_step,
+            ),
+            StepSpec(
                 step_key="synthesize_claims",
                 step_type="synthesize_claims",
-                depends_on=("persist_results",),
+                depends_on=("judge_relevance",),
                 handler=synthesize_claims_step,
             ),
             StepSpec(
@@ -566,6 +654,10 @@ async def run_federated_research(
             source_counts=context.federated.source_counts,
             source_errors=context.federated.errors,
             variant_errors=context.federated.variant_errors,
+            relevance_judged=len(context.verdicts),
+            relevance_dropped=len(context.dropped_source_record_ids),
+            relevance_failures=context.relevance_failures,
+            relevance_skipped=context.relevance_skipped,
         )
 
 

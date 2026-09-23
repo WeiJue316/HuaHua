@@ -332,3 +332,80 @@ def test_repository_records_plan_and_audit_event(tmp_path: Path) -> None:
         assert conn.execute("SELECT COUNT(*) FROM plan").fetchone()[0] == 1
         assert conn.execute("SELECT COUNT(*) FROM plan_step").fetchone()[0] == 1
         assert conn.execute("SELECT COUNT(*) FROM audit_event").fetchone()[0] == 1
+
+
+def test_repository_records_model_call(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+
+        call_id = repo.record_model_call(
+            run_id=run_id,
+            provider="deepseek",
+            model="deepseek-flash",
+            purpose="semantic_relevance",
+            prompt_hash="abc123",
+            prompt_version="relevance-v1",
+            response_hash="def456",
+            input_tokens=506,
+            output_tokens=245,
+            latency_ms=1200,
+        )
+
+        row = conn.execute(
+            "SELECT run_id, provider, model, purpose, prompt_version,"
+            " input_tokens, output_tokens, latency_ms, status"
+            " FROM model_call WHERE id = ?",
+            (call_id,),
+        ).fetchone()
+
+    assert row is not None
+    assert row["run_id"] == run_id
+    assert row["provider"] == "deepseek"
+    assert row["model"] == "deepseek-flash"
+    assert row["purpose"] == "semantic_relevance"
+    assert row["prompt_version"] == "relevance-v1"
+    assert row["input_tokens"] == 506
+    assert row["output_tokens"] == 245
+    assert row["latency_ms"] == 1200
+    assert row["status"] == "success"
+
+
+def test_repository_records_a_denied_relevance_verdict(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+
+        repo.record_audit_event(
+            run_id=run_id,
+            action="semantic_relevance",
+            target_type="paper",
+            target_id="doi:10.1/wrong-field",
+            decision="denied",
+            details={
+                "domain_scope": "out_of_scope",
+                "answer_role": "none",
+                "reason": "management research, not agent planning",
+            },
+        )
+
+        row = conn.execute(
+            "SELECT actor, action, decision, details_json FROM audit_event"
+            " WHERE run_id = ? AND action = 'semantic_relevance'",
+            (run_id,),
+        ).fetchone()
+
+    assert row is not None
+    assert row["actor"] == "system"
+    assert row["decision"] == "denied"
+    assert "out_of_scope" in row["details_json"]

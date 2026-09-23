@@ -666,6 +666,54 @@ class ResearchRepository:
         )
         return audit_id
 
+    def record_model_call(
+        self,
+        *,
+        run_id: str | None,
+        provider: str,
+        model: str,
+        purpose: str,
+        prompt_hash: str,
+        prompt_version: str | None = None,
+        response_hash: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        cost: float | None = None,
+        latency_ms: int | None = None,
+        status: str = "success",
+        error_code: str | None = None,
+    ) -> str:
+        """Record one language-model call for cost and reproducibility auditing."""
+
+        call_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO model_call
+                (id, run_id, provider, model, purpose, prompt_hash,
+                 prompt_version, response_hash, input_tokens, output_tokens,
+                 cost, latency_ms, status, error_code, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                call_id,
+                run_id,
+                provider,
+                model,
+                purpose,
+                prompt_hash,
+                prompt_version,
+                response_hash,
+                input_tokens,
+                output_tokens,
+                cost,
+                latency_ms,
+                status,
+                error_code,
+                utc_now(),
+            ),
+        )
+        return call_id
+
     def record_claim(self, *, report_id: str, claim: ClaimDraft) -> str:
         claim_id = str(uuid4())
         self.connection.execute(

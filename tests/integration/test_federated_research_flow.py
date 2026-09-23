@@ -95,7 +95,8 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
         assert conn.execute("SELECT COUNT(*) FROM file").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM document").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM plan").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM plan_step").fetchone()[0] == 6
+        # route, search, persist, judge_relevance, synthesize, validate, report
+        assert conn.execute("SELECT COUNT(*) FROM plan_step").fetchone()[0] == 7
         step_types = {
             row[0]
             for row in conn.execute("SELECT step_type FROM plan_step")
@@ -104,11 +105,12 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
             "route_sources",
             "search_sources",
             "persist_results",
+            "judge_relevance",
             "synthesize_claims",
             "validate_citations",
             "generate_report",
         }
-        assert conn.execute("SELECT COUNT(*) FROM step_attempt").fetchone()[0] == 6
+        assert conn.execute("SELECT COUNT(*) FROM step_attempt").fetchone()[0] == 7
         assert (
             conn.execute("SELECT status FROM run WHERE id = ?", (result.run_id,)).fetchone()[0]
             == "COMPLETED"
