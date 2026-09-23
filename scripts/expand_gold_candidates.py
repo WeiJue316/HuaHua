@@ -48,6 +48,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from research_agent.evaluator.dataset import EvaluationQuestion, load_questions  # noqa: E402
 from research_agent.evaluator.pilot_seed import match_terms  # noqa: E402
+from research_agent.llm.deepseek import DeepSeekGateway  # noqa: E402
 from research_agent.mcp_servers.cache import (  # noqa: E402
     DEFAULT_TTL_SECONDS,
     ResponseCache,
@@ -192,9 +193,15 @@ def render_worksheet(
     question: EvaluationQuestion,
     candidates: list[Candidate],
     years: tuple[int, int] | None,
+    translations: dict[int, str] | None = None,
 ) -> str:
-    """把候选渲染成人工复核表。"""
+    """把候选渲染成人工复核表。
 
+    translations 是"候选序号 -> 中文标题"的映射，只用于复核时快速定位。
+    中文标题是机器翻译，不能作为归档内容，也不能替代英文原文判断。
+    """
+
+    translations = translations or {}
     lines = [
         f"# 金标候选：{question.question_id}",
         "",
@@ -226,18 +233,39 @@ def render_worksheet(
             "",
             "## 候选清单",
             "",
-            "| # | 年份 | 标题 | DOI | 被引 | 与种子的关系 | 主题命中 | 判定 | 子问题 |",
-            "|---:|---:|---|---|---:|---|---:|---|---:|",
+            "| # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |",
+            "|---:|---:|---|---|---|---:|---|---:|---|---:|",
         ]
     )
     for index, item in enumerate(candidates, start=1):
         paper = item.paper
         title = " ".join((paper.title or "").replace("|", "\\|").split())
         cited = paper.raw.get("cited_by_count") or 0
+        zh = translations.get(index, "")
         lines.append(
-            f"| {index} | {paper.year or '?'} | {title[:70]} | `{paper.doi or ''}` "
-            f"| {cited} | {item.relation} | {item.topic_overlap} | | |"
+            f"| {index} | {paper.year or '?'} | {title[:70]} | {zh} "
+            f"| `{paper.doi or ''}` | {cited} | {item.relation} "
+            f"| {item.topic_overlap} | | |"
         )
+    lines.extend(
+        [
+            "",
+            "## 摘要（判定用）",
+            "",
+            "判据 3 要求确认摘要里存在可作为证据的完整句子，因此这里附上原文摘要。",
+            "机翻标题仅供快速定位，**判定必须依据英文原文**。",
+            "",
+        ]
+    )
+    for index, item in enumerate(candidates, start=1):
+        abstract = " ".join((item.paper.abstract or "").split())
+        lines.append(f"**{index}. {item.paper.title}**")
+        lines.append("")
+        lines.append(f"- DOI：`{item.paper.doi or ''}`")
+        lines.append(f"- 关联种子：`{item.seed_key}`（{item.relation}）")
+        lines.append("")
+        lines.append(abstract or "（源站未提供摘要——需另行获取，或直接放弃该候选）")
+        lines.append("")
     lines.extend(
         [
             "",
@@ -285,6 +313,7 @@ async def run(args: argparse.Namespace) -> int:
     written: list[Path] = []
     async with httpx.AsyncClient(timeout=60.0) as http_client:
         client = build_openalex_client(http_client, cache=cache)
+        gateway = DeepSeekGateway(http_client=http_client) if args.translate else None
         for question in questions:
             years = (
                 tuple(args.years)
@@ -299,8 +328,18 @@ async def run(args: argparse.Namespace) -> int:
             )
             if args.limit:
                 candidates = candidates[: args.limit]
+            translations: dict[int, str] = {}
+            if args.translate:
+                translations, translate_failures = await translate_titles(
+                    gateway, [item.paper.title for item in candidates]
+                )
+                for message in translate_failures:
+                    print(f"    标题翻译失败：{message}", file=sys.stderr)
             content = render_worksheet(
-                question=question, candidates=candidates, years=years  # type: ignore[arg-type]
+                question=question,
+                candidates=candidates,
+                years=years,  # type: ignore[arg-type]
+                translations=translations,
             )
             out = args.output_dir / f"gold-candidates-{question.question_id}.md"
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -317,6 +356,103 @@ async def run(args: argparse.Namespace) -> int:
     )
     print(f"缓存哈希：{cache.directory_hash()}")
     return 0
+
+
+async def translate_titles(
+    gateway: object,
+    titles: list[str],
+    *,
+    batch_size: int = 5,
+) -> tuple[dict[int, str], list[str]]:
+    """把英文标题翻成中文注释，**仅供复核时快速定位**。
+
+    注意：
+      · 机翻会丢失术语细节，判定必须依据英文原文
+      · 结果不写入数据集，数据集只保留英文标题
+    返回 (映射, 失败信息列表)。映射是 "候选序号(从1开始) -> 中文标题"。
+
+    失败必须上报：这里先前是静默 continue，一次限流会让整列中文留空，
+    看起来像"模型没翻"而不是"调用失败了"。
+    """
+
+    import json as _json
+    import re as _re
+
+    from research_agent.llm.gateway import ModelGatewayError
+
+    # 模型常把 JSON 包在说明文字或 ``` 代码块里，裸 loads 会直接失败。
+    # 和 policy/relevance 的解析保持同一策略：先取出 JSON 对象再解析。
+    json_block = _re.compile(r"\{.*\}", _re.S)
+
+    result: dict[int, str] = {}
+    failures: list[str] = []
+    system = (
+        "你是学术论文标题的翻译助手。把英文论文标题译成简洁准确的中文，"
+        "保留专业术语的通行译法。只输出 JSON。"
+    )
+    for start in range(0, len(titles), batch_size):
+        chunk = titles[start : start + batch_size]
+        numbered = "\n".join(
+            f"{start + offset + 1}. {title}"
+            for offset, title in enumerate(chunk)
+        )
+        user = (
+            f"按顺序翻译下面 {len(chunk)} 个标题：\n{numbered}\n\n"
+            f'返回格式：{{"translations":["第一句中文","第二句中文", ...]}}'
+            "\n数组中必须正好有 "
+            f"{len(chunk)} 个字符串，顺序与输入一一对应。"
+        )
+        payload = None
+        last_error = ""
+        # 解析失败重试一次：模型偶尔返回空内容或截断的 JSON，重试通常能成功。
+        # 批次已经很小，再失败就如实上报，不要静默留空。
+        for attempt in range(2):
+            try:
+                # 输出预算必须给足：模型先把预算花在内部推理上，给小了会返回
+                # 空内容（finish_reason=length），表现为"不是 JSON"。
+                response = await gateway.complete(  # type: ignore[attr-defined]
+                    prompt_hash=f"title-translation-v1-{attempt}",
+                    system=system,
+                    user=user,
+                    max_output_tokens=3000,
+                    json_output=True,
+                )
+            except ModelGatewayError as exc:
+                last_error = str(exc)
+                continue
+            match = json_block.search(response.content or "")
+            if match is None:
+                last_error = f"返回里没有 JSON（开头：{response.content[:60]!r}）"
+                continue
+            try:
+                payload = _json.loads(match.group(0))
+                break
+            except _json.JSONDecodeError as exc:
+                last_error = f"JSON 解析失败（{exc}）"
+                continue
+        if payload is None:
+            failures.append(
+                f"第 {start + 1}–{start + len(chunk)} 条：{last_error}"
+            )
+            continue
+        # 批次之间稍作停顿，避免连续调用被限流
+        await asyncio.sleep(0.4)
+        # 关键：**按返回顺序对应**，不信任模型给出的编号。
+        # 先前依赖模型回传的 index，但模型每批都从 1 重新编号，
+        # 各批互相覆盖，结果是中文标题和论文完全错位——
+        # 静默错位比缺翻译危险得多，复核时会照着错误标题判断另一篇论文。
+        items = payload.get("translations") or []
+        if len(items) != len(chunk):
+            failures.append(
+                f"第 {start + 1}–{start + len(chunk)} 条："
+                f"返回 {len(items)} 条，期望 {len(chunk)} 条"
+            )
+            continue
+        for offset, item in enumerate(items):
+            zh = item.get("zh") if isinstance(item, dict) else item
+            if isinstance(zh, str) and zh.strip():
+                result[start + offset + 1] = zh.strip()
+    return result, failures
 
 
 def main() -> int:
@@ -337,6 +473,11 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--cache-dir", type=Path, default=ROOT / "data" / "cache" / "openalex")
     parser.add_argument("--freeze-cache", action="store_true", help="缓存不过期（复现实验时使用）")
+    parser.add_argument(
+        "--translate",
+        action="store_true",
+        help="用模型为标题加中文注释（仅供复核，不写入数据集，需 DEEPSEEK_API_KEY）",
+    )
     args = parser.parse_args()
 
     if not args.all and not args.question and not args.seed:
