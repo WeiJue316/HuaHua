@@ -18,8 +18,10 @@ from .evaluator.runner import EvaluationRunner, EvaluationSummary
 from .evaluator.systems import SYSTEMS
 from .llm.deepseek import DeepSeekGateway
 from .llm.gateway import ModelGatewayError
+from .mcp_servers.cache import ResponseCache
 from .planner.planner import ResearchPlan, plan_research
 from .policy.relevance import RelevanceJudge
+from .router.federation import search_sources
 from .router.registry import (
     SUPPORTED_SOURCES,
     build_openalex_client,
@@ -100,6 +102,13 @@ def research(
             help="Judge candidate relevance with a language model before claims.",
         ),
     ] = True,
+    cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--cache-dir",
+            help="Reuse source responses from this directory.",
+        ),
+    ] = None,
 ) -> None:
     """Run the federated research flow and write a traceable report."""
 
@@ -131,7 +140,8 @@ def research(
 
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
-            clients = build_source_clients(http_client, source_ids)
+            cache = ResponseCache(cache_dir) if cache_dir is not None else None
+            clients = build_source_clients(http_client, source_ids, cache=cache)
             abstract_resolver = OpenAlexAbstractResolver(
                 build_openalex_client(http_client)
             )
@@ -150,6 +160,7 @@ def research(
                 plan=plan,
                 abstract_resolver=abstract_resolver,
                 relevance_judge=judge,
+                response_cache=cache,
             )
 
     try:
@@ -223,6 +234,13 @@ def evaluate(
         int,
         typer.Option("--max-results", min=1, max=200),
     ] = 10,
+    cache_dir: Annotated[
+        Path,
+        typer.Option(
+            "--cache-dir",
+            help="Frozen response cache shared by every system.",
+        ),
+    ] = Path("data/cache/http"),
 ) -> None:
     """Run an evaluation matrix over a frozen question set."""
 
@@ -241,6 +259,9 @@ def evaluate(
         reports_root=reports_dir,
         max_results_per_source=max_results,
     )
+    # Evaluation never lets an entry expire: the same key must always return
+    # the same bytes, or the arms are not comparable.
+    cache = ResponseCache(cache_dir, ttl_seconds=None)
 
     async def run() -> EvaluationSummary:
         async with httpx.AsyncClient(timeout=60.0) as http_client:
@@ -251,6 +272,7 @@ def evaluate(
                 settings=settings,
                 http_client=http_client,
                 gateway=gateway,
+                cache=cache,
             )
             with connect_database(db) as conn:
                 runner = EvaluationRunner(EvaluationRepository(conn))
@@ -265,6 +287,7 @@ def evaluate(
                         "systems": system_ids,
                         "repeats": repeats,
                         "max_results_per_source": max_results,
+                        "cache_dir": cache_dir.as_posix(),
                     },
                 )
 
@@ -280,6 +303,69 @@ def evaluate(
         f"cases: {summary.case_count} completed={summary.completed_count} "
         f"failed={summary.failed_count}"
     )
+    typer.echo(f"cache_entries: {cache.entry_count()}")
+    typer.echo(f"cache_hash: {cache.directory_hash()}")
+
+
+@app.command()
+def warm_cache(
+    dataset: Annotated[
+        Path,
+        typer.Option("--dataset", help="Frozen JSONL question set."),
+    ] = Path("evaluation/datasets/pilot_questions.v1.jsonl"),
+    cache_dir: Annotated[
+        Path,
+        typer.Option("--cache-dir", help="Directory to fill with responses."),
+    ] = Path("data/cache/http"),
+    sources: Annotated[
+        str,
+        typer.Option("--sources", help="comma-separated source IDs, or 'all'."),
+    ] = "all",
+    max_results: Annotated[
+        int,
+        typer.Option("--max-results", min=1, max=200),
+    ] = 10,
+) -> None:
+    """Fill the response cache so every evaluation arm sees identical input."""
+
+    if not dataset.is_file():
+        typer.echo(f"dataset not found: {dataset}", err=True)
+        raise typer.Exit(code=1)
+    questions = load_questions(dataset)
+    source_ids = (
+        list(SUPPORTED_SOURCES)
+        if sources.strip().lower() == "all"
+        else [item.strip() for item in sources.split(",") if item.strip()]
+    )
+    unsupported = sorted(set(source_ids) - set(SUPPORTED_SOURCES))
+    if unsupported:
+        typer.echo(f"unsupported sources: {', '.join(unsupported)}", err=True)
+        raise typer.Exit(code=1)
+
+    # no TTL: the cache is frozen after this command and must not expire
+    cache = ResponseCache(cache_dir, ttl_seconds=None)
+
+    async def fill() -> None:
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
+            clients = build_source_clients(http_client, source_ids, cache=cache)
+            for question in questions:
+                plan = plan_research(
+                    question.question,
+                    available_sources=tuple(source_ids),
+                    max_results_per_source=max_results,
+                )
+                await search_sources(
+                    {source: clients[source] for source in plan.selected_sources},
+                    query=question.question,
+                    query_variants=plan.query_variants,
+                    max_results_per_source=max_results,
+                    max_concurrency=plan.max_concurrency,
+                )
+
+    asyncio.run(fill())
+    typer.echo(f"cache_entries: {cache.entry_count()}")
+    typer.echo(f"cache_hash: {cache.directory_hash()}")
+    typer.echo(f"hits={cache.stats.hits} misses={cache.stats.misses}")
 
 
 def main() -> None:

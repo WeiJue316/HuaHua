@@ -15,6 +15,7 @@ from research_agent.mcp_servers.arxiv.parser import (
     normalize_arxiv_id,
     parse_search_response,
 )
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import (
     PaperCandidate,
     RetryPolicy,
@@ -77,11 +78,13 @@ class ArxivClient:
         *,
         http_client: httpx.AsyncClient,
         api_url: str = ARXIV_API_URL,
+        cache: ResponseCache | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url
+        self.cache = cache
         self.retry_policy = retry_policy or RetryPolicy()
         self.sleep = sleep
 
@@ -105,6 +108,7 @@ class ArxivClient:
                 search_url,
                 headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
+                cache=self.cache,
                 sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
@@ -144,6 +148,7 @@ class ArxivClient:
                 params=params,
                 headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
+                cache=self.cache,
                 sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
@@ -180,6 +185,7 @@ class ArxivClient:
                 url,
                 headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
+                cache=self.cache,
                 sleep=self.sleep,
             )
         except httpx.HTTPError as exc:

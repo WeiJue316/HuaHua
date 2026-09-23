@@ -14,6 +14,7 @@ from research_agent.evidence.claims import (
 )
 from research_agent.executor.executor import Executor, StepSpec
 from research_agent.mcp_servers.arxiv.client import ArxivClient
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.planner.planner import ResearchPlan
 from research_agent.policy.relevance import RelevanceJudge, RelevanceVerdict
@@ -237,6 +238,7 @@ async def run_federated_research(
     abstract_resolver: AbstractResolver | None = None,
     relevance_judge: RelevanceJudge | None = None,
     subquestions: Sequence[str] = (),
+    response_cache: ResponseCache | None = None,
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -311,6 +313,10 @@ async def run_federated_research(
             selected_clients = {
                 source: clients[source] for source in context.selected_sources
             }
+            # snapshot before the search so the step reports this run's cache
+            # activity, not the cache's lifetime totals
+            hits_before = response_cache.stats.hits if response_cache else 0
+            misses_before = response_cache.stats.misses if response_cache else 0
             context.federated = await search_sources(
                 selected_clients,
                 query=question,
@@ -318,10 +324,16 @@ async def run_federated_research(
                 max_results_per_source=max_results_per_source,
                 max_concurrency=plan.max_concurrency,
             )
-            return {
+            payload: dict[str, object] = {
                 "source_counts": context.federated.source_counts,
                 "source_errors": context.federated.errors,
             }
+            if response_cache is not None:
+                payload["cache_hits"] = response_cache.stats.hits - hits_before
+                payload["cache_misses"] = (
+                    response_cache.stats.misses - misses_before
+                )
+            return payload
 
         async def persist_results_step() -> dict[str, object]:
             if context.federated is None:

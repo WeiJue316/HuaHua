@@ -14,6 +14,8 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel, Field
 
+from research_agent.mcp_servers.cache import ResponseCache
+
 SleepFn = Callable[[float], Awaitable[None]]
 RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 
@@ -144,12 +146,20 @@ async def get_with_retry(
     headers: dict[str, str] | None = None,
     retry_policy: RetryPolicy | None = None,
     rate_limiter: HostRateLimiter | None = None,
+    cache: ResponseCache | None = None,
     sleep: SleepFn = asyncio.sleep,
 ) -> httpx.Response:
-    """GET with per-host rate limiting and bounded retries."""
+    """GET with per-host rate limiting, response caching and bounded retries."""
 
     policy = retry_policy or RetryPolicy()
     limiter = rate_limiter or DEFAULT_RATE_LIMITER
+    request_url = str(
+        http_client.build_request("GET", url, params=params, headers=headers).url
+    )
+    if cache is not None:
+        cached = cache.get(method="GET", url=request_url, now=time.time())
+        if cached is not None:
+            return cached
     last_error: httpx.HTTPError | None = None
     for attempt in range(1, policy.max_attempts + 1):
         try:
@@ -173,6 +183,13 @@ async def get_with_retry(
             retry_after = _retry_after_seconds(response)
             await sleep(policy.delay_for_attempt(attempt, retry_after))
             continue
+        if cache is not None:
+            cache.put(
+                method="GET",
+                url=request_url,
+                response=response,
+                now=time.time(),
+            )
         return response
 
     if last_error is not None:

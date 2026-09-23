@@ -8,6 +8,7 @@ from collections.abc import Callable, Iterable
 import httpx
 
 from research_agent.mcp_servers.arxiv.client import ArxivClient
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import contact_email
 from research_agent.mcp_servers.crossref.client import CrossrefClient
 from research_agent.mcp_servers.dblp.client import DblpClient
@@ -29,28 +30,37 @@ def _env_value(name: str) -> str | None:
     return value or None
 
 
-def build_openalex_client(http_client: httpx.AsyncClient) -> OpenAlexClient:
+def build_openalex_client(
+    http_client: httpx.AsyncClient,
+    *,
+    cache: ResponseCache | None = None,
+) -> OpenAlexClient:
     """Build an OpenAlex client carrying the configured polite-pool identity."""
 
     return OpenAlexClient(
         http_client=http_client,
         mailto=contact_email(),
         api_key=_env_value(OPENALEX_API_KEY_ENV_VAR),
+        cache=cache,
     )
 
 
-SOURCE_FACTORIES: dict[str, Callable[[httpx.AsyncClient], SearchClient]] = {
-    "arxiv": lambda client: ArxivClient(http_client=client),
-    "openalex": build_openalex_client,
-    "crossref": lambda client: CrossrefClient(
+SourceFactory = Callable[[httpx.AsyncClient, ResponseCache | None], SearchClient]
+
+SOURCE_FACTORIES: dict[str, SourceFactory] = {
+    "arxiv": lambda client, cache: ArxivClient(http_client=client, cache=cache),
+    "openalex": lambda client, cache: build_openalex_client(client, cache=cache),
+    "crossref": lambda client, cache: CrossrefClient(
         http_client=client,
         mailto=contact_email(),
+        cache=cache,
     ),
-    "semantic_scholar": lambda client: SemanticScholarClient(
+    "semantic_scholar": lambda client, cache: SemanticScholarClient(
         http_client=client,
         api_key=_env_value(SEMANTIC_SCHOLAR_API_KEY_ENV_VAR),
+        cache=cache,
     ),
-    "dblp": lambda client: DblpClient(http_client=client),
+    "dblp": lambda client, cache: DblpClient(http_client=client, cache=cache),
 }
 SUPPORTED_SOURCES = tuple(SOURCE_FACTORIES)
 
@@ -58,6 +68,8 @@ SUPPORTED_SOURCES = tuple(SOURCE_FACTORIES)
 def build_source_clients(
     http_client: httpx.AsyncClient,
     sources: Iterable[str],
+    *,
+    cache: ResponseCache | None = None,
 ) -> dict[str, SearchClient]:
     """Build source clients for the requested source IDs."""
 
@@ -66,5 +78,5 @@ def build_source_clients(
         factory = SOURCE_FACTORIES.get(source)
         if factory is None:
             raise UnsupportedSourceError(f"unsupported source: {source}")
-        clients[source] = factory(http_client)
+        clients[source] = factory(http_client, cache)
     return clients

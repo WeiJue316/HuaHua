@@ -9,6 +9,7 @@ from typing import Any
 
 import httpx
 
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import (
     PaperCandidate,
     RetryPolicy,
@@ -67,6 +68,7 @@ class OpenAlexClient:
         api_url: str = OPENALEX_API_URL,
         mailto: str | None = None,
         api_key: str | None = None,
+        cache: ResponseCache | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: SleepFn = asyncio.sleep,
     ) -> None:
@@ -74,6 +76,7 @@ class OpenAlexClient:
         self.api_url = api_url.rstrip("/")
         self.mailto = mailto
         self.api_key = api_key
+        self.cache = cache
         self.retry_policy = retry_policy or RetryPolicy()
         self.sleep = sleep
 
@@ -101,6 +104,7 @@ class OpenAlexClient:
                 params=params,
                 headers={"User-Agent": user_agent()},
                 retry_policy=self.retry_policy,
+                cache=self.cache,
                 sleep=self.sleep,
             )
         except httpx.HTTPError as exc:

@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 import httpx
 
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import (
     OpenAccessInfo,
     PaperCandidate,
@@ -62,12 +63,14 @@ class CrossrefClient:
         http_client: httpx.AsyncClient,
         api_url: str = CROSSREF_API_URL,
         mailto: str | None = None,
+        cache: ResponseCache | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url.rstrip("/")
         self.mailto = mailto
+        self.cache = cache
         self.retry_policy = retry_policy or RetryPolicy()
         self.sleep = sleep
 
@@ -92,7 +95,8 @@ class CrossrefClient:
             params=params,
             headers={"User-Agent": user_agent()},
             retry_policy=self.retry_policy,
-            sleep=self.sleep,
+            cache=self.cache,
+                sleep=self.sleep,
         )
         if response.status_code >= 400:
             retry_after = response.headers.get("retry-after")

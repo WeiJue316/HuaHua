@@ -18,6 +18,7 @@ from research_agent.evaluator.metrics import (
 from research_agent.evaluator.runner import EvaluationCaseOutcome
 from research_agent.evaluator.systems import get_system
 from research_agent.llm.gateway import ModelGateway
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.planner.planner import plan_research
 from research_agent.policy.relevance import RelevanceJudge
 from research_agent.router.registry import build_source_clients
@@ -50,11 +51,13 @@ class ResearchCaseRunner:
         settings: CaseRunnerSettings,
         http_client: httpx.AsyncClient,
         gateway: ModelGateway | None = None,
+        cache: ResponseCache | None = None,
     ) -> None:
         self.questions = {question.question_id: question for question in questions}
         self.settings = settings
         self.http_client = http_client
         self.gateway = gateway
+        self.cache = cache
 
     async def __call__(
         self, question_id: str, system_id: str, run_number: int
@@ -73,7 +76,7 @@ class ResearchCaseRunner:
         if not source_ids:
             return EvaluationCaseOutcome(error_code="no_sources")
 
-        clients = build_source_clients(self.http_client, source_ids)
+        clients = build_source_clients(self.http_client, source_ids, cache=self.cache)
         plan = plan_research(
             question.question,
             available_sources=tuple(source_ids),
@@ -95,6 +98,7 @@ class ResearchCaseRunner:
             plan=plan,
             relevance_judge=judge,
             subquestions=question.subquestions,
+            response_cache=self.cache,
         )
 
         metrics = self._metrics(question, result)

@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 import httpx
 
+from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import (
     PaperCandidate,
     RetryPolicy,
@@ -63,12 +64,14 @@ class SemanticScholarClient:
         http_client: httpx.AsyncClient,
         api_url: str = SEMANTIC_SCHOLAR_API_URL,
         api_key: str | None = None,
+        cache: ResponseCache | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url.rstrip("/")
         self.api_key = api_key
+        self.cache = cache
         self.retry_policy = retry_policy or RetryPolicy()
         self.sleep = sleep
 
@@ -90,7 +93,8 @@ class SemanticScholarClient:
             params=params,
             headers=self._headers(),
             retry_policy=self.retry_policy,
-            sleep=self.sleep,
+            cache=self.cache,
+                sleep=self.sleep,
         )
         if response.status_code >= 400:
             retry_after = response.headers.get("retry-after")
