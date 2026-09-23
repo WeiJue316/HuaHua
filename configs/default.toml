@@ -1,0 +1,11 @@
+# 非密钥默认配置。密钥只能来自环境变量或系统凭据管理器。
+[project]
+domain = "cs_ai"
+
+[storage]
+database_path = "data/research_agent.db"
+reports_dir = "reports"
+
+[agent]
+default_mode = "plan_and_execute"
+max_steps = 20
