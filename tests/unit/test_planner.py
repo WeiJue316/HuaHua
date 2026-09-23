@@ -40,13 +40,27 @@ def test_plan_research_keeps_fallback_order() -> None:
     assert len(plan.fallback_sources) == 3
     assert set(plan.selected_sources).isdisjoint(plan.fallback_sources)
 
-def test_plan_research_builds_content_term_query_variants() -> None:
+def test_plan_research_puts_the_full_question_first() -> None:
+    """Variant order decides what survives truncation, so the best goes first."""
+
     plan = plan_research(
         "evidence chain in scientific literature",
         available_sources=ALL_SOURCES,
     )
 
-    assert plan.query_variants[0] == "evidence chain scientific literature"
-    assert "evidence chain in scientific literature" in plan.query_variants
-    assert "evidence chain" in plan.query_variants
+    assert plan.query_variants[0] == "evidence chain in scientific literature"
+    assert "evidence chain scientific literature" in plan.query_variants
     assert len(plan.query_variants) == len(set(plan.query_variants))
+
+
+def test_plan_research_does_not_emit_a_generic_two_term_variant() -> None:
+    """Trimming to the first two content terms produced queries such as
+    "methods used", which returned unrelated papers instead of the gold set."""
+
+    plan = plan_research(
+        "What methods are used for query expansion in neural information retrieval?",
+        available_sources=ALL_SOURCES,
+    )
+
+    assert "methods used" not in plan.query_variants
+    assert all(len(variant.split()) > 2 for variant in plan.query_variants)

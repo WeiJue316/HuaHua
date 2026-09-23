@@ -60,6 +60,14 @@ async def search_sources(
       failed, so a partially failing source stays usable.
     - ``variant_errors[source]`` records partial variant failures without
       hiding the papers that did arrive.
+
+    Variants are merged in the order given and then truncated, so the first
+    variant fills the budget and later ones only contribute papers it missed.
+    **The caller must therefore order variants best first.** Measured example:
+    on csai_007 the full question ranks the gold papers at position 13 and the
+    stopword-stripped form at 17, so at ``max_results_per_source=20`` putting
+    the question first keeps them while interleaving the variants would drop
+    both, since each would only be allotted ten slots.
     """
 
     if max_concurrency < 1:

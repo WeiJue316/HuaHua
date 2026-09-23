@@ -62,16 +62,29 @@ def _content_terms(question: str) -> list[str]:
 
 
 def _query_variants(question: str) -> tuple[str, ...]:
-    """Build deterministic query variants from most precise to most permissive."""
+    """Build deterministic query variants, best first.
+
+    Measured against OpenAlex on the pilot set:
+
+    - The full question ranked the gold papers at position 13, while the
+      stopword-stripped variant ranked them at 17. The full question goes
+      first because variant order decides which results survive the merge
+      truncation.
+    - A "first two content terms" variant used to be generated as well. For
+      "What methods are used for query expansion in neural information
+      retrieval?" that produced the query "methods used", which never surfaced
+      the gold papers and instead returned quantitative PCR and Monte Carlo
+      papers. Stripping stopwords from a short question leaves terms too
+      generic to be selective, so the variant is gone.
+    """
 
     normalized = " ".join(question.split())
     terms = _content_terms(normalized)
-    variants: list[str] = []
+    variants: list[str] = [normalized]
     if terms:
-        variants.append(" ".join(terms))
-    variants.append(normalized)
-    if len(terms) >= 2:
-        variants.append(" ".join(terms[:2]))
+        stripped = " ".join(terms)
+        if stripped != normalized:
+            variants.append(stripped)
     return tuple(dict.fromkeys(variant for variant in variants if variant))
 
 
