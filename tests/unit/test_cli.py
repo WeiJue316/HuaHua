@@ -40,3 +40,4 @@ def test_research_help_lists_sources() -> None:
 
     assert result.exit_code == 0
     assert "--sources" in result.stdout
+    assert "--download-pdf" in result.stdout

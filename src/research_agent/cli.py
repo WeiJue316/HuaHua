@@ -65,6 +65,13 @@ def research(
             help="Comma-separated source IDs: arxiv, openalex.",
         ),
     ] = "arxiv,openalex",
+    download_pdf: Annotated[
+        bool,
+        typer.Option(
+            "--download-pdf",
+            help="Archive open arXiv PDFs and record File provenance.",
+        ),
+    ] = False,
 ) -> None:
     """Run the federated research flow and write a traceable report."""
 
@@ -89,6 +96,7 @@ def research(
                 reports_root=reports_dir,
                 clients=clients,
                 max_results_per_source=max_results,
+                download_pdf=download_pdf,
             )
 
     result = asyncio.run(run())
@@ -100,6 +108,7 @@ def research(
     typer.echo(f"papers: {result.paper_count}")
     typer.echo(f"evidence: {result.evidence_count}")
     typer.echo(f"claims: {result.claim_count}")
+    typer.echo(f"files: {result.file_count}")
     typer.echo(f"report: {result.report_path}")
 
 

@@ -14,6 +14,7 @@ from research_agent.evidence.claims import (
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.router.federation import SearchClient, search_sources
+from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
 from research_agent.storage.repository import ResearchRepository, utc_now
 
@@ -27,6 +28,7 @@ class ResearchRunResult:
     paper_count: int
     evidence_count: int
     claim_count: int
+    file_count: int
     source_counts: dict[str, int]
 
 
@@ -43,6 +45,7 @@ def render_report(
     source_records: list[tuple[PaperCandidate, str]],
     evidence: list[tuple[str, str, str, str, str]],
     claims: list[ClaimDraft],
+    files: list[tuple[str, str, str, str]],
 ) -> str:
     """Render a minimal evidence-first Markdown report."""
 
@@ -84,6 +87,21 @@ def render_report(
         lines.append(
             f"| E{index} | {_md_cell(title)} | {_md_cell(source)} "
             f"| {_md_cell(quote)} | Abstract | `{source_record_id}` |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Files",
+            "",
+            "| # | Paper | Source | SHA-256 | Archived Path |",
+            "|---:|---|---|---|---|",
+        ]
+    )
+    for index, (title, source, sha256, path) in enumerate(files, start=1):
+        lines.append(
+            f"| F{index} | {_md_cell(title)} | {_md_cell(source)} "
+            f"| `{sha256}` | `{_md_cell(path)}` |"
         )
 
     lines.extend(
@@ -146,11 +164,14 @@ async def run_federated_research(
     reports_root: Path,
     clients: Mapping[str, SearchClient],
     max_results_per_source: int = 10,
+    download_pdf: bool = False,
+    artifact_root: Path | None = None,
 ) -> ResearchRunResult:
     """Query multiple sources, preserve provenance, and render one report."""
 
     db_path = Path(db_path)
     reports_root = Path(reports_root)
+    archive_root = Path(artifact_root) if artifact_root else db_path.parent
     apply_migrations(db_path)
 
     started_at = utc_now()
@@ -164,6 +185,7 @@ async def run_federated_research(
             config={
                 "max_results_per_source": max_results_per_source,
                 "sources": sorted(clients),
+                "download_pdf": download_pdf,
             },
         )
         connection.commit()
@@ -176,6 +198,7 @@ async def run_federated_research(
 
     source_records: list[tuple[PaperCandidate, str]] = []
     evidence_rows: list[tuple[str, str, str, str, str]] = []
+    file_rows: list[tuple[str, str, str, str]] = []
     paper_ids: set[str] = set()
     with connect_database(db_path) as connection:
         repository = ResearchRepository(connection)
@@ -199,6 +222,7 @@ async def run_federated_research(
             )
             if source_failed:
                 continue
+            client = clients[source]
 
             for candidate in (
                 paper for paper in federated.papers if paper.source == source
@@ -242,6 +266,44 @@ async def run_federated_research(
                         )
                     )
 
+                if (
+                    download_pdf
+                    and candidate.pdf_url
+                    and isinstance(client, ArxivClient)
+                ):
+                    temp_dir = archive_root / "cache" / "downloads"
+                    artifact = await client.download_pdf(
+                        candidate.pdf_url,
+                        temp_dir,
+                        artifact_id=candidate.source_record_id,
+                    )
+                    final_path = archive_downloaded_file(
+                        source_path=temp_dir / artifact.filename,
+                        archive_dir=archive_root / project_id / "papers",
+                        sha256=artifact.sha256,
+                        suffix=".pdf",
+                    )
+                    repository.record_file(
+                        paper_id=paper_id,
+                        kind="pdf",
+                        sha256=artifact.sha256,
+                        path=final_path.as_posix(),
+                        size_bytes=artifact.size_bytes,
+                        content_type=artifact.content_type,
+                        source_url=artifact.source_url,
+                        final_url=artifact.final_url,
+                        retrieved_at=artifact.retrieved_at,
+                        license=artifact.license,
+                    )
+                    file_rows.append(
+                        (
+                            candidate.title,
+                            candidate.source,
+                            artifact.sha256,
+                            final_path.as_posix(),
+                        )
+                    )
+
         claims = build_claims_from_evidence(evidence_rows)
         available_evidence_ids = {row[4] for row in evidence_rows}
         for claim in claims:
@@ -253,6 +315,7 @@ async def run_federated_research(
             source_records=source_records,
             evidence=evidence_rows,
             claims=claims,
+            files=file_rows,
         )
         report_path = reports_root / run_id / "report.md"
         report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -272,6 +335,7 @@ async def run_federated_research(
         paper_count=len(paper_ids),
         evidence_count=len(evidence_rows),
         claim_count=len(claims),
+        file_count=len(file_rows),
         source_counts=federated.source_counts,
     )
 

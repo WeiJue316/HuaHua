@@ -80,8 +80,9 @@
 │   ├── evaluator/
 │   ├── evidence/
 │   │   └── claims.py            # Evidence → Claim 与引用校验
-│   ├── storage/                 # 迁移 runner、migrations/、repository.py
+│   ├── storage/                 # 迁移、repository、不可变文件归档
 │   │   ├── migrations/
+│   │   ├── artifacts.py
 │   │   └── repository.py
 │   ├── mcp_servers/
 │   │   ├── common.py            # 公共 envelope 与数据模型
