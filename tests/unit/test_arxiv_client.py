@@ -118,3 +118,19 @@ async def test_arxiv_client_retries_rate_limit_then_succeeds() -> None:
     assert calls == 2
     assert delays == [1.0]
     assert result.papers[0].source_record_id == "2407.18940"
+
+@pytest.mark.asyncio
+async def test_arxiv_client_uses_bare_query_for_single_term() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["search_query"] == "all:electron"
+        return httpx.Response(
+            200,
+            text=FIXTURE.read_text(encoding="utf-8"),
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        arxiv = ArxivClient(http_client=http_client)
+        result = await arxiv.search("electron", max_results=1)
+
+    assert result.papers[0].source_record_id == "2407.18940"

@@ -7,6 +7,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 
@@ -53,6 +54,15 @@ class ArtifactRef:
     license: str | None = None
 
 
+def _build_search_query(query: str) -> str:
+    normalized = query.strip()
+    if not normalized:
+        raise ArxivClientError("arXiv query must not be empty")
+    if len(normalized.split()) == 1:
+        return f"all:{normalized}"
+    return f'all:"{normalized}"'
+
+
 class ArxivClient:
     """Small async client around the public arXiv API."""
 
@@ -77,18 +87,16 @@ class ArxivClient:
     ) -> ArxivSearchResult:
         """Search arXiv and parse the Atom response."""
 
-        params: dict[str, str | int] = {
-            "search_query": f'all:"{query.strip()}"',
-            "start": 0,
-            "max_results": max_results,
-            "sortBy": "relevance",
-            "sortOrder": "descending",
-        }
+        query_value = quote(_build_search_query(query), safe=":")
+        search_url = (
+            f"{self.api_url}?search_query={query_value}"
+            f"&start=0&max_results={max_results}"
+            "&sortBy=relevance&sortOrder=descending"
+        )
         try:
             response = await get_with_retry(
                 self.http_client,
-                self.api_url,
-                params=params,
+                search_url,
                 headers={"User-Agent": "research-agent/0.1"},
                 retry_policy=self.retry_policy,
                 sleep=self.sleep,
