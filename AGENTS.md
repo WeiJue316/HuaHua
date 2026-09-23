@@ -75,6 +75,7 @@
 │   ├── executor/
 │   ├── memory/
 │   ├── router/
+│   │   └── federation.py        # 多源并行搜索与部分失败处理
 │   ├── policy/
 │   ├── evaluator/
 │   ├── evidence/
@@ -83,7 +84,11 @@
 │   │   └── repository.py
 │   ├── mcp_servers/
 │   │   ├── common.py            # 公共 envelope 与数据模型
-│   │   └── arxiv/               # arXiv 适配与 MCP server
+│   │   ├── arxiv/               # arXiv 适配与 MCP server
+│   │   │   ├── client.py
+│   │   │   ├── parser.py
+│   │   │   └── server.py
+│   │   └── openalex/            # OpenAlex 适配与 MCP server
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py

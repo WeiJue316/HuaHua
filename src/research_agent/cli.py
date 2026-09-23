@@ -8,8 +8,10 @@ import httpx
 import typer
 
 from . import __version__
-from .mcp_servers.arxiv.client import ArxivClient, ArxivClientError
-from .runtime.research_service import ResearchRunResult, run_arxiv_research
+from .mcp_servers.arxiv.client import ArxivClient
+from .mcp_servers.openalex.client import OpenAlexClient
+from .router.federation import SearchClient
+from .runtime.research_service import ResearchRunResult, run_federated_research
 
 app = typer.Typer(
     name="research-agent",
@@ -53,30 +55,48 @@ def research(
             "--max-results",
             min=1,
             max=200,
-            help="Maximum number of arXiv results.",
+            help="Maximum results per source.",
         ),
     ] = 10,
+    sources: Annotated[
+        str,
+        typer.Option(
+            "--sources",
+            help="Comma-separated source IDs: arxiv, openalex.",
+        ),
+    ] = "arxiv,openalex",
 ) -> None:
-    """Run the M1 arXiv research flow and write a traceable report."""
+    """Run the federated research flow and write a traceable report."""
+
+    source_ids = [item.strip().lower() for item in sources.split(",") if item.strip()]
+    supported = {"arxiv", "openalex"}
+    unsupported = sorted(set(source_ids) - supported)
+    if not source_ids:
+        raise typer.BadParameter("at least one source is required")
+    if unsupported:
+        raise typer.BadParameter(f"unsupported sources: {', '.join(unsupported)}")
 
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
-            client = ArxivClient(http_client=http_client)
-            return await run_arxiv_research(
+            clients: dict[str, SearchClient] = {}
+            if "arxiv" in source_ids:
+                clients["arxiv"] = ArxivClient(http_client=http_client)
+            if "openalex" in source_ids:
+                clients["openalex"] = OpenAlexClient(http_client=http_client)
+            return await run_federated_research(
                 question=question,
                 db_path=db,
                 reports_root=reports_dir,
-                client=client,
-                max_results=max_results,
+                clients=clients,
+                max_results_per_source=max_results,
             )
 
-    try:
-        result = asyncio.run(run())
-    except ArxivClientError as exc:
-        typer.echo(f"arXiv request failed: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
+    result = asyncio.run(run())
+    summary = ", ".join(
+        f"{source}={count}" for source, count in sorted(result.source_counts.items())
+    )
     typer.echo(f"run_id: {result.run_id}")
+    typer.echo(f"sources: {summary}")
     typer.echo(f"papers: {result.paper_count}")
     typer.echo(f"evidence: {result.evidence_count}")
     typer.echo(f"report: {result.report_path}")

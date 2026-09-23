@@ -34,3 +34,9 @@ def test_doctor() -> None:
 
     assert result.exit_code == 0
     assert "environment: ok" in result.stdout
+
+def test_research_help_lists_sources() -> None:
+    result = runner.invoke(app, ["research", "--help"])
+
+    assert result.exit_code == 0
+    assert "--sources" in result.stdout

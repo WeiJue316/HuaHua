@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "count": 1,
+    "page": 1,
+    "per_page": 2,
+    "next_cursor": null
+  },
+  "results": [
+    {
+      "id": "https://openalex.org/W123456789",
+      "doi": "https://doi.org/10.1000/example",
+      "display_name": "Traceable Retrieval for Scientific Agents",
+      "publication_year": 2024,
+      "publication_date": "2024-07-26",
+      "type": "preprint",
+      "language": "en",
+      "primary_location": {
+        "landing_page_url": "https://example.org/paper",
+        "pdf_url": "https://example.org/paper.pdf",
+        "source": {
+          "display_name": "arXiv"
+        }
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "green",
+        "oa_url": "https://example.org/paper.pdf"
+      },
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A111",
+            "display_name": "Alice Example"
+          }
+        },
+        {
+          "author_position": "middle",
+          "author": {
+            "id": "https://openalex.org/A222",
+            "display_name": "Bob Example"
+          }
+        }
+      ],
+      "abstract_inverted_index": {
+        "We": [0],
+        "study": [1],
+        "evidence": [2],
+        "chains": [3],
+        "for": [4],
+        "scientific": [5],
+        "agents.": [6]
+      }
+    }
+  ]
+}

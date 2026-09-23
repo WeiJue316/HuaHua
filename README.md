@@ -8,8 +8,9 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 - 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则、GitHub Actions 配置、SQLite 初始 schema 和迁移 runner。
 - M1 已实现：arXiv MCP server、arXiv Atom 解析、SourceRecord/Paper/EvidenceSpan 持久化、CLI 纵向流程和 Markdown 报告。
-- 未完成：真实 arXiv smoke test 当前被 429 限流阻断；OpenAlex、Federation、Agent Core 和实验尚未开始。
-- 已通过：Ruff、mypy、pytest（27 passed）、`research-agent --help` 和 `python scripts/check_docs.py`。
+- M2 已实现：OpenAlex MCP server、并行 Federation、DOI 跨源合并、双源 provenance 保留和双源 CLI。
+- 未完成：真实 arXiv smoke test 当前被 429 限流阻断；Agent Core、Claim 综合、评测和实验尚未开始。
+- 已通过：Ruff、mypy、pytest（36 passed）、`research-agent research --help` 和 `python scripts/check_docs.py`。
 - 文档校验：`python scripts/check_docs.py`。
 - 当前阶段：M1，arXiv 单源纵向闭环。
 - 论文定稿：2027-03-19 17:00。
@@ -29,7 +30,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 uv sync --dev
 uv run research-agent doctor
 uv run research-agent --help
-uv run research-agent research "evidence chain" --max-results 5
+uv run research-agent research "evidence chain" --sources arxiv,openalex --max-results 5
 ```
 
 ### 开发验证
