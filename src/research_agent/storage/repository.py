@@ -535,6 +535,104 @@ class ResearchRepository:
         )
         return step_id
 
+    def update_run_status(
+        self,
+        *,
+        run_id: str,
+        status: str,
+        error_code: str | None = None,
+        finished_at: str | None = None,
+    ) -> None:
+        if finished_at is None:
+            self.connection.execute(
+                "UPDATE run SET status = ?, error_code = ? WHERE id = ?",
+                (status, error_code, run_id),
+            )
+        else:
+            self.connection.execute(
+                """
+                UPDATE run
+                SET status = ?, error_code = ?, finished_at = ?
+                WHERE id = ?
+                """,
+                (status, error_code, finished_at, run_id),
+            )
+
+    def update_plan_step_status(
+        self,
+        *,
+        step_id: str,
+        status: str,
+        attempt_count: int | None = None,
+        input_json: Any | None = None,
+        output_json: Any | None = None,
+        checkpoint_json: Any | None = None,
+        error_code: str | None = None,
+        started_at: str | None = None,
+        finished_at: str | None = None,
+    ) -> None:
+        self.connection.execute(
+            """
+            UPDATE plan_step
+            SET status = ?,
+                attempt_count = COALESCE(?, attempt_count),
+                input_json = COALESCE(?, input_json),
+                output_json = COALESCE(?, output_json),
+                checkpoint_json = COALESCE(?, checkpoint_json),
+                error_code = ?,
+                started_at = COALESCE(?, started_at),
+                finished_at = COALESCE(?, finished_at)
+            WHERE id = ?
+            """,
+            (
+                status,
+                attempt_count,
+                json_text(input_json) if input_json is not None else None,
+                json_text(output_json) if output_json is not None else None,
+                json_text(checkpoint_json) if checkpoint_json is not None else None,
+                error_code,
+                started_at,
+                finished_at,
+                step_id,
+            ),
+        )
+
+    def record_step_attempt(
+        self,
+        *,
+        step_id: str,
+        attempt_no: int,
+        status: str,
+        input_json: Any | None = None,
+        output_json: Any | None = None,
+        checkpoint_json: Any | None = None,
+        error_code: str | None = None,
+        started_at: str,
+        finished_at: str | None = None,
+    ) -> str:
+        attempt_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO step_attempt
+                (id, step_id, attempt_no, status, input_json, output_json,
+                 checkpoint_json, error_code, started_at, finished_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                attempt_id,
+                step_id,
+                attempt_no,
+                status,
+                json_text(input_json) if input_json is not None else None,
+                json_text(output_json) if output_json is not None else None,
+                json_text(checkpoint_json) if checkpoint_json is not None else None,
+                error_code,
+                started_at,
+                finished_at,
+            ),
+        )
+        return attempt_id
+
     def record_audit_event(
         self,
         *,

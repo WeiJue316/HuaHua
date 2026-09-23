@@ -74,6 +74,7 @@
 │   ├── planner/
 │   │   └── planner.py           # 确定性源选择、查询变体和预算计划
 │   ├── executor/
+│   │   └── executor.py          # PlanStep 状态机、StepAttempt 和重试
 │   ├── memory/
 │   ├── router/
 │   │   ├── federation.py        # 多源并行搜索、并发预算与部分失败处理
