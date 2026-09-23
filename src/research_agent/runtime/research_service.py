@@ -26,7 +26,12 @@ from research_agent.runtime.enrichment import AbstractResolver
 from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
 from research_agent.storage.pdf_parser import parse_pdf
-from research_agent.storage.repository import ResearchRepository, sha256_text, utc_now
+from research_agent.storage.repository import (
+    ResearchRepository,
+    canonical_key,
+    sha256_text,
+    utc_now,
+)
 
 
 class ResearchExecutionError(RuntimeError):
@@ -51,6 +56,8 @@ class ResearchRunResult:
     relevance_dropped: int = 0
     relevance_failures: int = 0
     relevance_skipped: bool = False
+    retrieved_paper_keys: tuple[str, ...] = ()
+    dropped_paper_keys: tuple[str, ...] = ()
 
 
 @dataclass
@@ -76,9 +83,13 @@ class _RunContext:
     document_count: int = 0
     claims: list[ClaimDraft] = field(default_factory=list)
     dropped_source_record_ids: set[str] = field(default_factory=set)
+    retrieved_keys: set[str] = field(default_factory=set)
+    dropped_keys: set[str] = field(default_factory=set)
     verdicts: list[RelevanceVerdict] = field(default_factory=list)
     relevance_failures: int = 0
     relevance_skipped: bool = False
+    retrieved_paper_keys: tuple[str, ...] = ()
+    dropped_paper_keys: tuple[str, ...] = ()
     report_path: Path | None = None
     report_id: str | None = None
 
@@ -348,6 +359,7 @@ async def run_federated_research(
                 ):
                     paper_id, _ = repository.upsert_paper(candidate)
                     context.paper_ids.add(paper_id)
+                    context.retrieved_keys.add(canonical_key(candidate))
                     stored_source_record_id = repository.record_source_record(
                         source_call_id=source_call_id,
                         candidate=candidate,
@@ -541,6 +553,7 @@ async def run_federated_research(
                 )
                 if not verdict.keep:
                     context.dropped_source_record_ids.add(stored_source_record_id)
+                    context.dropped_keys.add(verdict.paper_key)
 
             context.relevance_failures = failures
             return {
@@ -658,6 +671,8 @@ async def run_federated_research(
             relevance_dropped=len(context.dropped_source_record_ids),
             relevance_failures=context.relevance_failures,
             relevance_skipped=context.relevance_skipped,
+            retrieved_paper_keys=tuple(sorted(context.retrieved_keys)),
+            dropped_paper_keys=tuple(sorted(context.dropped_keys)),
         )
 
 

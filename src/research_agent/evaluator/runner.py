@@ -62,6 +62,10 @@ class EvaluationRunner:
             evaluation_run_id=evaluation_run_id,
             status="running",
         )
+        # Release the write lock before running any case: a case runner writes
+        # its research run to the same database, and holding an open write
+        # transaction here makes every case fail with "database is locked".
+        self.repository.connection.commit()
         case_count = 0
         failed_count = 0
         completed_count = 0
@@ -80,6 +84,7 @@ class EvaluationRunner:
                             case_id=case_id,
                             status="running",
                         )
+                        self.repository.connection.commit()
                         try:
                             outcome = await run_case(
                                 question.question_id,
@@ -91,8 +96,9 @@ class EvaluationRunner:
                             self.repository.update_case(
                                 case_id=case_id,
                                 status="failed",
-                                error_code=type(exc).__name__,
+                                error_code=f"{type(exc).__name__}: {exc}"[:200],
                             )
+                            self.repository.connection.commit()
                             continue
                         if outcome.error_code:
                             failed_count += 1
@@ -116,6 +122,7 @@ class EvaluationRunner:
                             research_run_id=outcome.research_run_id,
                             metrics=outcome.metrics,
                         )
+                        self.repository.connection.commit()
             status = "completed" if failed_count == 0 else "failed"
             self.repository.update_run(
                 evaluation_run_id=evaluation_run_id,

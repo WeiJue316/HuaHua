@@ -8,6 +8,14 @@ import httpx
 import typer
 
 from . import __version__
+from .evaluator.case_runner import (
+    SYSTEM_VERSION,
+    CaseRunnerSettings,
+    ResearchCaseRunner,
+)
+from .evaluator.dataset import load_questions
+from .evaluator.runner import EvaluationRunner, EvaluationSummary
+from .evaluator.systems import SYSTEMS
 from .llm.deepseek import DeepSeekGateway
 from .llm.gateway import ModelGatewayError
 from .planner.planner import ResearchPlan, plan_research
@@ -23,6 +31,8 @@ from .runtime.research_service import (
     ResearchRunResult,
     run_federated_research,
 )
+from .storage.evaluation_repository import EvaluationRepository
+from .storage.migrations import apply_migrations, connect_database
 
 app = typer.Typer(
     name="research-agent",
@@ -185,6 +195,91 @@ def research(
             f"failures={result.relevance_failures}"
         )
     typer.echo(f"report: {result.report_path}")
+
+
+@app.command()
+def evaluate(
+    dataset: Annotated[
+        Path,
+        typer.Option("--dataset", help="Frozen JSONL question set."),
+    ] = Path("evaluation/datasets/pilot_questions.v1.jsonl"),
+    systems: Annotated[
+        str,
+        typer.Option("--systems", help="Comma-separated system identifiers."),
+    ] = "B3,A6",
+    repeats: Annotated[
+        int,
+        typer.Option("--repeats", min=1, max=10, help="Runs per question."),
+    ] = 1,
+    db: Annotated[
+        Path,
+        typer.Option("--db", help="SQLite database for runs and results."),
+    ] = Path("data/research_agent.db"),
+    reports_dir: Annotated[
+        Path,
+        typer.Option("--reports-dir", help="Directory for generated reports."),
+    ] = Path("reports/evaluation"),
+    max_results: Annotated[
+        int,
+        typer.Option("--max-results", min=1, max=200),
+    ] = 10,
+) -> None:
+    """Run an evaluation matrix over a frozen question set."""
+
+    if not dataset.is_file():
+        typer.echo(f"dataset not found: {dataset}", err=True)
+        raise typer.Exit(code=1)
+    questions = load_questions(dataset)
+    system_ids = [item.strip() for item in systems.split(",") if item.strip()]
+    unknown = [item for item in system_ids if item not in SYSTEMS]
+    if unknown:
+        typer.echo(f"unknown systems: {', '.join(unknown)}", err=True)
+        raise typer.Exit(code=1)
+
+    settings = CaseRunnerSettings(
+        db_path=db,
+        reports_root=reports_dir,
+        max_results_per_source=max_results,
+    )
+
+    async def run() -> EvaluationSummary:
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
+            gateway = DeepSeekGateway(http_client=http_client)
+            apply_migrations(db)
+            case_runner = ResearchCaseRunner(
+                questions=questions,
+                settings=settings,
+                http_client=http_client,
+                gateway=gateway,
+            )
+            with connect_database(db) as conn:
+                runner = EvaluationRunner(EvaluationRepository(conn))
+                return await runner.run(
+                    questions=questions,
+                    systems=system_ids,
+                    repeats=repeats,
+                    run_case=case_runner,
+                    dataset_version=settings.dataset_version,
+                    system_version=SYSTEM_VERSION,
+                    config={
+                        "systems": system_ids,
+                        "repeats": repeats,
+                        "max_results_per_source": max_results,
+                    },
+                )
+
+    try:
+        summary = asyncio.run(run())
+    except ModelGatewayError as exc:
+        typer.echo(f"evaluation needs a model provider: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"evaluation_run_id: {summary.evaluation_run_id}")
+    typer.echo(f"status: {summary.status}")
+    typer.echo(
+        f"cases: {summary.case_count} completed={summary.completed_count} "
+        f"failed={summary.failed_count}"
+    )
 
 
 def main() -> None:
