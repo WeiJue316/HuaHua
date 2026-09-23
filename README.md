@@ -11,7 +11,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 - M3 已实现第三站：Crossref、Semantic Scholar 和 DBLP MCP server，以及五源 source registry、Federation 并发预算和部分源错误可见性。
 - M2 已实现：OpenAlex MCP server（含 citations/references）、并行 Federation、DOI 跨源合并、双源 provenance 保留、双源 CLI、Evidence → Claim 构建与引用校验、限流/网络错误的有界重试与 `Retry-After` 支持，以及内容寻址 PDF 归档、Document 解析、full-text Evidence 和 File provenance。
 - 未完成：真实 arXiv smoke test 当前被 429 限流阻断；Agent Core、Claim 综合、评测和实验尚未开始。
-- 已通过：Ruff、mypy、pytest（75 passed）、`research-agent research --help` 和 `python scripts/check_docs.py`。
+- 已通过：Ruff、mypy、pytest（76 passed）、`research-agent research --help` 和 `python scripts/check_docs.py`。
 - 文档校验：`python scripts/check_docs.py`。
 - 当前阶段：M1，arXiv 单源纵向闭环。
 - 论文定稿：2027-03-19 17:00。

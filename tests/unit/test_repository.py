@@ -239,3 +239,62 @@ def test_repository_records_claim_with_evidence(tmp_path: Path) -> None:
         assert claim_evidence is not None
         assert claim_evidence["evidence_span_id"] == evidence_id
         assert claim_evidence["relation_type"] == "supports"
+
+def test_repository_deduplicates_five_sources_by_doi(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+
+    candidates = [
+        _candidate(),
+        _candidate().model_copy(
+            update={"source": "openalex", "source_record_id": "W123456789"}
+        ),
+        _candidate().model_copy(
+            update={"source": "crossref", "source_record_id": "10.1000/example"}
+        ),
+        _candidate().model_copy(
+            update={"source": "semantic_scholar", "source_record_id": "S123"}
+        ),
+        _candidate().model_copy(
+            update={"source": "dblp", "source_record_id": "conf/example/paper"}
+        ),
+    ]
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+        paper_ids: set[str] = set()
+
+        for candidate in candidates:
+            call_id = repo.record_source_call(
+                run_id=run_id,
+                source=candidate.source,
+                tool_name=f"{candidate.source}_search_papers",
+                request_json={},
+                status="success",
+                started_at="2026-01-01T00:00:00Z",
+            )
+            source_record_id = repo.record_source_record(
+                source_call_id=call_id,
+                candidate=candidate,
+                api_endpoint=f"https://example.org/{candidate.source}",
+            )
+            paper_id, created = repo.upsert_paper(candidate)
+            if created:
+                paper_ids.add(paper_id)
+            repo.link_paper_source_record(
+                paper_id=paper_id,
+                source_record_id=source_record_id,
+                merge_reason="doi",
+                is_primary_metadata=candidate.source == "arxiv",
+            )
+
+        assert len(paper_ids) == 1
+        assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM source_record").fetchone()[0] == 5
+        assert (
+            conn.execute("SELECT COUNT(*) FROM paper_source_record").fetchone()[0]
+            == 5
+        )
