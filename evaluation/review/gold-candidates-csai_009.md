@@ -2,10 +2,16 @@
 
 **问题**：What techniques accelerate transformer inference without retraining?
 
+　　→ 哪些技术可以在无需重新训练的情况下加速 Transformer 推理？
+
 **子问题**：
 
 1. Which inference-time optimizations are used?
+　　→ 使用了哪些推理时优化？
+
 2. What latency and quality trade-offs are reported?
+　　→ 报告了哪些延迟与质量的权衡？
+
 
 **现有 gold**：2 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,27 +31,27 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2023 | Q-Diffusion: Quantizing Diffusion Models | Q-Diffusion：扩散模型量化 | `10.1109/iccv51070.2023.01608` | 135 | 引用了种子 | 3 | | |
+| 1 | 2023 | Q-Diffusion: Quantizing Diffusion Models | Q-Diffusion：量化扩散模型 | `10.1109/iccv51070.2023.01608` | 135 | 引用了种子 | 3 | | |
 | 2 | 2023 | I-ViT: Integer-only Quantization for Efficient Vision Transformer Infe | I-ViT：面向高效视觉Transformer推理的纯整数量化 | `10.1109/iccv51070.2023.01565` | 126 | 引用了种子 | 3 | | |
 | 3 | 2025 | Edge Intelligence: A Review of Deep Neural Network Inference in Resour | 边缘智能：资源受限环境下深度神经网络推理综述 | `10.3390/electronics14122495` | 80 | 引用了种子 | 3 | | |
-| 4 | 2024 | Fluctuation-Based Adaptive Structured Pruning for Large Language Model | 基于波动的大语言模型自适应结构化剪枝 | `10.1609/aaai.v38i10.28960` | 43 | 引用了种子 | 3 | | |
-| 5 | 2024 | Agile-Quant: Activation-Guided Quantization for Faster Inference of LL | Agile-Quant：激活引导的量化以实现边缘端LLM更快推理 | `10.1609/aaai.v38i17.29860` | 34 | 引用了种子 | 3 | | |
+| 4 | 2024 | Fluctuation-Based Adaptive Structured Pruning for Large Language Model | 面向大语言模型的基于波动的自适应结构化剪枝 | `10.1609/aaai.v38i10.28960` | 43 | 引用了种子 | 3 | | |
+| 5 | 2024 | Agile-Quant: Activation-Guided Quantization for Faster Inference of LL | Agile-Quant：激活引导的量化以实现大语言模型在边缘端的快速推理 | `10.1609/aaai.v38i17.29860` | 34 | 引用了种子 | 3 | | |
 | 6 | 2024 | Efficient LLMs Training and Inference: An Introduction | 高效大语言模型训练与推理：导论 | `10.1109/access.2024.3501358` | 27 | 引用了种子 | 3 | | |
 | 7 | 2024 | One-Shot Sensitivity-Aware Mixed Sparsity Pruning for Large Language M | 面向大语言模型的一次性敏感度感知混合稀疏剪枝 | `10.1109/icassp48485.2024.10445737` | 26 | 引用了种子 | 3 | | |
 | 8 | 2024 | 8-bit Transformer Inference and Fine-tuning for Edge Accelerators | 面向边缘加速器的 8 位 Transformer 推理与微调 | `10.1145/3620666.3651368` | 26 | 引用了种子 | 3 | | |
 | 9 | 2025 | AWQ: Activation-aware Weight Quantization for On-Device LLM Compressio | AWQ：面向端侧大语言模型压缩与加速的激活感知权重量化 | `10.1145/3714983.3714987` | 223 | 引用了种子 | 2 | | |
 | 10 | 2025 | Empowering Edge Intelligence: A Comprehensive Survey on On-Device AI M | 赋能边缘智能：端侧 AI 模型综合综述 | `10.1145/3724420` | 189 | 引用了种子 | 2 | | |
-| 11 | 2023 | LLMLingua: Compressing Prompts for Accelerated Inference of Large Lang | LLMLingua：压缩提示以实现大语言模型的加速推理 | `10.18653/v1/2023.emnlp-main.825` | 137 | 引用了种子 | 2 | | |
+| 11 | 2023 | LLMLingua: Compressing Prompts for Accelerated Inference of Large Lang | LLMLingua：压缩提示以加速大语言模型推理 | `10.18653/v1/2023.emnlp-main.825` | 137 | 引用了种子 | 2 | | |
 | 12 | 2023 | Deep Learning Workload Scheduling in GPU Datacenters: A Survey | GPU数据中心中的深度学习工作负载调度：综述 | `10.1145/3638757` | 122 | 引用了种子 | 2 | | |
 | 13 | 2023 | RepQ-ViT: Scale Reparameterization for Post-Training Quantization of V | RepQ-ViT：面向视觉Transformer训练后量化的尺度重参数化 | `10.1109/iccv51070.2023.01580` | 108 | 引用了种子 | 2 | | |
-| 14 | 2022 | Learned Token Pruning for Transformers | 面向Transformer的学习型词元剪枝 | `10.1145/3534678.3539260` | 107 | 引用了种子 | 2 | | |
+| 14 | 2022 | Learned Token Pruning for Transformers | 面向Transformer的可学习词元剪枝 | `10.1145/3534678.3539260` | 107 | 引用了种子 | 2 | | |
 | 15 | 2024 | OWQ: Outlier-Aware Weight Quantization for Efficient Fine-Tuning and I | OWQ：面向大语言模型高效微调与推理的离群值感知权重量化 | `10.1609/aaai.v38i12.29237` | 70 | 引用了种子 | 2 | | |
 | 16 | 2025 | A survey of model compression techniques: past, present, and future | 模型压缩技术综述：过去、现在与未来 | `10.3389/frobt.2025.1518965` | 69 | 引用了种子 | 2 | | |
-| 17 | 2024 | FIGNA: Integer Unit-Based Accelerator Design for FP-INT GEMM Preservin | FIGNA：保持数值精度的基于整数单元的 FP-INT GEMM 加速器设计 | `10.1109/hpca57654.2024.00064` | 40 | 引用了种子 | 2 | | |
+| 17 | 2024 | FIGNA: Integer Unit-Based Accelerator Design for FP-INT GEMM Preservin | FIGNA：面向保持数值精度的 FP-INT GEMM 的基于整数单元的加速器设计 | `10.1109/hpca57654.2024.00064` | 40 | 引用了种子 | 2 | | |
 | 18 | 2024 | Exploring Post-training Quantization in LLMs from Comprehensive Study  | 探索大语言模型中的训练后量化：从全面研究到低秩补偿 | `10.1609/aaai.v38i17.29908` | 22 | 引用了种子 | 2 | | |
 | 19 | 2022 | Generative Adversarial Networks | 生成对抗网络 | `10.1017/9781108891530.013` | 2579 | 被种子引用 | 1 | | |
 | 20 | 2024 | AI and Memory Wall | AI 与内存墙 | `10.1109/mm.2024.3373763` | 321 | 引用了种子 | 1 | | |
-| 21 | 2024 | Lightweight Deep Learning for Resource-Constrained Environments: A Sur | 面向资源受限环境的轻量级深度学习：综述 | `10.1145/3657282` | 252 | 引用了种子 | 1 | | |
+| 21 | 2024 | Lightweight Deep Learning for Resource-Constrained Environments: A Sur | 资源受限环境下的轻量级深度学习：综述 | `10.1145/3657282` | 252 | 引用了种子 | 1 | | |
 | 22 | 2023 | A Comprehensive Survey on Model Quantization for Deep Neural Networks  | 图像分类中深度神经网络模型量化的全面综述 | `10.1145/3623402` | 224 | 引用了种子 | 1 | | |
 | 23 | 2024 | LLM-Based Edge Intelligence: A Comprehensive Survey on Architectures,  | 基于大语言模型的边缘智能：架构、应用、安全与可信性全面综述 | `10.1109/ojcoms.2024.3456549` | 184 | 引用了种子 | 1 | | |
 | 24 | 2023 | Tiny Machine Learning: Progress and Futures [Feature] | 微型机器学习：进展与未来 [专题] | `10.1109/mcas.2023.3302182` | 179 | 引用了种子 | 1 | | |

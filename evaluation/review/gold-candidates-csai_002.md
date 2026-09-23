@@ -2,10 +2,16 @@
 
 **问题**：How do agentic tool-use methods differ in planning and memory design?
 
+　　→ 智能体工具使用方法在规划与记忆设计上有何不同？
+
 **子问题**：
 
 1. How is planning represented?
+　　→ 规划是如何表示的？
+
 2. How is long-term state retained?
+　　→ 长期状态是如何保留的？
+
 
 **现有 gold**：3 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,30 +31,30 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2024 | MemoryRepository for AI NPC | 面向AI NPC的记忆仓库 | `10.1109/access.2024.3393485` | 15 | 引用了种子 | 4 | | |
-| 2 | 2026 | Prompt-Native Semantic Runtimes for Language Models: Inference-Time Se | 面向语言模型的提示原生语义运行时：推理时语义治理、溯源、压缩与文档级过程教学 | `10.5281/zenodo.19059674` | 10 | 引用了种子 | 4 | | |
+| 1 | 2024 | MemoryRepository for AI NPC | 面向AI非玩家角色的记忆仓库 | `10.1109/access.2024.3393485` | 15 | 引用了种子 | 4 | | |
+| 2 | 2026 | Prompt-Native Semantic Runtimes for Language Models: Inference-Time Se | 面向语言模型的提示原生语义运行时：推理期语义治理、溯源、压缩与文档级过程教学 | `10.5281/zenodo.19059674` | 10 | 引用了种子 | 4 | | |
 | 3 | 2024 | LLM-Collab: a framework for enhancing task planning via chain-of-thoug | LLM-Collab：通过思维链与多智能体协作增强任务规划的框架 | `10.3934/aci.2024019` | 7 | 引用了种子 | 4 | | |
-| 4 | 2025 | Agentic Lab: An Agentic-physical AI system for cell and organoid exper | Agentic Lab：用于细胞与类器官实验与制造的智能体-物理AI系统 | `10.1101/2025.11.11.686354` | 4 | 引用了种子 | 4 | | |
-| 5 | 2023 | GPTeach: Interactive TA Training with GPT-based Students | GPTeach：基于GPT学生的交互式助教培训 | `10.1145/3573051.3593393` | 118 | 引用了种子 | 3 | | |
-| 6 | 2024 | Agent design pattern catalogue: A collection of architectural patterns | 智能体设计模式目录：基于基础模型的智能体架构模式集 | `10.1016/j.jss.2024.112278` | 43 | 引用了种子 | 3 | | |
+| 4 | 2025 | Agentic Lab: An Agentic-physical AI system for cell and organoid exper | Agentic Lab：用于细胞与类器官实验及制造的智能体-物理AI系统 | `10.1101/2025.11.11.686354` | 4 | 引用了种子 | 4 | | |
+| 5 | 2023 | GPTeach: Interactive TA Training with GPT-based Students | GPTeach：基于GPT学生角色的互动式助教培训 | `10.1145/3573051.3593393` | 118 | 引用了种子 | 3 | | |
+| 6 | 2024 | Agent design pattern catalogue: A collection of architectural patterns | 智能体设计模式目录：面向基础模型智能体的架构模式集合 | `10.1016/j.jss.2024.112278` | 43 | 引用了种子 | 3 | | |
 | 7 | 2025 | Agentic AI: The age of reasoning—A review | 智能体式人工智能：推理时代——综述 | `10.1016/j.jai.2025.08.003` | 41 | 引用了种子 | 3 | | |
-| 8 | 2024 | Can LLMs Answer Investment Banking Questions? Using Domain-Tuned Funct | 大语言模型能回答投资银行问题吗？利用领域调优函数提升 LLM 在知识密集型分析任务中的表现 | `10.1609/aaaiss.v3i1.31191` | 14 | 引用了种子 | 3 | | |
-| 9 | 2024 | Toward the Emergence of Intelligent Control: Episodic Generalization a | 迈向智能控制的涌现：情节泛化与优化 | `10.1162/opmi_a_00143` | 9 | 引用了种子 | 3 | | |
-| 10 | 2025 | Conversational Agents: From RAG to LTM | 对话式智能体：从 RAG 到 LTM | `10.1145/3767695.3769671` | 4 | 引用了种子 | 3 | | |
-| 11 | 2025 | Enhancing Reasoning Capacity of SLM Using Cognitive Enhancement | 利用认知增强提升小型语言模型的推理能力 | `10.1109/icaiic64266.2025.10920811` | 3 | 引用了种子 | 3 | | |
-| 12 | 2025 | Agentic Large Language Models for Conceptual Systems Engineering and D | 面向概念系统工程与设计的智能体式大语言模型 | `10.1115/1.4070328` | 2 | 引用了种子 | 3 | | |
-| 13 | 2026 | From simulated empathy to structural attunement: Realtime Editable Mem | 从模拟共情到结构性调谐：实时可编辑记忆拓扑与情感根基人工智能的演化 | `10.3389/frai.2026.1749517` | 1 | 引用了种子 | 3 | | |
-| 14 | 2024 | A survey on LLM-based multi-agent systems: workflow, infrastructure, a | 基于LLM的多智能体系统综述：工作流、基础设施与挑战 | `10.1007/s44336-024-00009-2` | 362 | 引用了种子 | 2 | | |
-| 15 | 2024 | LLM-Based Edge Intelligence: A Comprehensive Survey on Architectures,  | 基于LLM的边缘智能：架构、应用、安全与可信性的综合综述 | `10.1109/ojcoms.2024.3456549` | 184 | 引用了种子 | 2 | | |
-| 16 | 2023 | The Exploration of Integrating the Midjourney Artificial Intelligence  | 探索将Midjourney人工智能生成内容工具融入设计系统以引导设计师迈向未来创新 | `10.3390/systems11120566` | 123 | 引用了种子 | 2 | | |
-| 17 | 2024 | Materials science in the era of large language models: a perspective | 大语言模型时代的材料科学：一种视角 | `10.1039/d4dd00074a` | 105 | 引用了种子 | 2 | | |
-| 18 | 2024 | Towards Responsible Generative AI: A Reference Architecture for Design | 迈向负责任的生成式AI：设计基于基础模型的智能体的参考架构 | `10.1109/icsa-c63560.2024.00028` | 16 | 引用了种子 | 2 | | |
-| 19 | 2024 | Speech-Copilot: Leveraging Large Language Models for Speech Processing | Speech-Copilot：通过任务分解、模块化和程序生成，利用大语言模型进行语音处理 | `10.1109/slt61566.2024.10832184` | 8 | 引用了种子 | 2 | | |
+| 8 | 2024 | Can LLMs Answer Investment Banking Questions? Using Domain-Tuned Funct | 大语言模型能回答投资银行问题吗？利用领域微调函数提升大语言模型在知识密集型分析任务中的表现 | `10.1609/aaaiss.v3i1.31191` | 14 | 引用了种子 | 3 | | |
+| 9 | 2024 | Toward the Emergence of Intelligent Control: Episodic Generalization a | 迈向智能控制的涌现：情景泛化与优化 | `10.1162/opmi_a_00143` | 9 | 引用了种子 | 3 | | |
+| 10 | 2025 | Conversational Agents: From RAG to LTM | 对话智能体：从检索增强生成到长期记忆 | `10.1145/3767695.3769671` | 4 | 引用了种子 | 3 | | |
+| 11 | 2025 | Enhancing Reasoning Capacity of SLM Using Cognitive Enhancement | 使用认知增强提升SLM的推理能力 | `10.1109/icaiic64266.2025.10920811` | 3 | 引用了种子 | 3 | | |
+| 12 | 2025 | Agentic Large Language Models for Conceptual Systems Engineering and D | 面向概念系统工程与设计的智能体大语言模型 | `10.1115/1.4070328` | 2 | 引用了种子 | 3 | | |
+| 13 | 2026 | From simulated empathy to structural attunement: Realtime Editable Mem | 从模拟共情到结构性调谐：实时可编辑记忆拓扑与情感根基AI的演进 | `10.3389/frai.2026.1749517` | 1 | 引用了种子 | 3 | | |
+| 14 | 2024 | A survey on LLM-based multi-agent systems: workflow, infrastructure, a | 基于大语言模型的多智能体系统综述：工作流、基础设施与挑战 | `10.1007/s44336-024-00009-2` | 362 | 引用了种子 | 2 | | |
+| 15 | 2024 | LLM-Based Edge Intelligence: A Comprehensive Survey on Architectures,  | 基于大语言模型的边缘智能：架构、应用、安全与可信性综合综述 | `10.1109/ojcoms.2024.3456549` | 184 | 引用了种子 | 2 | | |
+| 16 | 2023 | The Exploration of Integrating the Midjourney Artificial Intelligence  | 将Midjourney人工智能生成内容工具融入设计系统以引导设计师走向未来导向创新的探索 | `10.3390/systems11120566` | 123 | 引用了种子 | 2 | | |
+| 17 | 2024 | Materials science in the era of large language models: a perspective | 大语言模型时代的材料科学：一个视角 | `10.1039/d4dd00074a` | 105 | 引用了种子 | 2 | | |
+| 18 | 2024 | Towards Responsible Generative AI: A Reference Architecture for Design | 迈向负责任的生成式人工智能：设计基于基础模型的智能体的参考架构 | `10.1109/icsa-c63560.2024.00028` | 16 | 引用了种子 | 2 | | |
+| 19 | 2024 | Speech-Copilot: Leveraging Large Language Models for Speech Processing | 语音副驾驶：通过任务分解、模块化和程序生成利用大语言模型进行语音处理 | `10.1109/slt61566.2024.10832184` | 8 | 引用了种子 | 2 | | |
 | 20 | 2025 | Spike sorting AI agent | 锋电位分类AI智能体 | `10.1101/2025.02.11.637754` | 8 | 引用了种子 | 2 | | |
-| 21 | 2024 | Evaluating Top-k RAG-based approach for Game Review Generation | 评估基于 Top-k RAG 的游戏评论生成方法 | `10.1109/ic2pct60090.2024.10486273` | 8 | 引用了种子 | 2 | | |
+| 21 | 2024 | Evaluating Top-k RAG-based approach for Game Review Generation | 评估基于Top-k RAG的游戏评论生成方法 | `10.1109/ic2pct60090.2024.10486273` | 8 | 引用了种子 | 2 | | |
 | 22 | 2024 | Unified Multi-Scenario Summarization Evaluation and Explanation | 统一的多场景摘要评估与解释 | `10.1109/tkde.2024.3509715` | 4 | 引用了种子 | 2 | | |
-| 23 | 2025 | AgentArcEval: An architecture evaluation method for foundation model b | AgentArcEval：一种面向基于基础模型的智能体的架构评估方法 | `10.1016/j.jss.2025.112656` | 3 | 引用了种子 | 2 | | |
-| 24 | 2026 | MDSD: Multi-turn Diverse Synthetic Dialog Generation for Domain Specif | MDSD：面向领域特定不完整请求理解的多轮多样合成对话生成 | `10.1109/icde65706.2026.00355` | 0 | 引用了种子 | 2 | | |
+| 23 | 2025 | AgentArcEval: An architecture evaluation method for foundation model b | AgentArcEval：一种基于基础模型的智能体架构评估方法 | `10.1016/j.jss.2025.112656` | 3 | 引用了种子 | 2 | | |
+| 24 | 2026 | MDSD: Multi-turn Diverse Synthetic Dialog Generation for Domain Specif | MDSD：面向领域特定不完整请求理解的多轮多样化合成对话生成 | `10.1109/icde65706.2026.00355` | 0 | 引用了种子 | 2 | | |
 | 25 | 2024 | A survey on large language model based autonomous agents | 基于大语言模型的自主智能体综述 | `10.1007/s11704-024-40231-1` | 1624 | 引用了种子 | 1 | | |
 
 ## 摘要（判定用）

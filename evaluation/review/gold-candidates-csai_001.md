@@ -2,10 +2,16 @@
 
 **问题**：What are the main evaluation methods for retrieval-augmented generation systems?
 
+　　→ 检索增强生成系统的主要评估方法有哪些？
+
 **子问题**：
 
 1. Which metrics are used?
+　　→ 使用了哪些指标？
+
 2. Which datasets and baselines are common?
+　　→ 常见的数据集和基线有哪些？
+
 
 **现有 gold**：3 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,30 +31,30 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2025 | A self-correcting Agentic Graph RAG for clinical decision support in h | 面向肝病临床决策支持的自纠正智能体图RAG | `10.3389/fmed.2025.1716327` | 9 | 引用了种子 | 8 | | |
-| 2 | 2025 | Improving large language model applications in biomedicine with retrie | 利用检索增强生成改进生物医学中的大语言模型应用：系统综述、元分析与临床开发指南 | `10.1093/jamia/ocaf008` | 173 | 引用了种子 | 6 | | |
-| 3 | 2025 | The Great Nugget Recall: Automating Fact Extraction and RAG Evaluation | Nugget大召回：用大语言模型自动化事实抽取与RAG评估 | `10.1145/3726302.3730090` | 13 | 引用了种子 | 6 | | |
-| 4 | 2025 | Conversational Gold: Evaluating Personalized Conversational Search Sys | 对话金块：用黄金Nugget评估个性化对话式检索系统 | `10.1145/3726302.3730316` | 12 | 引用了种子 | 6 | | |
-| 5 | 2025 | A Systematic Evaluation of Large Language Models and Retrieval-Augment | 面向哈萨克语问答任务的大语言模型与检索增强生成系统评估 | `10.3390/info16110943` | 10 | 引用了种子 | 6 | | |
-| 6 | 2025 | A retrieval augmented generation based optimization approach for medic | 一种基于检索增强生成的大语言模型医学知识理解与推理优化方法 | `10.1016/j.array.2025.100504` | 8 | 引用了种子 | 6 | | |
+| 1 | 2025 | A self-correcting Agentic Graph RAG for clinical decision support in h | 面向肝病临床决策支持的自校正智能体图RAG | `10.3389/fmed.2025.1716327` | 9 | 引用了种子 | 8 | | |
+| 2 | 2025 | Improving large language model applications in biomedicine with retrie | 利用检索增强生成改进大语言模型在生物医学中的应用：系统综述、元分析与临床开发指南 | `10.1093/jamia/ocaf008` | 173 | 引用了种子 | 6 | | |
+| 3 | 2025 | The Great Nugget Recall: Automating Fact Extraction and RAG Evaluation | 伟大的金块召回：用大语言模型自动化事实抽取与RAG评估 | `10.1145/3726302.3730090` | 13 | 引用了种子 | 6 | | |
+| 4 | 2025 | Conversational Gold: Evaluating Personalized Conversational Search Sys | 对话金标准：利用金块评估个性化对话搜索系统 | `10.1145/3726302.3730316` | 12 | 引用了种子 | 6 | | |
+| 5 | 2025 | A Systematic Evaluation of Large Language Models and Retrieval-Augment | 大语言模型与检索增强生成用于哈萨克语问答任务的系统性评估 | `10.3390/info16110943` | 10 | 引用了种子 | 6 | | |
+| 6 | 2025 | A retrieval augmented generation based optimization approach for medic | 基于检索增强生成的大语言模型医学知识理解与推理优化方法 | `10.1016/j.array.2025.100504` | 8 | 引用了种子 | 6 | | |
 | 7 | 2025 | Evaluating Open-Source LLMs in RAG Systems: A Benchmark on Diploma The | 评估RAG系统中的开源大语言模型：使用Ragas对学位论文摘要的基准测试 | `10.1007/s44427-025-00006-3` | 7 | 引用了种子 | 6 | | |
-| 8 | 2025 | Evaluation of a retrieval-augmented generation system using a Japanese | 基于日本机构核医学手册和大语言模型自动评分的检索增强生成系统评估 | `10.1007/s12194-025-00941-y` | 6 | 引用了种子 | 6 | | |
+| 8 | 2025 | Evaluation of a retrieval-augmented generation system using a Japanese | 使用日本机构核医学手册与大语言模型自动评分评估检索增强生成系统 | `10.1007/s12194-025-00941-y` | 6 | 引用了种子 | 6 | | |
 | 9 | 2024 | Applying generative AI with retrieval augmented generation to summariz | 应用结合检索增强生成的生成式AI从电子健康记录中总结和提取关键临床信息 | `10.1016/j.jbi.2024.104662` | 150 | 引用了种子 | 5 | | |
-| 10 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：面向大语言模型检索增强生成的综合性中文基准 | `10.1145/3701228` | 96 | 引用了种子 | 5 | | |
+| 10 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：一个面向大语言模型检索增强生成的全面中文基准测试 | `10.1145/3701228` | 96 | 引用了种子 | 5 | | |
 | 11 | 2024 | Evaluating Retrieval-Augmented Generation Models for Financial Report  | 评估用于财务报告问答的检索增强生成模型 | `10.3390/app14209318` | 42 | 引用了种子 | 5 | | |
-| 12 | 2024 | Hybrid Retrieval-Augmented Generation Approach for LLMs Query Response | 用于大语言模型查询响应增强的混合检索增强生成方法 | `10.1109/icwr61162.2024.10533345` | 34 | 引用了种子 | 5 | | |
-| 13 | 2025 | Development and Evaluation of a Retrieval-Augmented Generation Chatbot | 用于骨科与创伤外科患者教育的检索增强生成聊天机器人的开发与评估：混合方法研究 | `10.2196/75262` | 19 | 引用了种子 | 5 | | |
-| 14 | 2025 | SynthMedic: Utilizing large language models for synthetic discharge su | SynthMedic：利用大语言模型进行合成出院小结生成、校正与验证 | `10.1016/j.jbi.2025.104906` | 9 | 引用了种子 | 5 | | |
-| 15 | 2025 | Optimization of Customer Feedback Summarization Using Large Language M | 使用大语言模型（LLM）和高级检索增强生成优化客户反馈摘要 | `10.1109/access.2025.3588337` | 7 | 引用了种子 | 5 | | |
-| 16 | 2025 | Benchmarking Vector, Graph and Hybrid Retrieval Augmented Generation ( | 面向开放无线接入网（ORAN）的向量、图与混合检索增强生成（RAG）流水线基准测试 | `10.1109/pimrc62392.2025.11274810` | 7 | 引用了种子 | 5 | | |
+| 12 | 2024 | Hybrid Retrieval-Augmented Generation Approach for LLMs Query Response | 用于增强大语言模型查询响应的混合检索增强生成方法 | `10.1109/icwr61162.2024.10533345` | 34 | 引用了种子 | 5 | | |
+| 13 | 2025 | Development and Evaluation of a Retrieval-Augmented Generation Chatbot | 面向骨科与创伤外科患者教育的检索增强生成聊天机器人的开发与评估：混合方法研究 | `10.2196/75262` | 19 | 引用了种子 | 5 | | |
+| 14 | 2025 | SynthMedic: Utilizing large language models for synthetic discharge su | SynthMedic：利用大语言模型进行合成出院小结的生成、校正与验证 | `10.1016/j.jbi.2025.104906` | 9 | 引用了种子 | 5 | | |
+| 15 | 2025 | Optimization of Customer Feedback Summarization Using Large Language M | 利用大语言模型（LLM）和高级检索增强生成优化客户反馈摘要 | `10.1109/access.2025.3588337` | 7 | 引用了种子 | 5 | | |
+| 16 | 2025 | Benchmarking Vector, Graph and Hybrid Retrieval Augmented Generation ( | 面向开放无线接入网（ORAN）的向量、图与混合检索增强生成（RAG）管线基准测试 | `10.1109/pimrc62392.2025.11274810` | 7 | 引用了种子 | 5 | | |
 | 17 | 2025 | RAGTrace: Understanding and Refining Retrieval-Generation Dynamics in  | RAGTrace：理解与优化检索增强生成中的检索-生成动态 | `10.1145/3746059.3747741` | 6 | 引用了种子 | 5 | | |
-| 18 | 2025 | A comprehensive survey of loss functions and metrics in deep learning | 深度学习中的损失函数与度量指标全面综述 | `10.1007/s10462-025-11198-7` | 285 | 引用了种子 | 4 | | |
-| 19 | 2024 | AI–Human Hybrids for Marketing Research: Leveraging Large Language Mod | 市场研究中的人工智能-人类混合：利用大语言模型（LLM）作为协作者 | `10.1177/00222429241276529` | 151 | 引用了种子 | 4 | | |
+| 18 | 2025 | A comprehensive survey of loss functions and metrics in deep learning | 深度学习中的损失函数与评价指标全面综述 | `10.1007/s10462-025-11198-7` | 285 | 引用了种子 | 4 | | |
+| 19 | 2024 | AI–Human Hybrids for Marketing Research: Leveraging Large Language Mod | 面向营销研究的AI-人类混合：利用大型语言模型（LLM）作为协作者 | `10.1177/00222429241276529` | 151 | 引用了种子 | 4 | | |
 | 20 | 2025 | Hallucination‐Free? Assessing the Reliability of Leading AI Legal Rese | 无幻觉？评估领先AI法律研究工具的可靠性 | `10.1111/jels.12413` | 150 | 引用了种子 | 4 | | |
-| 21 | 2024 | RDguru: A Conversational Intelligent Agent for Rare Diseases | RDguru：面向罕见病的对话式智能体 | `10.1109/jbhi.2024.3464555` | 26 | 引用了种子 | 4 | | |
-| 22 | 2025 | Correctness is not Faithfulness in Retrieval Augmented Generation Attr | 在检索增强生成归因中，正确性并非忠实性 | `10.1145/3731120.3744592` | 17 | 引用了种子 | 4 | | |
-| 23 | 2025 | Retrieval-Augmented Generation (RAG) and Large Language Models (LLMs)  | 面向企业知识管理与文档自动化的检索增强生成（RAG）与大语言模型（LLM）：系统文献综述 | `10.3390/app16010368` | 11 | 引用了种子 | 4 | | |
-| 24 | 2025 | Can LLMs be Trusted for Evaluating RAG Systems? A Survey of Methods an | 大语言模型能可信地用于评估RAG系统吗？方法与数据集综述 | `10.1109/sds66131.2025.00010` | 11 | 引用了种子 | 4 | | |
+| 21 | 2024 | RDguru: A Conversational Intelligent Agent for Rare Diseases | RDguru：面向罕见病的对话式智能代理 | `10.1109/jbhi.2024.3464555` | 26 | 引用了种子 | 4 | | |
+| 22 | 2025 | Correctness is not Faithfulness in Retrieval Augmented Generation Attr | 在检索增强生成归因中，正确性不等于忠实性 | `10.1145/3731120.3744592` | 17 | 引用了种子 | 4 | | |
+| 23 | 2025 | Retrieval-Augmented Generation (RAG) and Large Language Models (LLMs)  | 面向企业知识管理与文档自动化的检索增强生成（RAG）与大语言模型（LLM）：一项系统性文献综述 | `10.3390/app16010368` | 11 | 引用了种子 | 4 | | |
+| 24 | 2025 | Can LLMs be Trusted for Evaluating RAG Systems? A Survey of Methods an | 大语言模型能否可信地评估RAG系统？方法与数据集综述 | `10.1109/sds66131.2025.00010` | 11 | 引用了种子 | 4 | | |
 | 25 | 2025 | Faithfulness-Aware Multi-Objective Context Ranking for Retrieval-Augme | 面向检索增强生成的忠实性感知多目标上下文排序 | `10.1145/3797161.3797180` | 9 | 引用了种子 | 4 | | |
 
 ## 摘要（判定用）

@@ -194,6 +194,7 @@ def render_worksheet(
     candidates: list[Candidate],
     years: tuple[int, int] | None,
     translations: dict[int, str] | None = None,
+    header_translations: dict[int, str] | None = None,
 ) -> str:
     """把候选渲染成人工复核表。
 
@@ -202,16 +203,24 @@ def render_worksheet(
     """
 
     translations = translations or {}
+    header_translations = header_translations or {}
     lines = [
         f"# 金标候选：{question.question_id}",
         "",
         f"**问题**：{question.question}",
         "",
-        "**子问题**：",
-        "",
     ]
+    # 问题与子问题的中文注释：复核时先要读懂"在问什么"，再判断论文是否回答。
+    # translate_texts 的键从 1 开始（1=问题，2..n+1=子问题），这里必须用同一基准；
+    # 先前按 0 开始取值，结果整体错位一位，问题的译文挂到了子问题 1 上。
+    if header_translations.get(1):
+        lines.extend([f"　　→ {header_translations[1]}", ""])
+    lines.extend(["**子问题**：", ""])
     for index, sub in enumerate(question.subquestions, start=1):
         lines.append(f"{index}. {sub}")
+        if header_translations.get(index + 1):
+            lines.append(f"　　→ {header_translations[index + 1]}")
+        lines.append("")
     lines.extend(
         [
             "",
@@ -329,17 +338,29 @@ async def run(args: argparse.Namespace) -> int:
             if args.limit:
                 candidates = candidates[: args.limit]
             translations: dict[int, str] = {}
+            header_translations: dict[int, str] = {}
             if args.translate:
-                translations, translate_failures = await translate_titles(
-                    gateway, [item.paper.title for item in candidates]
+                translations, translate_failures = await translate_texts(
+                    gateway,
+                    [item.paper.title for item in candidates],
+                    kind="学术论文标题",
                 )
                 for message in translate_failures:
                     print(f"    标题翻译失败：{message}", file=sys.stderr)
+                # 键从 1 开始：1 = 研究问题，2..n+1 = 子问题
+                header_translations, header_failures = await translate_texts(
+                    gateway,
+                    [question.question, *question.subquestions],
+                    kind="研究问题或其子问题",
+                )
+                for message in header_failures:
+                    print(f"    问题翻译失败：{message}", file=sys.stderr)
             content = render_worksheet(
                 question=question,
                 candidates=candidates,
                 years=years,  # type: ignore[arg-type]
                 translations=translations,
+                header_translations=header_translations,
             )
             out = args.output_dir / f"gold-candidates-{question.question_id}.md"
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -358,18 +379,22 @@ async def run(args: argparse.Namespace) -> int:
     return 0
 
 
-async def translate_titles(
+async def translate_texts(
     gateway: object,
-    titles: list[str],
+    texts: list[str],
     *,
+    kind: str = "学术论文标题",
     batch_size: int = 5,
 ) -> tuple[dict[int, str], list[str]]:
-    """把英文标题翻成中文注释，**仅供复核时快速定位**。
+    """把英文文本翻成中文注释，**仅供复核时快速定位**。
 
     注意：
       · 机翻会丢失术语细节，判定必须依据英文原文
       · 结果不写入数据集，数据集只保留英文标题
-    返回 (映射, 失败信息列表)。映射是 "候选序号(从1开始) -> 中文标题"。
+    kind 用于提示语，取值如"学术论文标题"或"研究问题"。
+    返回 (映射, 失败信息列表)。映射是 "序号(从1开始) -> 中文"。
+
+    **绝不写入数据集**：机翻会丢术语细节，判定必须依据英文原文。
 
     失败必须上报：这里先前是静默 continue，一次限流会让整列中文留空，
     看起来像"模型没翻"而不是"调用失败了"。
@@ -387,17 +412,17 @@ async def translate_titles(
     result: dict[int, str] = {}
     failures: list[str] = []
     system = (
-        "你是学术论文标题的翻译助手。把英文论文标题译成简洁准确的中文，"
+        f"你是学术文献的翻译助手。把英文{kind}译成简洁准确的中文，"
         "保留专业术语的通行译法。只输出 JSON。"
     )
-    for start in range(0, len(titles), batch_size):
-        chunk = titles[start : start + batch_size]
+    for start in range(0, len(texts), batch_size):
+        chunk = texts[start : start + batch_size]
         numbered = "\n".join(
             f"{start + offset + 1}. {title}"
             for offset, title in enumerate(chunk)
         )
         user = (
-            f"按顺序翻译下面 {len(chunk)} 个标题：\n{numbered}\n\n"
+            f"按顺序翻译下面 {len(chunk)} 条：\n{numbered}\n\n"
             f'返回格式：{{"translations":["第一句中文","第二句中文", ...]}}'
             "\n数组中必须正好有 "
             f"{len(chunk)} 个字符串，顺序与输入一一对应。"
@@ -411,7 +436,7 @@ async def translate_titles(
                 # 输出预算必须给足：模型先把预算花在内部推理上，给小了会返回
                 # 空内容（finish_reason=length），表现为"不是 JSON"。
                 response = await gateway.complete(  # type: ignore[attr-defined]
-                    prompt_hash=f"title-translation-v1-{attempt}",
+                    prompt_hash=f"translation-v1-{attempt}",
                     system=system,
                     user=user,
                     max_output_tokens=3000,

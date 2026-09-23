@@ -2,10 +2,16 @@
 
 **问题**：What methods are used for query expansion in neural information retrieval?
 
+　　→ 神经信息检索中使用哪些查询扩展方法？
+
 **子问题**：
 
 1. What are the main query expansion families?
+　　→ 查询扩展的主要类别有哪些？
+
 2. What evidence supports their effectiveness?
+　　→ 有哪些证据支持其有效性？
+
 
 **现有 gold**：2 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,31 +31,31 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2024 | "In-Context Learning" or: How I learned to stop worrying and love "App | “上下文学习”，或：我如何学会不再担忧并爱上“应用信息检索” | `10.1145/3626772.3657842` | 12 | 引用了种子 | 5 | | |
-| 2 | 2022 | Query Expansion Using Contextual Clue Sampling with Language Models | 基于语言模型上下文线索采样的查询扩展 | `10.48550/arxiv.2210.07093` | 3 | 被种子引用 | 5 | | |
-| 3 | 2024 | Semantic grounding of LLMs using knowledge graphs for query reformulat | 使用知识图谱对大语言模型进行语义接地以用于医学信息检索中的查询重构 | `10.1109/bigdata62323.2024.10826117` | 1 | 引用了种子 | 5 | | |
-| 4 | 2026 | A critical evaluation of generative query expansion on biomedical lite | 对生物医学文献检索中生成式查询扩展的批判性评估 | `10.1093/jamia/ocag037` | 0 | 引用了种子 | 5 | | |
-| 5 | 2025 | Large Language Models for Information Retrieval: A Survey | 大语言模型用于信息检索：综述 | `10.1145/3748304` | 98 | 引用了种子 | 4 | | |
+| 1 | 2024 | "In-Context Learning" or: How I learned to stop worrying and love "App | “上下文学习”，或者：我如何学会停止担忧并爱上“应用信息检索” | `10.1145/3626772.3657842` | 12 | 引用了种子 | 5 | | |
+| 2 | 2022 | Query Expansion Using Contextual Clue Sampling with Language Models | 利用语言模型进行上下文线索采样的查询扩展 | `10.48550/arxiv.2210.07093` | 3 | 被种子引用 | 5 | | |
+| 3 | 2024 | Semantic grounding of LLMs using knowledge graphs for query reformulat | 面向医学信息检索中查询重构的基于知识图谱的大语言模型语义接地 | `10.1109/bigdata62323.2024.10826117` | 1 | 引用了种子 | 5 | | |
+| 4 | 2026 | A critical evaluation of generative query expansion on biomedical lite | 生成式查询扩展在生物医学文献检索中的批判性评估 | `10.1093/jamia/ocag037` | 0 | 引用了种子 | 5 | | |
+| 5 | 2025 | Large Language Models for Information Retrieval: A Survey | 用于信息检索的大语言模型：综述 | `10.1145/3748304` | 98 | 引用了种子 | 4 | | |
 | 6 | 2024 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序器的泛化能力？ | `10.1145/3626772.3657979` | 13 | 引用了种子 | 4 | | |
 | 7 | 2023 | A Test Collection of Synthetic Documents for Training Rankers: ChatGPT | 用于训练排序器的合成文档测试集：ChatGPT 与人类专家对比 | `10.1145/3583780.3615111` | 12 | 引用了种子 | 4 | | |
 | 8 | 2024 | Drop your Decoder: Pre-training with Bag-of-Word Prediction for Dense  | 丢弃解码器：基于词袋预测的预训练用于稠密段落检索 | `10.1145/3626772.3657792` | 5 | 引用了种子 | 4 | | |
 | 9 | 2023 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序器的泛化能力？ | `10.48550/arxiv.2311.09175` | 0 | 引用了种子 | 4 | | |
-| 10 | 2026 | Bmqexpander: ontology-guided query expansion for biomedical document r | BMQExpander：基于大语言模型的本体引导查询扩展用于生物医学文档检索 | `10.1007/s10618-026-01220-z` | 0 | 引用了种子 | 4 | | |
+| 10 | 2026 | Bmqexpander: ontology-guided query expansion for biomedical document r | Bmqexpander：基于大语言模型的本体引导查询扩展用于生物医学文档检索 | `10.1007/s10618-026-01220-z` | 0 | 引用了种子 | 4 | | |
 | 11 | 2022 | Text Embeddings by Weakly-Supervised Contrastive Pre-training | 基于弱监督对比预训练的文本嵌入 | `10.48550/arxiv.2212.03533` | 123 | 被种子引用 | 3 | | |
 | 12 | 2024 | Fine-Tuning LLaMA for Multi-Stage Text Retrieval | 面向多阶段文本检索的LLaMA微调 | `10.1145/3626772.3657951` | 112 | 引用了种子 | 3 | | |
-| 13 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：面向大语言模型检索增强生成的综合中文基准 | `10.1145/3701228` | 96 | 引用了种子 | 3 | | |
+| 13 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：面向大语言模型检索增强生成的综合性中文基准 | `10.1145/3701228` | 96 | 引用了种子 | 3 | | |
 | 14 | 2024 | When Search Engine Services Meet Large Language Models: Visions and Ch | 当搜索引擎服务遇见大语言模型：愿景与挑战 | `10.1109/tsc.2024.3451185` | 65 | 引用了种子 | 3 | | |
 | 15 | 2025 | A Survey of Conversational Search | 对话式搜索综述 | `10.1145/3759453` | 42 | 引用了种子 | 3 | | |
-| 16 | 2025 | A Comprehensive Survey of Retrieval-Augmented Large Language Models fo | 面向农业决策的检索增强大语言模型综合综述：未解决的问题与研究机遇 | `10.2478/jaiscr-2025-0007` | 28 | 引用了种子 | 3 | | |
-| 17 | 2024 | SimIIR 3: A Framework for the Simulation of Interactive and Conversati | SimIIR 3：交互式与会话式信息检索模拟框架 | `10.1145/3673791.3698427` | 13 | 引用了种子 | 3 | | |
-| 18 | 2024 | Exploration Robot Chat: Uncovering Decades of Exploration Knowledge an | 探索机器人聊天：利用会话式大语言模型揭示数十年的探索知识与数据 | `10.2118/218439-ms` | 8 | 引用了种子 | 3 | | |
+| 16 | 2025 | A Comprehensive Survey of Retrieval-Augmented Large Language Models fo | 面向农业决策的检索增强大语言模型全面综述：未解决的问题与研究机遇 | `10.2478/jaiscr-2025-0007` | 28 | 引用了种子 | 3 | | |
+| 17 | 2024 | SimIIR 3: A Framework for the Simulation of Interactive and Conversati | SimIIR 3：交互式与对话式信息检索模拟框架 | `10.1145/3673791.3698427` | 13 | 引用了种子 | 3 | | |
+| 18 | 2024 | Exploration Robot Chat: Uncovering Decades of Exploration Knowledge an | 探索机器人聊天：利用对话式大语言模型揭示数十年的探索知识与数据 | `10.2118/218439-ms` | 8 | 引用了种子 | 3 | | |
 | 19 | 2023 | Report on the 1st Workshop on Generative Information Retrieval (Gen-IR | SIGIR 2023 第一届生成式信息检索研讨会（Gen-IR 2023）报告 | `10.1145/3642979.3642995` | 0 | 引用了种子 | 3 | | |
-| 20 | 2026 | When More Reformulations Hurt: Avoiding Drift using Ranker Feedback | 当更多查询重构有害时：利用排序器反馈避免漂移 | `10.1145/3805712.3809721` | 0 | 引用了种子 | 3 | | |
-| 21 | 2024 | A Survey on Hallucination in Large Language Models: Principles, Taxono | 大型语言模型中的幻觉综述：原理、分类、挑战与开放问题 | `10.1145/3703155` | 2084 | 引用了种子 | 2 | | |
-| 22 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT 擅长搜索吗？探究大型语言模型作为重排序代理的能力 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 2 | | |
-| 23 | 2025 | Hallucination Mitigation for Retrieval-Augmented Large Language Models | 检索增强大型语言模型的幻觉缓解：综述 | `10.3390/math13050856` | 130 | 引用了种子 | 2 | | |
+| 20 | 2026 | When More Reformulations Hurt: Avoiding Drift using Ranker Feedback | 当更多改写有害时：利用排序器反馈避免漂移 | `10.1145/3805712.3809721` | 0 | 引用了种子 | 3 | | |
+| 21 | 2024 | A Survey on Hallucination in Large Language Models: Principles, Taxono | 大语言模型幻觉研究综述：原理、分类体系、挑战与开放问题 | `10.1145/3703155` | 2084 | 引用了种子 | 2 | | |
+| 22 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT 擅长搜索吗？探究大语言模型作为重排序智能体 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 2 | | |
+| 23 | 2025 | Hallucination Mitigation for Retrieval-Augmented Large Language Models | 检索增强大语言模型的幻觉缓解：综述 | `10.3390/math13050856` | 130 | 引用了种子 | 2 | | |
 | 24 | 2026 | Retrieval-Augmented Generation for AI-Generated Content: A Survey | 面向 AI 生成内容的检索增强生成：综述 | `10.1007/s41019-025-00335-5` | 106 | 引用了种子 | 2 | | |
-| 25 | 2022 | Generate rather than Retrieve: Large Language Models are Strong Contex | 生成而非检索：大型语言模型是强大的上下文生成器 | `10.48550/arxiv.2209.10063` | 86 | 被种子引用 | 2 | | |
+| 25 | 2022 | Generate rather than Retrieve: Large Language Models are Strong Contex | 生成而非检索：大语言模型是强大的上下文生成器 | `10.48550/arxiv.2209.10063` | 86 | 被种子引用 | 2 | | |
 
 ## 摘要（判定用）
 

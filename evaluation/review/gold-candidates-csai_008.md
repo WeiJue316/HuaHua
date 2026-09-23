@@ -2,10 +2,16 @@
 
 **问题**：How do parameter-efficient fine-tuning methods reduce training memory?
 
+　　→ 参数高效微调方法如何降低训练内存占用？
+
 **子问题**：
 
 1. Which parameter subsets are updated?
+　　→ 哪些参数子集会被更新？
+
 2. What memory and quality trade-offs are reported?
+　　→ 报告了哪些内存与质量之间的权衡？
+
 
 **现有 gold**：3 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,30 +31,30 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2024 | Democratizing protein language models with parameter-efficient fine-tu | 以参数高效微调推动蛋白质语言模型的普及化 | `10.1073/pnas.2405840121` | 88 | 引用了种子 | 7 | | |
-| 2 | 2023 | FacT: Factor-Tuning for Lightweight Adaptation on Vision Transformer | FacT：面向视觉Transformer轻量化适配的因子微调 | `10.1609/aaai.v37i1.25187` | 98 | 引用了种子 | 6 | | |
-| 3 | 2024 | Fine-tuning protein language models boosts predictions across diverse  | 微调蛋白质语言模型可提升多种任务的预测性能 | `10.1038/s41467-024-51844-2` | 218 | 引用了种子 | 5 | | |
-| 4 | 2025 | Parameter-efficient fine-tuning in large language models: a survey of  | 大语言模型中的参数高效微调：方法学综述 | `10.1007/s10462-025-11236-4` | 152 | 引用了种子 | 5 | | |
+| 1 | 2024 | Democratizing protein language models with parameter-efficient fine-tu | 以参数高效微调普及蛋白质语言模型 | `10.1073/pnas.2405840121` | 88 | 引用了种子 | 7 | | |
+| 2 | 2023 | FacT: Factor-Tuning for Lightweight Adaptation on Vision Transformer | FacT：面向视觉Transformer轻量级适配的因子微调 | `10.1609/aaai.v37i1.25187` | 98 | 引用了种子 | 6 | | |
+| 3 | 2024 | Fine-tuning protein language models boosts predictions across diverse  | 微调蛋白质语言模型可提升多种任务上的预测性能 | `10.1038/s41467-024-51844-2` | 218 | 引用了种子 | 5 | | |
+| 4 | 2025 | Parameter-efficient fine-tuning in large language models: a survey of  | 大语言模型中的参数高效微调：方法综述 | `10.1007/s10462-025-11236-4` | 152 | 引用了种子 | 5 | | |
 | 5 | 2023 | On the Effectiveness of Parameter-Efficient Fine-Tuning | 论参数高效微调的有效性 | `10.1609/aaai.v37i11.26505` | 139 | 引用了种子 | 5 | | |
 | 6 | 2022 | SPoT: Better Frozen Model Adaptation through Soft Prompt Transfer | SPoT：通过软提示迁移实现更好的冻结模型适配 | `10.18653/v1/2022.acl-long.346` | 178 | 被种子引用 | 4 | | |
-| 7 | 2022 | Cutting Down on Prompts and Parameters: Simple Few-Shot Learning with  | 减少提示与参数：基于语言模型的简单少样本学习 | `10.18653/v1/2022.findings-acl.222` | 129 | 引用了种子 | 4 | | |
-| 8 | 2024 | Boosting Continual Learning of Vision-Language Models via Mixture-of-E | 通过专家混合适配器提升视觉-语言模型的持续学习 | `10.1109/cvpr52733.2024.02191` | 122 | 引用了种子 | 4 | | |
-| 9 | 2024 | A survey on LoRA of large language models | 大语言模型 LoRA 综述 | `10.1007/s11704-024-40663-9` | 120 | 引用了种子 | 4 | | |
-| 10 | 2023 | A Unified Continual Learning Framework with General Parameter-Efficien | 基于通用参数高效微调的统一持续学习框架 | `10.1109/iccv51070.2023.01055` | 93 | 引用了种子 | 4 | | |
+| 7 | 2022 | Cutting Down on Prompts and Parameters: Simple Few-Shot Learning with  | 减少提示与参数：语言模型的简单小样本学习 | `10.18653/v1/2022.findings-acl.222` | 129 | 引用了种子 | 4 | | |
+| 8 | 2024 | Boosting Continual Learning of Vision-Language Models via Mixture-of-E | 通过混合专家适配器提升视觉-语言模型的持续学习 | `10.1109/cvpr52733.2024.02191` | 122 | 引用了种子 | 4 | | |
+| 9 | 2024 | A survey on LoRA of large language models | 大语言模型LoRA综述 | `10.1007/s11704-024-40663-9` | 120 | 引用了种子 | 4 | | |
+| 10 | 2023 | A Unified Continual Learning Framework with General Parameter-Efficien | 基于通用参数高效调优的统一持续学习框架 | `10.1109/iccv51070.2023.01055` | 93 | 引用了种子 | 4 | | |
 | 11 | 2023 | Towards Adaptive Prefix Tuning for Parameter-Efficient Language Model  | 面向参数高效语言模型微调的自适应前缀调优 | `10.18653/v1/2023.acl-short.107` | 91 | 引用了种子 | 4 | | |
 | 12 | 2023 | FedPETuning: When Federated Learning Meets the Parameter-Efficient Tun | FedPETuning：当联邦学习遇上预训练语言模型的参数高效调优方法 | `10.18653/v1/2023.findings-acl.632` | 89 | 引用了种子 | 4 | | |
 | 13 | 2024 | When MOE Meets LLMs: Parameter Efficient Fine-tuning for Multi-task Me | 当MOE遇上大语言模型：面向多任务医疗应用的参数高效微调 | `10.1145/3626772.3657722` | 88 | 引用了种子 | 4 | | |
-| 14 | 2024 | Enhancing efficiency of protein language models with minimal wet-lab d | 通过少样本学习利用极少量湿实验数据提升蛋白质语言模型的效率 | `10.1038/s41467-024-49798-6` | 84 | 引用了种子 | 4 | | |
-| 15 | 2023 | All in One: Multi-Task Prompting for Graph Neural Networks | 多合一：图神经网络的多任务提示 | `10.1145/3580305.3599256` | 175 | 引用了种子 | 3 | | |
-| 16 | 2022 | No more fine-tuning? an experimental evaluation of prompt tuning in co | 不再需要微调？代码智能中提示微调的实验评估 | `10.1145/3540250.3549113` | 150 | 引用了种子 | 3 | | |
+| 14 | 2024 | Enhancing efficiency of protein language models with minimal wet-lab d | 通过少样本学习以极少量湿实验数据提升蛋白质语言模型的效率 | `10.1038/s41467-024-49798-6` | 84 | 引用了种子 | 4 | | |
+| 15 | 2023 | All in One: Multi-Task Prompting for Graph Neural Networks | 多合一：面向图神经网络的多任务提示 | `10.1145/3580305.3599256` | 175 | 引用了种子 | 3 | | |
+| 16 | 2022 | No more fine-tuning? an experimental evaluation of prompt tuning in co | 不再需要微调？代码智能中提示调优的实验评估 | `10.1145/3540250.3549113` | 150 | 引用了种子 | 3 | | |
 | 17 | 2023 | ViTPose++: Vision Transformer for Generic Body Pose Estimation | ViTPose++：用于通用人体姿态估计的视觉Transformer | `10.1109/tpami.2023.3330016` | 147 | 引用了种子 | 3 | | |
-| 18 | 2023 | Enhancing Chat Language Models by Scaling High-quality Instructional C | 通过扩展高质量指令对话增强聊天语言模型 | `10.18653/v1/2023.emnlp-main.183` | 123 | 引用了种子 | 3 | | |
+| 18 | 2023 | Enhancing Chat Language Models by Scaling High-quality Instructional C | 通过规模化高质量指令对话增强聊天语言模型 | `10.18653/v1/2023.emnlp-main.183` | 123 | 引用了种子 | 3 | | |
 | 19 | 2023 | Fill in the Blank: Context-aware Automated Text Input Generation for M | 填空：面向移动GUI测试的上下文感知自动文本输入生成 | `10.1109/icse48619.2023.00119` | 121 | 引用了种子 | 3 | | |
-| 20 | 2023 | Baize: An Open-Source Chat Model with Parameter-Efficient Tuning on Se | Baize：基于自聊天数据参数高效微调的开源聊天模型 | `10.18653/v1/2023.emnlp-main.385` | 119 | 引用了种子 | 3 | | |
-| 21 | 2024 | SDSTrack: Self-Distillation Symmetric Adapter Learning for Multi-Modal | SDSTrack：面向多模态视觉目标跟踪的自蒸馏对称适配器学习 | `10.1109/cvpr52733.2024.02507` | 114 | 引用了种子 | 3 | | |
-| 22 | 2024 | From Large Language Models to Large Multimodal Models: A Literature Re | 从大语言模型到大多模态模型：文献综述 | `10.3390/app14125068` | 101 | 引用了种子 | 3 | | |
-| 23 | 2024 | Stronger, Fewer, & Superior: Harnessing Vision Foundation Models for D | 更强、更少、更优：利用视觉基础模型实现领域泛化语义分割 | `10.1109/cvpr52733.2024.02704` | 100 | 引用了种子 | 3 | | |
-| 24 | 2024 | Deep learning for rice leaf disease detection: A systematic literature | 面向水稻叶片病害检测的深度学习：新兴趋势、方法与技术的系统性文献综述 | `10.1016/j.inpa.2024.04.006` | 92 | 引用了种子 | 3 | | |
+| 20 | 2023 | Baize: An Open-Source Chat Model with Parameter-Efficient Tuning on Se | Baize：一个在自聊天数据上进行参数高效调优的开源聊天模型 | `10.18653/v1/2023.emnlp-main.385` | 119 | 引用了种子 | 3 | | |
+| 21 | 2024 | SDSTrack: Self-Distillation Symmetric Adapter Learning for Multi-Modal | SDSTrack：用于多模态视觉目标跟踪的自蒸馏对称适配器学习 | `10.1109/cvpr52733.2024.02507` | 114 | 引用了种子 | 3 | | |
+| 22 | 2024 | From Large Language Models to Large Multimodal Models: A Literature Re | 从大语言模型到大型多模态模型：文献综述 | `10.3390/app14125068` | 101 | 引用了种子 | 3 | | |
+| 23 | 2024 | Stronger, Fewer, & Superior: Harnessing Vision Foundation Models for D | 更强、更少、更优：利用视觉基础模型实现域泛化语义分割 | `10.1109/cvpr52733.2024.02704` | 100 | 引用了种子 | 3 | | |
+| 24 | 2024 | Deep learning for rice leaf disease detection: A systematic literature | 深度学习用于水稻叶片病害检测：关于新兴趋势、方法学与技术的系统文献综述 | `10.1016/j.inpa.2024.04.006` | 92 | 引用了种子 | 3 | | |
 | 25 | 2025 | A foundation model for generalizable cancer diagnosis and survival pre | 一种基于组织病理学图像的可泛化癌症诊断与生存预测基础模型 | `10.1038/s41467-025-57587-y` | 83 | 引用了种子 | 3 | | |
 
 ## 摘要（判定用）

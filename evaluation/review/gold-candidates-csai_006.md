@@ -2,10 +2,16 @@
 
 **问题**：How does dense retrieval compare with sparse retrieval for scientific search?
 
+　　→ 在科学检索中，稠密检索与稀疏检索相比表现如何？
+
 **子问题**：
 
 1. What are the reported trade-offs?
+　　→ 文献中报告了哪些权衡取舍？
+
 2. Which evaluation setups are used?
+　　→ 采用了哪些评估设置？
+
 
 **现有 gold**：2 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -25,31 +31,31 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 判定 | 子问题 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|
-| 1 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT 擅长搜索吗？探究作为重排序智能体的大语言模型 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 3 | | |
-| 2 | 2025 | Retrieval augmented generation for large language models in healthcare | 医疗领域大语言模型的检索增强生成：一项系统综述 | `10.1371/journal.pdig.0000877` | 226 | 引用了种子 | 3 | | |
-| 3 | 2023 | Query2doc: Query Expansion with Large Language Models | Query2doc：基于大语言模型的查询扩展 | `10.18653/v1/2023.emnlp-main.585` | 188 | 引用了种子 | 3 | | |
+| 1 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT 擅长搜索吗？探究大语言模型作为重排序代理 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 3 | | |
+| 2 | 2025 | Retrieval augmented generation for large language models in healthcare | 医疗领域大语言模型的检索增强生成：系统综述 | `10.1371/journal.pdig.0000877` | 226 | 引用了种子 | 3 | | |
+| 3 | 2023 | Query2doc: Query Expansion with Large Language Models | Query2doc：利用大语言模型进行查询扩展 | `10.18653/v1/2023.emnlp-main.585` | 188 | 引用了种子 | 3 | | |
 | 4 | 2024 | Fine-Tuning LLaMA for Multi-Stage Text Retrieval | 面向多阶段文本检索的 LLaMA 微调 | `10.1145/3626772.3657951` | 112 | 引用了种子 | 3 | | |
-| 5 | 2025 | Evaluating Retrieval-Augmented Generation Variants for Clinical Decisi | 面向临床决策支持的检索增强生成变体评估：幻觉缓解与安全本地化部署 | `10.3390/electronics14214227` | 14 | 引用了种子 | 3 | | |
+| 5 | 2025 | Evaluating Retrieval-Augmented Generation Variants for Clinical Decisi | 评估用于临床决策支持的检索增强生成变体：幻觉缓解与安全的本地部署 | `10.3390/electronics14214227` | 14 | 引用了种子 | 3 | | |
 | 6 | 2022 | Unsupervised Corpus Aware Language Model Pre-training for Dense Passag | 面向稠密段落检索的无监督语料感知语言模型预训练 | `10.18653/v1/2022.acl-long.203` | 144 | 被种子引用 | 2 | | |
 | 7 | 2023 | The Information Retrieval Experiment Platform | 信息检索实验平台 | `10.1145/3539618.3591888` | 54 | 引用了种子 | 2 | | |
-| 8 | 2023 | Large Language Models Know Your Contextual Search Intent: A Prompting  | 大语言模型知晓你的上下文搜索意图：面向会话搜索的提示框架 | `10.18653/v1/2023.findings-emnlp.86` | 49 | 引用了种子 | 2 | | |
+| 8 | 2023 | Large Language Models Know Your Contextual Search Intent: A Prompting  | 大型语言模型知晓你的上下文搜索意图：一种面向会话搜索的提示框架 | `10.18653/v1/2023.findings-emnlp.86` | 49 | 引用了种子 | 2 | | |
 | 9 | 2024 | Soft prompt tuning for augmenting dense retrieval with large language  | 利用大语言模型增强稠密检索的软提示调优 | `10.1016/j.knosys.2024.112758` | 26 | 引用了种子 | 2 | | |
 | 10 | 2024 | Generative Multi-Modal Knowledge Retrieval with Large Language Models | 基于大语言模型的生成式多模态知识检索 | `10.1609/aaai.v38i17.29837` | 24 | 引用了种子 | 2 | | |
-| 11 | 2025 | Retrieval-Augmented Generation to Generate Knowledge Assets and Creati | 检索增强生成用于生成知识资产与创建行动驱动因素 | `10.3390/app15116247` | 22 | 引用了种子 | 2 | | |
+| 11 | 2025 | Retrieval-Augmented Generation to Generate Knowledge Assets and Creati | 利用检索增强生成生成知识资产并创建行动驱动因素 | `10.3390/app15116247` | 22 | 引用了种子 | 2 | | |
 | 12 | 2024 | Customized Retrieval Augmented Generation and Benchmarking for EDA Too | 面向EDA工具文档问答的定制化检索增强生成与基准测试 | `10.1145/3676536.3676730` | 21 | 引用了种子 | 2 | | |
-| 13 | 2025 | MoRSE: Bridging the Gap in Cybersecurity Expertise with Retrieval Augm | MoRSE：借助检索增强生成弥合网络安全专业知识的差距 | `10.1145/3672608.3707898` | 14 | 引用了种子 | 2 | | |
-| 14 | 2025 | Retrieval-Augmented Generation (RAG) and Large Language Models (LLMs)  | 检索增强生成（RAG）与大语言模型（LLMs）用于企业知识管理与文档自动化：系统性文献综述 | `10.3390/app16010368` | 11 | 引用了种子 | 2 | | |
-| 15 | 2023 | SCITAB: A Challenging Benchmark for Compositional Reasoning and Claim  | SCITAB：一个用于科学表格组合推理与声明验证的挑战性基准 | `10.18653/v1/2023.emnlp-main.483` | 9 | 引用了种子 | 2 | | |
-| 16 | 2025 | An In-depth Analysis of the Linguistic Characteristics of Science Clai | 网络上科学论断的语言特征及其对事实核查影响的深入分析 | `10.1145/3746170` | 2 | 引用了种子 | 2 | | |
+| 13 | 2025 | MoRSE: Bridging the Gap in Cybersecurity Expertise with Retrieval Augm | MoRSE：利用检索增强生成弥合网络安全专业知识差距 | `10.1145/3672608.3707898` | 14 | 引用了种子 | 2 | | |
+| 14 | 2025 | Retrieval-Augmented Generation (RAG) and Large Language Models (LLMs)  | 检索增强生成（RAG）与大语言模型（LLMs）用于企业知识管理和文档自动化：系统性文献综述 | `10.3390/app16010368` | 11 | 引用了种子 | 2 | | |
+| 15 | 2023 | SCITAB: A Challenging Benchmark for Compositional Reasoning and Claim  | SCITAB：一个用于科学表格上组合推理与声明验证的挑战性基准 | `10.18653/v1/2023.emnlp-main.483` | 9 | 引用了种子 | 2 | | |
+| 16 | 2025 | An In-depth Analysis of the Linguistic Characteristics of Science Clai | 深入分析网络科学主张的语言特征及其对事实核查的影响 | `10.1145/3746170` | 2 | 引用了种子 | 2 | | |
 | 17 | 2025 | The Next Phase of Scientific Fact-Checking: Advanced Evidence Retrieva | 科学事实核查的下一阶段：从复杂结构化学术论文中进行高级证据检索 | `10.1145/3731120.3744614` | 2 | 引用了种子 | 2 | | |
 | 18 | 2025 | +VeriRel: Verification Feedback to Enhance Document Retrieval for Scie | +VeriRel：通过验证反馈增强科学事实核查的文档检索 | `10.1145/3746252.3760822` | 1 | 引用了种子 | 2 | | |
-| 19 | 2023 | The student becomes the master: Outperforming GPT3 on Scientific Factu | 学生成为大师：在科学事实错误纠正上超越GPT3 | `10.18653/v1/2023.findings-emnlp.451` | 0 | 引用了种子 | 2 | | |
-| 20 | 2023 | FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long | FActScore：长文本生成中事实精确性的细粒度原子评估 | `10.18653/v1/2023.emnlp-main.741` | 345 | 引用了种子 | 1 | | |
+| 19 | 2023 | The student becomes the master: Outperforming GPT3 on Scientific Factu | 青出于蓝：在科学事实错误纠正上超越GPT-3 | `10.18653/v1/2023.findings-emnlp.451` | 0 | 引用了种子 | 2 | | |
+| 20 | 2023 | FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long | FActScore：长文本生成中事实精确度的细粒度原子评估 | `10.18653/v1/2023.emnlp-main.741` | 345 | 引用了种子 | 1 | | |
 | 21 | 2025 | Hallucination Mitigation for Retrieval-Augmented Large Language Models | 检索增强大语言模型的幻觉缓解：综述 | `10.3390/math13050856` | 130 | 引用了种子 | 1 | | |
 | 22 | 2026 | Retrieval-Augmented Generation for AI-Generated Content: A Survey | 面向AI生成内容的检索增强生成：综述 | `10.1007/s41019-025-00335-5` | 106 | 引用了种子 | 1 | | |
 | 23 | 2023 | Generative Relevance Feedback with Large Language Models | 基于大语言模型的生成式相关性反馈 | `10.1145/3539618.3591992` | 47 | 引用了种子 | 1 | | |
 | 24 | 2025 | Improving knowledge management in building engineering with hybrid ret | 利用混合检索增强生成框架改进建筑工程中的知识管理 | `10.1016/j.jobe.2025.112189` | 27 | 引用了种子 | 1 | | |
-| 25 | 2025 | MemoRAG: Boosting Long Context Processing with Global Memory-Enhanced  | MemoRAG：利用全局记忆增强的检索增强提升长上下文处理 | `10.1145/3696410.3714805` | 23 | 引用了种子 | 1 | | |
+| 25 | 2025 | MemoRAG: Boosting Long Context Processing with Global Memory-Enhanced  | MemoRAG：以全局记忆增强的检索增强提升长上下文处理 | `10.1145/3696410.3714805` | 23 | 引用了种子 | 1 | | |
 
 ## 摘要（判定用）
 

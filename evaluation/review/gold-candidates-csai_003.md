@@ -2,10 +2,16 @@
 
 **问题**：What are reported limitations of chain-of-thought prompting on reasoning benchmarks?
 
+　　→ 思维链提示在推理基准上被报告有哪些局限性？
+
 **子问题**：
 
 1. Which benchmarks expose limitations?
+　　→ 哪些基准揭示了这些局限性？
+
 2. Which failure modes are reported?
+　　→ 报告了哪些失败模式？
+
 
 **现有 gold**：2 篇　**年份范围**：(2022, 2026)　**引用图候选**：25 篇
 
@@ -27,28 +33,28 @@
 |---:|---:|---|---|---|---:|---|---:|---|---:|
 | 1 | 2023 | The Art of SOCRATIC QUESTIONING: Recursive Thinking with Large Languag | 苏格拉底式提问的艺术：基于大语言模型的递归思维 | `10.18653/v1/2023.emnlp-main.255` | 24 | 引用了种子 | 4 | | |
 | 2 | 2023 | Faithful Chain-of-Thought Reasoning | 忠实的思维链推理 | `10.18653/v1/2023.ijcnlp-main.20` | 111 | 引用了种子 | 3 | | |
-| 3 | 2023 | On Second Thought, Let’s Not Think Step by Step! Bias and Toxicity in  | 转念一想，我们还是别一步步推理了！零样本推理中的偏见与毒性 | `10.18653/v1/2023.acl-long.244` | 68 | 引用了种子 | 3 | | |
-| 4 | 2023 | Can ChatGPT Defend its Belief in Truth? Evaluating LLM Reasoning via D | ChatGPT 能否捍卫其对真理的信念？通过辩论评估大语言模型的推理能力 | `10.18653/v1/2023.findings-emnlp.795` | 47 | 引用了种子 | 2 | | |
-| 5 | 2024 | From Automation to Augmentation: Redefining Engineering Design and Man | 从自动化到增强：在下一代人工智能时代重新定义工程设计制造 | `10.21428/e4baedd9.e39b392d` | 22 | 引用了种子 | 2 | | |
+| 3 | 2023 | On Second Thought, Let’s Not Think Step by Step! Bias and Toxicity in  | 再想想，还是别一步步推理了！零样本推理中的偏见与毒性 | `10.18653/v1/2023.acl-long.244` | 68 | 引用了种子 | 3 | | |
+| 4 | 2023 | Can ChatGPT Defend its Belief in Truth? Evaluating LLM Reasoning via D | ChatGPT 能否为它对真理的信念辩护？通过辩论评估大语言模型推理 | `10.18653/v1/2023.findings-emnlp.795` | 47 | 引用了种子 | 2 | | |
+| 5 | 2024 | From Automation to Augmentation: Redefining Engineering Design and Man | 从自动化到增强：在下一代人工智能时代重新定义工程设计与制造 | `10.21428/e4baedd9.e39b392d` | 22 | 引用了种子 | 2 | | |
 | 6 | 2025 | Dual-process theory and decision-making in large language models | 双过程理论与大语言模型中的决策 | `10.1038/s44159-025-00506-1` | 11 | 引用了种子 | 2 | | |
-| 7 | 2024 | Generative AI in the context of assistive technologies: Trends, limita | 辅助技术语境下的生成式人工智能：趋势、局限与未来方向 | `10.1016/j.imavis.2024.105347` | 45 | 引用了种子 | 1 | | |
-| 8 | 2023 | Prompting is not a substitute for probability measurements in large la | 提示并非大语言模型中概率测量的替代方案 | `10.18653/v1/2023.emnlp-main.306` | 37 | 引用了种子 | 1 | | |
+| 7 | 2024 | Generative AI in the context of assistive technologies: Trends, limita | 辅助技术背景下的生成式人工智能：趋势、局限与未来方向 | `10.1016/j.imavis.2024.105347` | 45 | 引用了种子 | 1 | | |
+| 8 | 2023 | Prompting is not a substitute for probability measurements in large la | 提示并非大语言模型中概率测量的替代品 | `10.18653/v1/2023.emnlp-main.306` | 37 | 引用了种子 | 1 | | |
 | 9 | 2025 | “It’s Not Only Attention We Need”: Systematic Review of Large Language | “我们需要的不仅是注意力”：大语言模型在心理健康照护中的系统综述 | `10.2196/78410` | 20 | 引用了种子 | 1 | | |
-| 10 | 2025 | Generating and leveraging explanations of AI/ML models in materials an | 在材料与制造研究中生成并利用 AI/ML 模型的解释 | `10.1016/j.patter.2025.101340` | 12 | 引用了种子 | 1 | | |
-| 11 | 2024 | The Evaluation of GenAI Capabilities to Implement Professional Tasks | 生成式人工智能完成专业任务的能力评估 | `10.17323/2500-2597.2024.4.67.76` | 9 | 引用了种子 | 1 | | |
-| 12 | 2025 | A Survey on Enhancing Causal Reasoning Ability of Large Language Model | 增强大型语言模型因果推理能力的综述 | `10.1007/978-981-96-8183-9_29` | 8 | 引用了种子 | 1 | | |
+| 10 | 2025 | Generating and leveraging explanations of AI/ML models in materials an | 在材料与制造研究中生成并利用人工智能/机器学习模型的解释 | `10.1016/j.patter.2025.101340` | 12 | 引用了种子 | 1 | | |
+| 11 | 2024 | The Evaluation of GenAI Capabilities to Implement Professional Tasks | 生成式人工智能执行专业任务能力的评估 | `10.17323/2500-2597.2024.4.67.76` | 9 | 引用了种子 | 1 | | |
+| 12 | 2025 | A Survey on Enhancing Causal Reasoning Ability of Large Language Model | 大语言模型因果推理能力增强研究综述 | `10.1007/978-981-96-8183-9_29` | 8 | 引用了种子 | 1 | | |
 | 13 | 2025 | If You Give an LLM a Legal Practice Guide | 如果你给大语言模型一本法律实务指南 | `10.1145/3709025.3712220` | 5 | 引用了种子 | 1 | | |
-| 14 | 2025 | Psychometrically derived 60-question benchmarks: Substantial efficienc | 基于心理测量学构建的60题基准：显著的效率及人类—AI比较的可能性 | `10.1016/j.intell.2025.101922` | 4 | 引用了种子 | 1 | | |
+| 14 | 2025 | Psychometrically derived 60-question benchmarks: Substantial efficienc | 基于心理测量学构建的60题基准：显著效率与人类—AI比较的可能性 | `10.1016/j.intell.2025.101922` | 4 | 引用了种子 | 1 | | |
 | 15 | 2025 | Developing an Accounting Virtual Assistant Through Supervised Fine‐Tun | 通过小语言模型（SLM）的监督微调（SFT）开发会计虚拟助手 | `10.1002/isaf.70011` | 2 | 引用了种子 | 1 | | |
 | 16 | 2025 | Comparative Evaluation of GPT Models in FHIR Proficiency | GPT模型在FHIR熟练度方面的比较评估 | `10.1145/3718095` | 2 | 引用了种子 | 1 | | |
 | 17 | 2023 | Gender bias and stereotypes in Large Language Models | 大型语言模型中的性别偏见与刻板印象 | `10.1145/3582269.3615599` | 366 | 引用了种子 | 0 | | |
-| 18 | 2024 | AI deception: A survey of examples, risks, and potential solutions | AI欺骗：示例、风险与潜在解决方案综述 | `10.1016/j.patter.2024.100988` | 219 | 引用了种子 | 0 | | |
+| 18 | 2024 | AI deception: A survey of examples, risks, and potential solutions | AI欺骗：实例、风险与潜在解决方案综述 | `10.1016/j.patter.2024.100988` | 219 | 引用了种子 | 0 | | |
 | 19 | 2023 | Automated evaluation of written discourse coherence using GPT-4 | 使用GPT-4自动评估书面语篇连贯性 | `10.18653/v1/2023.bea-1.32` | 76 | 引用了种子 | 0 | | |
-| 20 | 2025 | Sycophancy in Large Language Models: Causes and Mitigations | 大型语言模型中的谄媚：成因与缓解措施 | `10.1007/978-3-031-92611-2_5` | 76 | 引用了种子 | 0 | | |
-| 21 | 2025 | Helpful, harmless, honest? Sociotechnical limits of AI alignment and s | 有用、无害、诚实？通过基于人类反馈的强化学习实现AI对齐与安全的社会技术局限 | `10.1007/s10676-025-09837-2` | 46 | 引用了种子 | 0 | | |
-| 22 | 2025 | Formal requirements engineering and large language models: A two-way r | 形式化需求工程与大语言模型：双向路线图 | `10.1016/j.infsof.2025.107697` | 46 | 引用了种子 | 0 | | |
-| 23 | 2024 | Large language models can help boost food production, but be mindful o | 大语言模型有助于提高粮食产量，但需注意其风险 | `10.3389/frai.2024.1326153` | 42 | 引用了种子 | 0 | | |
-| 24 | 2024 | Quo Vadis ChatGPT? From large language models to Large Knowledge Model | ChatGPT何去何从？从大语言模型到大知识模型 | `10.1016/j.compchemeng.2024.108895` | 41 | 引用了种子 | 0 | | |
+| 20 | 2025 | Sycophancy in Large Language Models: Causes and Mitigations | 大型语言模型中的谄媚现象：成因与缓解措施 | `10.1007/978-3-031-92611-2_5` | 76 | 引用了种子 | 0 | | |
+| 21 | 2025 | Helpful, harmless, honest? Sociotechnical limits of AI alignment and s | 有益、无害、诚实？通过人类反馈强化学习实现人工智能对齐与安全的社会技术局限 | `10.1007/s10676-025-09837-2` | 46 | 引用了种子 | 0 | | |
+| 22 | 2025 | Formal requirements engineering and large language models: A two-way r | 形式化需求工程与大语言模型：一条双向路线图 | `10.1016/j.infsof.2025.107697` | 46 | 引用了种子 | 0 | | |
+| 23 | 2024 | Large language models can help boost food production, but be mindful o | 大语言模型有助于提升粮食生产，但需警惕其风险 | `10.3389/frai.2024.1326153` | 42 | 引用了种子 | 0 | | |
+| 24 | 2024 | Quo Vadis ChatGPT? From large language models to Large Knowledge Model | ChatGPT何去何从？从大语言模型到大型知识模型 | `10.1016/j.compchemeng.2024.108895` | 41 | 引用了种子 | 0 | | |
 | 25 | 2023 | Leveraging GPT-4 for Automatic Translation Post-Editing | 利用GPT-4进行自动翻译译后编辑 | `10.18653/v1/2023.findings-emnlp.804` | 40 | 引用了种子 | 0 | | |
 
 ## 摘要（判定用）
