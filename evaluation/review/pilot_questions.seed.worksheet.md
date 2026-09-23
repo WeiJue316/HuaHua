@@ -2,7 +2,7 @@
 
 - 数据集：`evaluation/datasets/pilot_questions.seed.jsonl`
 - 问题数：10
-- 数据集哈希：`2c21c0c6b2be87fd67515978997b9c7ea534eb5a90a26a86783d88bb4ac1e399`
+- 数据集哈希：`ce5516b789fbfc347ec6c97c972bdcc9eea99e3d562d9ab4d9cf862240eff0e3`
 
 复核规则：每道题逐项确认下面的判据，在「决定」处填写 `保留`、`修改` 或 `删除`，
 并在「原因」处写明修改内容或删除理由。复核完成后据此生成冻结版数据集，
@@ -94,13 +94,12 @@
 1. Which benchmarks expose limitations?
 2. Which failure modes are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1038/s41586-023-06291-2 (subquestion 1); doi:10.1038/s41586-025-09422-z (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1038/s41586-023-06291-2` | 2023 | 1 | Here, to address these limitations, we present MultiMedQA, a benchmark combining six existing medical question answering datasets spanning professional medicine, research and consumer queries and a new dataset of medical questions searched online, HealthSearchQA. |
-| 2 | `doi:10.1038/s41586-025-09422-z` | 2025 | 1 | General reasoning represents a long-standing and formidable challenge in artificial intelligence (AI). |
-| 3 | `doi:10.48550/arxiv.2305.04388` | 2023 | 2 | However, we find that CoT explanations can systematically misrepresent the true reason for a model's prediction. |
+| 1 | `doi:10.48550/arxiv.2305.04388` | 2023 | 2 | However, we find that CoT explanations can systematically misrepresent the true reason for a model's prediction. |
+| 2 | `doi:10.48550/arxiv.2410.05229` | 2024 | 1 | To overcome the limitations of existing evaluations, we introduce GSM-Symbolic, an improved benchmark created from symbolic templates that allow for the generation of a diverse set of questions. |
 
 复核判据：
 
@@ -126,13 +125,13 @@
 1. Which alignment objectives are used?
 2. How is alignment evaluated?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.48550/arxiv.2201.12086 (subquestion 1); doi:10.48550/arxiv.2301.12597 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.48550/arxiv.2201.12086` | 2022 | 1 | Vision-Language Pre-training (VLP) has advanced the performance for many vision-language tasks. |
-| 2 | `doi:10.48550/arxiv.2301.12597` | 2023 | 1 | The cost of vision-and-language pre-training has become increasingly prohibitive due to end-to-end training of large-scale models. |
-| 3 | `doi:10.48550/arxiv.2204.03162` | 2022 | 2 | We present a novel task and dataset for evaluating the ability of vision and language models to conduct visio-linguistic compositional reasoning, which we call Winoground. |
+| 1 | `doi:10.48550/arxiv.2204.03162` | 2022 | 2 | We present a novel task and dataset for evaluating the ability of vision and language models to conduct visio-linguistic compositional reasoning, which we call Winoground. |
+| 2 | `doi:10.1007/s11633-022-1369-5` | 2023 | 1 | To give readers a better overall grasp of VLP, we first review its recent advances in five aspects: feature extraction, model architecture, pre-training objectives, pre-training datasets, and downstream tasks. |
+| 3 | `doi:10.48550/arxiv.2301.12597` | 2023 | 1 | The first stage bootstraps vision-language representation learning from a frozen image encoder. The second stage bootstraps vision-to-language generative learning from a frozen language model. |
 
 复核判据：
 
@@ -189,13 +188,12 @@
 1. What are the reported trade-offs?
 2. Which evaluation setups are used?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1093/bioinformatics/btad651 (subquestion 2) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.18653/v1/2023.acl-long.99` | 2023 | 1 | While dense retrieval has been shown to be effective and efficient across tasks and languages, it remains difficult to create effective fully zero-shot dense retrieval systems when no relevance labels are available. |
-| 2 | `doi:10.1109/tpami.2022.3218591` | 2022 | 2 | Our survey considers a wide variety of recent methods, whereby we identify milestone work, reveal connections among various methods and present the commonly used benchmarks, evaluation results, common challenges, and propose promising future directions. |
-| 3 | `doi:10.1093/bioinformatics/btad651` | 2023 | 2 | In addition, MedCPT also generates better biomedical article and sentence representations for semantic evaluations. |
+| 2 | `doi:10.18653/v1/2022.findings-emnlp.347` | 2022 | 2 | In this work, we present SCIFACT-OPEN, a new test collection designed to evaluate the performance of scientific claim verification systems on a corpus of 500K research abstracts. |
 
 复核判据：
 
@@ -256,9 +254,9 @@
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.48550/arxiv.2203.02155` | 2022 | 1 | In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. |
-| 2 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
-| 3 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | This necessitates a new branch of research focusing on the parameter-efficient adaptation of PLMs, which optimizes a small portion of the model parameters while keeping the rest fixed, drastically cutting down computation and storage costs. |
+| 1 | `doi:10.18653/v1/2022.acl-short.8` | 2022 | 2 | Prompt tuning, which only tunes continuous prompts with a frozen language model, substantially reduces per-task storage and memory usage at training. |
+| 2 | `doi:10.1038/s42256-023-00626-4` | 2023 | 1 | This necessitates a new branch of research focusing on the parameter-efficient adaptation of PLMs, which optimizes a small portion of the model parameters while keeping the rest fixed, drastically cutting down computation and storage costs. |
+| 3 | `doi:10.18653/v1/2022.acl-short.1` | 2022 | 1 | We introduce BitFit, a sparse-finetuning method where only the bias-terms of the model (or a subset of them) are being modified. |
 
 复核判据：
 
@@ -284,12 +282,12 @@
 1. Which inference-time optimizations are used?
 2. What latency and quality trade-offs are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1201/9781003162810-13 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. Subquestion(s) 2 have no supporting evidence.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
-| 1 | `doi:10.1201/9781003162810-13` | 2022 | 1 | Achieving efficient, real-time NNs with optimal accuracy requires rethinking the design, training, and deployment of NN models. |
-| 2 | `doi:10.48550/arxiv.2211.10438` | 2022 | 2 | We demonstrate up to 1.56x speedup and 2x memory reduction for LLMs with negligible loss in accuracy. |
+| 1 | `doi:10.48550/arxiv.2211.10438` | 2022 | 2 | We demonstrate up to 1.56x speedup and 2x memory reduction for LLMs with negligible loss in accuracy. |
+| 2 | `doi:10.1201/9781003162810-13` | 2022 | 1 | This chapter provides approaches to the problem of quantizing the numerical values in deep Neural Network computations, covering the advantages/disadvantages of current methods. |
 
 复核判据：
 
@@ -315,13 +313,12 @@
 1. Which artifacts and metadata are shared?
 2. What barriers to reproducibility are reported?
 
-> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing. KNOWN ISSUE (2026-09-23 review): the quote recorded for doi:10.1109/access.2023.3262138 (subquestion 1) is a background sentence that does not answer its subquestion. Marked for rebuild by the P1 semantic relevance filter; do not treat as final gold evidence.
+> 生成备注：Seed annotation generated from OpenAlex metadata; requires human verification before freezing.
 
 | # | gold paper | 年份 | 子问题 | quote |
 |---:|---|---:|---:|---|
 | 1 | `doi:10.1016/j.patter.2023.100804` | 2023 | 2 | We systematically investigate reproducibility issues in ML-based science. |
-| 2 | `doi:10.1109/access.2023.3262138` | 2023 | 1 | The final goal of all industrial machine learning (ML) projects is to develop ML products and rapidly bring them into production. |
-| 3 | `doi:10.1145/3582302.3582306` | 2023 | 1 | The explorative and iterative nature of developing and operating ML applications leads to a variety of artifacts, such as datasets, features, models, hyperparameters, metrics, software, configurations, and logs. |
+| 2 | `doi:10.1145/3582302.3582306` | 2023 | 1 | The explorative and iterative nature of developing and operating ML applications leads to a variety of artifacts, such as datasets, features, models, hyperparameters, metrics, software, configurations, and logs. |
 
 复核判据：
 
