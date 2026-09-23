@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -13,7 +14,7 @@ from research_agent.mcp_servers.arxiv.parser import (
     normalize_arxiv_id,
     parse_search_response,
 )
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, RetryPolicy, SleepFn, get_with_retry
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 
@@ -60,9 +61,13 @@ class ArxivClient:
         *,
         http_client: httpx.AsyncClient,
         api_url: str = ARXIV_API_URL,
+        retry_policy: RetryPolicy | None = None,
+        sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url
+        self.retry_policy = retry_policy or RetryPolicy()
+        self.sleep = sleep
 
     async def search(
         self,
@@ -80,10 +85,13 @@ class ArxivClient:
             "sortOrder": "descending",
         }
         try:
-            response = await self.http_client.get(
+            response = await get_with_retry(
+                self.http_client,
                 self.api_url,
                 params=params,
                 headers={"User-Agent": "research-agent/0.1"},
+                retry_policy=self.retry_policy,
+                sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
             raise ArxivClientError(f"arXiv request failed: {exc}") from exc
@@ -116,10 +124,13 @@ class ArxivClient:
             "max_results": 5,
         }
         try:
-            response = await self.http_client.get(
+            response = await get_with_retry(
+                self.http_client,
                 self.api_url,
                 params=params,
                 headers={"User-Agent": "research-agent/0.1"},
+                retry_policy=self.retry_policy,
+                sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
             raise ArxivClientError(f"arXiv request failed: {exc}") from exc
@@ -150,9 +161,12 @@ class ArxivClient:
         """Download a PDF into a temporary destination and return its handle."""
 
         try:
-            response = await self.http_client.get(
+            response = await get_with_retry(
+                self.http_client,
                 url,
                 headers={"User-Agent": "research-agent/0.1"},
+                retry_policy=self.retry_policy,
+                sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
             raise ArxivClientError(f"arXiv PDF request failed: {exc}") from exc

@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from research_agent.mcp_servers.arxiv.client import ArxivClient, ArxivClientError
+from research_agent.mcp_servers.common import RetryPolicy
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "arxiv_search.xml"
 
@@ -39,7 +40,10 @@ async def test_arxiv_client_maps_upstream_failure() -> None:
         return httpx.Response(503, text="busy", request=request)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
-        arxiv = ArxivClient(http_client=http_client)
+        arxiv = ArxivClient(
+            http_client=http_client,
+            retry_policy=RetryPolicy(max_attempts=1),
+        )
         with pytest.raises(ArxivClientError, match="503") as exc_info:
             await arxiv.search("evidence chain")
 
@@ -83,3 +87,34 @@ async def test_arxiv_client_maps_rate_limit() -> None:
             await arxiv.search("evidence chain")
 
     assert exc_info.value.status_code == 429
+
+@pytest.mark.asyncio
+async def test_arxiv_client_retries_rate_limit_then_succeeds() -> None:
+    calls = 0
+    delays: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(
+                429,
+                headers={"retry-after": "1"},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            text=FIXTURE.read_text(encoding="utf-8"),
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        arxiv = ArxivClient(http_client=http_client, sleep=fake_sleep)
+        result = await arxiv.search("evidence chain", max_results=5)
+
+    assert calls == 2
+    assert delays == [1.0]
+    assert result.papers[0].source_record_id == "2407.18940"

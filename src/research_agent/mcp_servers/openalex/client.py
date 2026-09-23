@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, RetryPolicy, SleepFn, get_with_retry
 from research_agent.mcp_servers.openalex.parser import (
     OpenAlexParseError,
     normalize_openalex_id,
@@ -53,10 +54,14 @@ class OpenAlexClient:
         http_client: httpx.AsyncClient,
         api_url: str = OPENALEX_API_URL,
         mailto: str | None = None,
+        retry_policy: RetryPolicy | None = None,
+        sleep: SleepFn = asyncio.sleep,
     ) -> None:
         self.http_client = http_client
         self.api_url = api_url.rstrip("/")
         self.mailto = mailto
+        self.retry_policy = retry_policy or RetryPolicy()
+        self.sleep = sleep
 
     def _params(self, values: dict[str, str | int | None]) -> dict[str, str | int]:
         params: dict[str, str | int] = {}
@@ -74,10 +79,13 @@ class OpenAlexClient:
         params: dict[str, str | int] | None = None,
     ) -> dict[str, Any]:
         try:
-            response = await self.http_client.get(
+            response = await get_with_retry(
+                self.http_client,
                 f"{self.api_url}{path}",
                 params=params,
                 headers={"User-Agent": "research-agent/0.1"},
+                retry_policy=self.retry_policy,
+                sleep=self.sleep,
             )
         except httpx.HTTPError as exc:
             raise OpenAlexClientError(f"OpenAlex request failed: {exc}") from exc
