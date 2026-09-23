@@ -81,11 +81,14 @@
 │   │   └── registry.py          # 五源 client registry
 │   ├── policy/
 │   ├── evaluator/
+│   │   ├── dataset.py             # JSONL 问题集加载与哈希
+│   │   └── runner.py              # EvaluationRun/Case 矩阵调度
 │   ├── evidence/
 │   │   └── claims.py            # Evidence → Claim 与引用校验
 │   ├── storage/                 # 迁移、repository、不可变文件归档
 │   │   ├── migrations/
 │   │   ├── artifacts.py
+│   │   ├── evaluation_repository.py
 │   │   ├── pdf_parser.py
 │   │   └── repository.py
 │   ├── mcp_servers/
