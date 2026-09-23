@@ -220,7 +220,7 @@ def _content_terms(value: str) -> set[str]:
     }
 
 
-def _match_terms(value: str) -> set[str]:
+def match_terms(value: str) -> set[str]:
     """Terms used to match a paper against a subquestion.
 
     Unlike :func:`_content_terms` this keeps generic words such as
@@ -398,7 +398,7 @@ def paper_to_annotation(
     }
 
 
-def _within_year_range(
+def within_year_range(
     paper: PaperCandidate,
     year_range: tuple[int, int] | None,
 ) -> bool:
@@ -435,7 +435,7 @@ async def build_seed_questions(
         question_terms = sorted(_content_terms(question))
         variants: list[str] = list(plan.query_variants)
         for subquestion in subquestions:
-            sub_terms = sorted(_match_terms(subquestion))
+            sub_terms = sorted(match_terms(subquestion))
             if sub_terms:
                 variants.append(
                     " ".join(dict.fromkeys([*question_terms, *sub_terms]))
@@ -453,7 +453,7 @@ async def build_seed_questions(
                 candidates.append(paper)
 
         relevance_terms = _content_terms(" ".join([question, *subquestions]))
-        subquestion_terms = [_match_terms(item) for item in subquestions]
+        subquestion_terms = [match_terms(item) for item in subquestions]
 
         year_range = seed.get("year_range")
         parsed_year_range: tuple[int, int] | None = None
@@ -465,7 +465,7 @@ async def build_seed_questions(
             parsed_year_range = (int(year_range[0]), int(year_range[1]))
 
         in_range = [
-            paper for paper in candidates if _within_year_range(paper, parsed_year_range)
+            paper for paper in candidates if within_year_range(paper, parsed_year_range)
         ]
         year_filter_relaxed = False
         if not in_range and candidates:

@@ -24,6 +24,9 @@ BANNED_TERMS = {
     "source_describe": "旧工具名；公共工具名应使用 <source>_describe",
     "temporary_path": "旧 ArtifactRef 字段；应使用 artifact_uri",
 }
+# Review records and frozen data quote historical material verbatim, so the
+# terminology rule only applies to the project's own documentation.
+TERM_CHECK_SKIP_PARTS = {"evaluation"}
 LINK_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)\s]+)(?:\s+['\"][^'\"]*['\"])?\)")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
 
@@ -145,6 +148,8 @@ def check_tables(path, text, errors):
 
 
 def check_terms(path, text, errors):
+    if TERM_CHECK_SKIP_PARTS & set(path.relative_to(ROOT).parts):
+        return
     for line_no, line in enumerate(text.splitlines(), 1):
         for term, reason in BANNED_TERMS.items():
             if term in line:
