@@ -6,9 +6,9 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 ## 当前状态
 
-- 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则和 GitHub Actions 配置。
-- 未开始：数据库实现、MCP server、Agent Core、实验。
-- 已通过：Ruff、mypy、pytest（3 passed）、`research-agent --help` 和 `python scripts/check_docs.py`。
+- 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则、GitHub Actions 配置，以及 SQLite 初始 schema 和迁移 runner。
+- 未开始：MCP server、Agent Core、实验。
+- 已通过：Ruff、mypy、pytest（含 6 个迁移测试）、`research-agent --help` 和 `python scripts/check_docs.py`。
 - 文档校验：`python scripts/check_docs.py`。
 - 当前阶段：Phase 0，规范与最小原型。
 - 论文定稿：2027-03-19 17:00。

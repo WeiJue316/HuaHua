@@ -77,7 +77,8 @@
 │   ├── policy/
 │   ├── evaluator/
 │   ├── evidence/
-│   ├── storage/
+│   ├── storage/                 # 迁移 runner 与 migrations/
+│   │   └── migrations/
 │   ├── mcp_servers/
 │   └── interfaces/
 ├── tests/

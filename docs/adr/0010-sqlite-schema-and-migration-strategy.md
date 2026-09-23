@@ -1,6 +1,6 @@
 # ADR-0010：SQLite schema、迁移与完整性策略
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-09-23
 - 决策者：LYY
 - 关联文档：`docs/data-model.md`, `docs/architecture.md`, `docs/adr/0005-local-first-sqlite-fts5-filesystem.md`
@@ -141,7 +141,7 @@ FTS5 一致性由迁移创建的触发器和应用层事务共同维护；重建
 
 ## 约束
 
-- 本 ADR 处于 Proposed 状态；未获用户确认前不得创建初始数据库或执行迁移。
+- 本 ADR 已接受；初始 schema 和迁移 runner 已实现。任何后续 schema 变更仍需更新本 ADR 或新建 ADR。
 - 任何 schema 变更都必须更新本 ADR 或新建 ADR，并更新 `docs/data-model.md`。
 - 迁移前必须备份，迁移后必须运行完整性和引用链校验。
 - 迁移脚本不得修改已归档文件，也不得删除不可变 Source Record。

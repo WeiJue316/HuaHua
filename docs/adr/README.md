@@ -29,5 +29,5 @@
 | 0007 | MCP 协议层采用官方 SDK，源站适配与联邦自研 | Accepted |
 | 0008 | 证据链基数与 provenance | Accepted |
 | 0009 | 正式评测规模与任务指标拆分 | Accepted |
-| 0010 | SQLite schema、迁移与完整性策略 | Proposed |
+| 0010 | SQLite schema、迁移与完整性策略 | Accepted |
 | 0011 | 可移植性与 GitHub 分发 | Accepted |
