@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from research_agent.evidence.claims import ClaimDraft
 from research_agent.mcp_servers.common import PaperCandidate
 
 
@@ -469,6 +470,35 @@ class ResearchRepository:
             ),
         )
         return evidence_id
+
+    def record_claim(self, *, report_id: str, claim: ClaimDraft) -> str:
+        claim_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO claim
+                (id, report_id, claim_text, claim_type, support_status, confidence, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                claim_id,
+                report_id,
+                claim.claim_text,
+                claim.claim_type,
+                claim.support_status,
+                claim.confidence,
+                utc_now(),
+            ),
+        )
+        for rank, evidence_span_id in enumerate(claim.evidence_span_ids):
+            self.connection.execute(
+                """
+                INSERT INTO claim_evidence
+                    (claim_id, evidence_span_id, relation_type, rank)
+                VALUES (?, ?, 'supports', ?)
+                """,
+                (claim_id, evidence_span_id, rank),
+            )
+        return claim_id
 
     def record_report(
         self,

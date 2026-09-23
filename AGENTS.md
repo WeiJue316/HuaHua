@@ -79,6 +79,7 @@
 │   ├── policy/
 │   ├── evaluator/
 │   ├── evidence/
+│   │   └── claims.py            # Evidence → Claim 与引用校验
 │   ├── storage/                 # 迁移 runner、migrations/、repository.py
 │   │   ├── migrations/
 │   │   └── repository.py

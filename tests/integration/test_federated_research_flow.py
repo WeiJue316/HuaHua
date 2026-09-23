@@ -49,13 +49,17 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
     assert result.source_counts == {"arxiv": 2, "openalex": 1}
     assert result.paper_count == 2
     assert result.evidence_count == 3
+    assert result.claim_count == 3
     assert result.report_path.is_file()
     report = result.report_path.read_text(encoding="utf-8")
     assert "arxiv" in report
     assert "openalex" in report
+    assert "## Claims" in report
 
     with connect_database(tmp_path / "research_agent.db") as conn:
         assert conn.execute("SELECT COUNT(*) FROM source_record").fetchone()[0] == 3
         assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM paper_source_record").fetchone()[0] == 3
         assert conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0] == 3
+        assert conn.execute("SELECT COUNT(*) FROM claim").fetchone()[0] == 3
+        assert conn.execute("SELECT COUNT(*) FROM claim_evidence").fetchone()[0] == 3

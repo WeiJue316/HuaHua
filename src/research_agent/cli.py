@@ -99,6 +99,7 @@ def research(
     typer.echo(f"sources: {summary}")
     typer.echo(f"papers: {result.paper_count}")
     typer.echo(f"evidence: {result.evidence_count}")
+    typer.echo(f"claims: {result.claim_count}")
     typer.echo(f"report: {result.report_path}")
 
 

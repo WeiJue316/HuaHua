@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from research_agent.evidence.claims import ClaimDraft
 from research_agent.mcp_servers.common import Author, OpenAccessInfo, PaperCandidate
 from research_agent.storage.migrations import apply_migrations, connect_database
 from research_agent.storage.repository import ResearchRepository
@@ -179,3 +180,62 @@ def test_repository_enriches_existing_paper_with_doi(tmp_path: Path) -> None:
         assert conn.execute(
             "SELECT COUNT(*) FROM paper_identifier WHERE type = 'doi'"
         ).fetchone()[0] == 1
+
+def test_repository_records_claim_with_evidence(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+        call_id = repo.record_source_call(
+            run_id=run_id,
+            source="arxiv",
+            tool_name="arxiv_search_papers",
+            request_json={},
+            status="success",
+            started_at="2026-01-01T00:00:00Z",
+        )
+        source_record_id = repo.record_source_record(
+            source_call_id=call_id,
+            candidate=_candidate(),
+            api_endpoint="https://export.arxiv.org/api/query",
+        )
+        paper_id, _ = repo.upsert_paper(_candidate())
+        evidence_id = repo.record_evidence_span(
+            paper_id=paper_id,
+            source_record_id=source_record_id,
+            quote="We study evidence chains.",
+            locator={"section": "Abstract"},
+            evidence_level="abstract",
+            extraction_method="rule",
+            confidence=0.9,
+            verified=1,
+        )
+        report_id = repo.record_report(
+            run_id=run_id,
+            path="reports/project/run/report.md",
+            content="# Report\n",
+        )
+
+        claim_id = repo.record_claim(
+            report_id=report_id,
+            claim=ClaimDraft(
+                claim_text="Paper reports that We study evidence chains.",
+                claim_type="fact",
+                support_status="supported",
+                confidence=0.8,
+                evidence_span_ids=[evidence_id],
+            ),
+        )
+
+        assert claim_id
+        assert conn.execute("SELECT COUNT(*) FROM claim").fetchone()[0] == 1
+        claim_evidence = conn.execute(
+            "SELECT evidence_span_id, relation_type FROM claim_evidence"
+        ).fetchone()
+        assert claim_evidence is not None
+        assert claim_evidence["evidence_span_id"] == evidence_id
+        assert claim_evidence["relation_type"] == "supports"
