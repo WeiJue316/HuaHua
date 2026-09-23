@@ -70,6 +70,7 @@
 │       └── NNNN-kebab-case.md
 ├── src/research_agent/           # Python 包，后续创建
 │   ├── runtime/
+│   │   └── research_service.py  # M1 纵向编排
 │   ├── planner/
 │   ├── executor/
 │   ├── memory/
@@ -77,11 +78,18 @@
 │   ├── policy/
 │   ├── evaluator/
 │   ├── evidence/
-│   ├── storage/                 # 迁移 runner 与 migrations/
-│   │   └── migrations/
+│   ├── storage/                 # 迁移 runner、migrations/、repository.py
+│   │   ├── migrations/
+│   │   └── repository.py
 │   ├── mcp_servers/
+│   │   ├── common.py            # 公共 envelope 与数据模型
+│   │   └── arxiv/               # arXiv 适配与 MCP server
+│   │       ├── client.py
+│   │       ├── parser.py
+│   │       └── server.py
 │   └── interfaces/
 ├── tests/
+│   ├── fixtures/                # 可公开的脱敏测试响应
 │   ├── unit/
 │   ├── integration/
 │   └── e2e/

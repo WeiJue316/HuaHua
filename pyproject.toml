@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 research-agent = "research_agent.cli:main"
+arxiv-mcp = "research_agent.mcp_servers.arxiv.server:main"
 
 [dependency-groups]
 dev = [

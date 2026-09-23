@@ -12,6 +12,7 @@ def test_help_lists_commands() -> None:
     assert result.exit_code == 0
     assert "version" in result.stdout
     assert "doctor" in result.stdout
+    assert "research" in result.stdout
 
 
 def test_help_is_ascii_safe() -> None:

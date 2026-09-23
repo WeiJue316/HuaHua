@@ -6,11 +6,12 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 ## 当前状态
 
-- 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则、GitHub Actions 配置，以及 SQLite 初始 schema 和迁移 runner。
-- 未开始：MCP server、Agent Core、实验。
-- 已通过：Ruff、mypy、pytest（含 6 个迁移测试）、`research-agent --help` 和 `python scripts/check_docs.py`。
+- 已完成：工作规范、PRD、架构、MCP 契约、数据模型、评测方案、路线图、术语表、ADR、Pi 调研记录、文档结构校验脚本、Python 3.12 + uv 最小脚手架、跨平台项目规则、GitHub Actions 配置、SQLite 初始 schema 和迁移 runner。
+- M1 已实现：arXiv MCP server、arXiv Atom 解析、SourceRecord/Paper/EvidenceSpan 持久化、CLI 纵向流程和 Markdown 报告。
+- 未完成：真实 arXiv smoke test 当前被 429 限流阻断；OpenAlex、Federation、Agent Core 和实验尚未开始。
+- 已通过：Ruff、mypy、pytest（27 passed）、`research-agent --help` 和 `python scripts/check_docs.py`。
 - 文档校验：`python scripts/check_docs.py`。
-- 当前阶段：Phase 0，规范与最小原型。
+- 当前阶段：M1，arXiv 单源纵向闭环。
 - 论文定稿：2027-03-19 17:00。
 - 答辩：2027-04-10。
 
@@ -28,6 +29,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 uv sync --dev
 uv run research-agent doctor
 uv run research-agent --help
+uv run research-agent research "evidence chain" --max-results 5
 ```
 
 ### 开发验证
@@ -52,6 +54,17 @@ GitHub Actions 配置位于 `.github/workflows/ci.yml`。工作流在 Windows、
 - `uv run research-agent --help`
 
 CI 已通过 Windows、Linux 和 macOS 三个平台的首轮验证。
+
+## 独立 MCP server
+
+arXiv MCP server 使用官方 MCP Python SDK，通过 stdio 启动：
+
+```powershell
+uv run arxiv-mcp
+```
+
+MCP 工具包括 `arxiv_describe`、`arxiv_search_papers`、`arxiv_get_paper`、`arxiv_resolve_open_access` 和 `arxiv_download_pdf`。下载只返回临时 ArtifactRef，不直接写最终归档。
+
 ## 文档入口
 
 - [工作规范](AGENTS.md)
