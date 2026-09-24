@@ -12,8 +12,10 @@ from research_agent.evaluator.b0 import B0Baseline
 from research_agent.evaluator.bm25 import Bm25Index
 from research_agent.evaluator.dataset import EvaluationQuestion
 from research_agent.evaluator.metrics import (
+    ModelUsage,
     evidence_metrics,
     load_claim_rows,
+    load_model_usage,
     retrieval_metrics,
     source_coverage,
 )
@@ -148,6 +150,7 @@ class ResearchCaseRunner:
                 "input_tokens": float(outcome.input_tokens or 0),
                 "output_tokens": float(outcome.output_tokens or 0),
                 "latency_ms": float(outcome.latency_ms or 0),
+                "model_latency_ms": float(outcome.latency_ms or 0),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
             }
@@ -184,6 +187,7 @@ class ResearchCaseRunner:
                 "input_tokens": float(outcome.input_tokens),
                 "output_tokens": float(outcome.output_tokens),
                 "latency_ms": float(outcome.latency_ms),
+                "model_latency_ms": float(outcome.latency_ms),
                 "steps_used": float(outcome.steps_used),
                 "search_calls": float(outcome.search_calls),
                 "report_written": 1.0,
@@ -209,6 +213,7 @@ class ResearchCaseRunner:
         stored = set(result.retrieved_paper_keys)
         kept = stored - set(result.dropped_paper_keys)
         claims = load_claim_rows_checked(self.settings.db_path, result.run_id)
+        usage = load_model_usage_checked(self.settings.db_path, result.run_id)
         contributing = {
             source for source, count in result.source_counts.items() if count > 0
         }
@@ -228,9 +233,20 @@ class ResearchCaseRunner:
             "source_coverage": coverage,
             "relevance_dropped": float(result.relevance_dropped),
             "relevance_failures": float(result.relevance_failures),
+            **usage.to_dict(),
             "retrieved_paper_count": float(result.paper_count),
             "stored_paper_count": float(len(stored)),
         }
+
+
+def load_model_usage_checked(
+    db_path: Path,
+    run_id: str,
+) -> ModelUsage:
+    """Read model usage for a full-system run."""
+
+    with connect_database(db_path) as conn:
+        return load_model_usage(conn, run_id)
 
 
 def load_claim_rows_checked(

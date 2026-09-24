@@ -10,6 +10,7 @@ from research_agent.evaluator.metrics import (
     evidence_metrics,
     load_claim_rows,
     load_contributing_sources,
+    load_model_usage,
     load_retrieved_keys,
     retrieval_metrics,
     source_coverage,
@@ -136,6 +137,29 @@ def test_metric_queries_read_back_what_the_repository_wrote(tmp_path: Path) -> N
         report_id = repo.record_report(
             run_id=run_id, path="reports/r/report.md", content="# Report\n"
         )
+        repo.record_model_call(
+            run_id=run_id,
+            provider="deepseek",
+            model="deepseek-flash",
+            purpose="semantic_relevance",
+            prompt_hash="prompt-1",
+            prompt_version="relevance-v1",
+            input_tokens=120,
+            output_tokens=30,
+            latency_ms=25,
+            status="success",
+        )
+        repo.record_model_call(
+            run_id=run_id,
+            provider="deepseek",
+            model="deepseek-flash",
+            purpose="semantic_relevance",
+            prompt_hash="prompt-2",
+            prompt_version="relevance-v1",
+            latency_ms=5,
+            status="failed",
+            error_code="timeout",
+        )
         repo.record_claim(
             report_id=report_id,
             claim=ClaimDraft(
@@ -150,7 +174,18 @@ def test_metric_queries_read_back_what_the_repository_wrote(tmp_path: Path) -> N
         retrieved = load_retrieved_keys(conn, run_id)
         claims = load_claim_rows(conn, run_id)
         sources = load_contributing_sources(conn, run_id)
+        usage = load_model_usage(conn, run_id)
 
     assert retrieved == {"doi:10.1000/example"}
     assert claims == [("supported", 1)]
     assert sources == {"openalex"}
+    assert usage.calls == 2
+    assert usage.input_tokens == 120
+    assert usage.output_tokens == 30
+    assert usage.latency_ms == 30
+    assert usage.to_dict() == {
+        "llm_calls": 2.0,
+        "input_tokens": 120.0,
+        "output_tokens": 30.0,
+        "model_latency_ms": 30.0,
+    }

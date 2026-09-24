@@ -133,6 +133,10 @@ async def test_full_system_case_reports_retrieval_and_evidence_metrics(
     assert "evidence_coverage" in metrics
     assert "unsupported_claim_rate" in metrics
     assert metrics["relevance_failures"] == 0.0
+    assert metrics["llm_calls"] >= 1.0
+    assert "input_tokens" in metrics
+    assert "output_tokens" in metrics
+    assert "model_latency_ms" in metrics
 
 
 @pytest.mark.asyncio

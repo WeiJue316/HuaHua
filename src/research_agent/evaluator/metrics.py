@@ -86,6 +86,55 @@ def evidence_metrics(claim_rows: list[tuple[str, int]]) -> EvidenceMetrics:
     )
 
 
+@dataclass(frozen=True)
+class ModelUsage:
+    """Aggregated model calls recorded for one research run."""
+
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    latency_ms: int
+
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "llm_calls": float(self.calls),
+            "input_tokens": float(self.input_tokens),
+            "output_tokens": float(self.output_tokens),
+            "model_latency_ms": float(self.latency_ms),
+        }
+
+
+def load_model_usage(
+    connection: sqlite3.Connection,
+    run_id: str,
+) -> ModelUsage:
+    """Aggregate every model-call attempt recorded for a run.
+
+    Failed attempts remain in the result because a retry or rejected response
+    still consumes latency and may consume provider tokens.
+    """
+
+    row = connection.execute(
+        """
+        SELECT COUNT(*),
+               COALESCE(SUM(input_tokens), 0),
+               COALESCE(SUM(output_tokens), 0),
+               COALESCE(SUM(latency_ms), 0)
+        FROM model_call
+        WHERE run_id = ?
+        """,
+        (run_id,),
+    ).fetchone()
+    if row is None:
+        return ModelUsage(calls=0, input_tokens=0, output_tokens=0, latency_ms=0)
+    return ModelUsage(
+        calls=int(row[0] or 0),
+        input_tokens=int(row[1] or 0),
+        output_tokens=int(row[2] or 0),
+        latency_ms=int(row[3] or 0),
+    )
+
+
 def source_coverage(
     *, contributing_sources: set[str], allowed_sources: set[str]
 ) -> float:

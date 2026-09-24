@@ -48,3 +48,11 @@
 2. 把 B1/B3 的模型调用、token、延迟写回 evaluation metric。
 3. 设计同一候选宇宙或源站健康快照，消除检索输入差异。
 4. 在此基础上进入 A1、A2、A4 消融与正式 30 题集。
+
+## 模型用量口径修正验证
+
+2026-09-25 追加 1 题 smoke（评测运行 ID `d9d45a3b-2830-43ce-af7a-00adf9c11f64`）验证：
+B1、B2、B3 现在都在 `evaluation_case.metrics_json` 中输出相同字段
+`llm_calls`、`input_tokens`、`output_tokens`、`model_latency_ms`。
+
+该验证只证明指标口径已一致，不改变上面的 Pilot 结论或正式实验规模。

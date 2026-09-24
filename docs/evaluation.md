@@ -349,8 +349,9 @@ RecoveryRate = 从失败或暂停状态恢复并完成的 Run 数 / 发生失败
 
 - 端到端延迟：P50、P95、最大值。
 - 单源调用延迟：P50、P95。
-- LLM 调用次数。
-- 输入和输出 token。
+- LLM 调用次数：`llm_calls`，包含失败或被打回后重试的调用。
+- 输入和输出 token：`input_tokens`、`output_tokens`。
+- 模型调用累计延迟：`model_latency_ms`；它不等于端到端延迟。
 - LLM 成本。
 - 源站请求次数、重试次数、限流次数。
 - PDF 下载成功率。
