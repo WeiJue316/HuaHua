@@ -356,6 +356,8 @@ RecoveryRate = 从失败或暂停状态恢复并完成的 Run 数 / 发生失败
 - 模型调用累计延迟：`model_latency_ms`；它不等于端到端延迟。
 - LLM 成本。
 - 源站请求次数、重试次数、限流次数。
+- 源站健康：`source_attempts`、`source_successes`、`source_failures`、
+  `source_success_rate`。跨系统比较必须同时报告这些字段。
 - PDF 下载成功率。
 - PDF 解析成功率。
 

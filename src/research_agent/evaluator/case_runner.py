@@ -218,6 +218,14 @@ class ResearchCaseRunner:
                 "model_latency_ms": float(outcome.latency_ms),
                 "steps_used": float(outcome.steps_used),
                 "search_calls": float(outcome.search_calls),
+                "source_attempts": float(outcome.source_attempts),
+                "source_successes": float(outcome.source_successes),
+                "source_failures": float(outcome.source_failures),
+                "source_success_rate": (
+                    outcome.source_successes / outcome.source_attempts
+                    if outcome.source_attempts
+                    else 0.0
+                ),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
                 **task_metrics,
@@ -275,6 +283,12 @@ class ResearchCaseRunner:
             contributing_sources=contributing,
             allowed_sources=set(result.source_counts),
         )
+        source_attempts = len(result.source_counts)
+        source_failures = len(result.source_errors)
+        source_successes = source_attempts - source_failures
+        source_success_rate = (
+            source_successes / source_attempts if source_attempts else 0.0
+        )
         return {
             **retrieval.to_dict(),
             **evidence.to_dict(),
@@ -282,6 +296,10 @@ class ResearchCaseRunner:
             "relevance_dropped": float(result.relevance_dropped),
             "relevance_failures": float(result.relevance_failures),
             **usage.to_dict(),
+            "source_attempts": float(source_attempts),
+            "source_successes": float(source_successes),
+            "source_failures": float(source_failures),
+            "source_success_rate": source_success_rate,
             **task_metrics,
             "retrieved_paper_count": float(result.paper_count),
             "stored_paper_count": float(len(stored)),

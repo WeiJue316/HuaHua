@@ -53,6 +53,9 @@ class ReActOutcome:
     latency_ms: int
     steps_used: int
     search_calls: int
+    source_attempts: int
+    source_successes: int
+    source_failures: int
 
 
 @dataclass(frozen=True)
@@ -123,6 +126,8 @@ class PureReActBaseline:
         output_tokens = 0
         latency_ms = 0
         search_calls = 0
+        source_successes = 0
+        source_failures = 0
 
         try:
             for step in range(1, self.max_steps + 1):
@@ -159,10 +164,14 @@ class PureReActBaseline:
 
                 if action.kind == "search":
                     search_calls += 1
-                    observation, new_count = await self._run_search(
+                    observation, new_count, source_ok = await self._run_search(
                         action=action,
                         retrieved=retrieved,
                     )
+                    if source_ok:
+                        source_successes += 1
+                    else:
+                        source_failures += 1
                     observations.append(observation)
                     trace.append(
                         {
@@ -197,6 +206,9 @@ class PureReActBaseline:
                     latency_ms=latency_ms,
                     steps_used=step,
                     search_calls=search_calls,
+                    source_attempts=search_calls,
+                    source_successes=source_successes,
+                    source_failures=source_failures,
                 )
 
             message = f"max_steps={self.max_steps} reached without finish"
@@ -295,7 +307,7 @@ class PureReActBaseline:
         *,
         action: _Action,
         retrieved: dict[str, PaperCandidate],
-    ) -> tuple[str, int]:
+    ) -> tuple[str, int, bool]:
         try:
             result = await self.clients[action.source].search(
                 action.query,
@@ -305,6 +317,7 @@ class PureReActBaseline:
             return (
                 f"search failed for source={action.source}: {type(exc).__name__}: {exc}",
                 0,
+                False,
             )
 
         papers = getattr(result, "papers", [])
@@ -326,7 +339,7 @@ class PureReActBaseline:
         )
         if new_titles:
             observation += " Titles: " + "; ".join(new_titles)
-        return observation, new_count
+        return observation, new_count, True
 
     def _build_user_message(
         self,

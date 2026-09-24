@@ -99,6 +99,9 @@ async def test_react_runs_search_then_finish_and_writes_trace(tmp_path: Path) ->
     assert outcome.steps_used == 2
     assert outcome.search_calls == 1
     assert outcome.model_calls == 2
+    assert outcome.source_attempts == 1
+    assert outcome.source_successes == 1
+    assert outcome.source_failures == 0
     assert client.queries == ["evidence chain"]
     assert "Final ReAct report." in outcome.report_path.read_text(encoding="utf-8")
     trace = json.loads(outcome.trace_path.read_text(encoding="utf-8"))
@@ -165,3 +168,33 @@ async def test_react_counts_rejected_retry_calls_in_usage(tmp_path: Path) -> Non
         "rejected_action",
         "search",
     ]
+
+
+class FailingSearchClient:
+    async def search(self, query: str, *, max_results: int = 20) -> object:
+        del query, max_results
+        raise RuntimeError("source unavailable")
+
+
+@pytest.mark.asyncio
+async def test_react_records_failed_source_attempts(tmp_path: Path) -> None:
+    gateway = ScriptedGateway(
+        [
+            json.dumps(
+                {"action": "search", "source": "openalex", "query": "evidence chain"}
+            ),
+            json.dumps({"action": "finish", "report": "Insufficient evidence."}),
+        ]
+    )
+    baseline = PureReActBaseline(
+        clients={"openalex": FailingSearchClient()},
+        gateway=gateway,
+        reports_root=tmp_path / "reports",
+        max_steps=2,
+    )
+
+    outcome = await baseline.run(_question(), run_number=1)
+
+    assert outcome.source_attempts == 1
+    assert outcome.source_successes == 0
+    assert outcome.source_failures == 1

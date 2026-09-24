@@ -24,7 +24,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 ### 验证状态
 
-- 已通过：Ruff、mypy（strict）、pytest（220 passed）、`research-agent --help`、`python scripts/check_docs.py`。
+- 已通过：Ruff、mypy（strict）、pytest（221 passed）、`research-agent --help`、`python scripts/check_docs.py`。
 - 一键本地检查：`uv run python scripts/check_all.py`，执行与 CI 相同的命令组。
 - 关键日期：论文定稿 2027-03-19 17:00；答辩 2027-04-10。
 
