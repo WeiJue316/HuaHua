@@ -401,3 +401,23 @@ async def test_b2_runs_a_react_search_finish_loop(tmp_path: Path) -> None:
     traces = list((tmp_path / "reports-b2" / "b2").glob("*.trace.json"))
     assert len(reports) == 1
     assert len(traces) == 1
+
+
+@pytest.mark.asyncio
+async def test_source_allowlist_can_disable_a_system_source(tmp_path: Path) -> None:
+    settings = CaseRunnerSettings(
+        db_path=tmp_path / "allowlist.db",
+        reports_root=tmp_path / "reports-allowlist",
+        max_results_per_source=5,
+        allowed_sources=("arxiv",),
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as http_client:
+        runner = ResearchCaseRunner(
+            questions=[_question()],
+            settings=settings,
+            http_client=http_client,
+            gateway=StubGateway(),  # type: ignore[arg-type]
+        )
+        outcome = await runner("csai_test", "B1", 1)
+
+    assert outcome.error_code == "no_sources"

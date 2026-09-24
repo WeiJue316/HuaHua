@@ -19,7 +19,11 @@ from research_agent.evaluator.metrics import (
 )
 from research_agent.evaluator.react import PureReActBaseline
 from research_agent.evaluator.runner import EvaluationCaseOutcome
-from research_agent.evaluator.systems import get_system
+from research_agent.evaluator.systems import (
+    SystemConfig,
+    get_system,
+    restrict_sources,
+)
 from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.planner.planner import plan_research
@@ -42,6 +46,7 @@ class CaseRunnerSettings:
     reports_root: Path
     max_results_per_source: int = 10
     dataset_version: str = "pilot-v2"
+    allowed_sources: tuple[str, ...] | None = None
 
 
 class ResearchCaseRunner:
@@ -79,9 +84,9 @@ class ResearchCaseRunner:
         if system_id == "B0":
             return await self._run_b0(question, run_number)
         if system_id == "B2":
-            return await self._run_b2(question, run_number)
+            return await self._run_b2(question, run_number, config)
 
-        source_ids = config.sources or self._default_sources()
+        source_ids = self._source_ids_for(config)
         if not source_ids:
             return EvaluationCaseOutcome(error_code="no_sources")
 
@@ -152,10 +157,13 @@ class ResearchCaseRunner:
         self,
         question: EvaluationQuestion,
         run_number: int,
+        config: SystemConfig,
     ) -> EvaluationCaseOutcome:
         if self.gateway is None:
             return EvaluationCaseOutcome(error_code="no_model_gateway")
-        source_ids = self._default_sources()
+        source_ids = self._source_ids_for(config)
+        if not source_ids:
+            return EvaluationCaseOutcome(error_code="no_sources")
         clients = build_source_clients(self.http_client, source_ids, cache=self.cache)
         baseline = PureReActBaseline(
             clients=clients,
@@ -182,6 +190,12 @@ class ResearchCaseRunner:
                 "report_chars": float(len(outcome.report)),
             }
         )
+
+    def _source_ids_for(self, config: SystemConfig) -> tuple[str, ...]:
+        requested = (
+            config.sources if config.sources is not None else self._default_sources()
+        )
+        return restrict_sources(requested, self.settings.allowed_sources)
 
     @staticmethod
     def _default_sources() -> tuple[str, ...]:

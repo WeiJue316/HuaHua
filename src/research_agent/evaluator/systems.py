@@ -7,9 +7,22 @@ evaluation run fails loudly instead of silently measuring the wrong system.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 ALL_SOURCES = ("arxiv", "openalex", "crossref", "semantic_scholar", "dblp")
+
+
+def restrict_sources(
+    requested: Sequence[str],
+    allowed: Sequence[str] | None,
+) -> tuple[str, ...]:
+    """Intersect requested sources with an optional run-level allowlist."""
+
+    if allowed is None:
+        return tuple(requested)
+    allowed_set = set(allowed)
+    return tuple(source for source in requested if source in allowed_set)
 
 
 @dataclass(frozen=True)

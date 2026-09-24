@@ -41,3 +41,9 @@ def test_research_help_lists_sources() -> None:
     assert result.exit_code == 0
     assert "--sources" in result.stdout
     assert "--download-pdf" in result.stdout
+
+def test_evaluate_help_lists_source_allowlist() -> None:
+    result = runner.invoke(app, ["evaluate", "--help"])
+
+    assert result.exit_code == 0
+    assert "--sources" in result.stdout

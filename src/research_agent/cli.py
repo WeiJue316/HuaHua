@@ -219,6 +219,13 @@ def evaluate(
         str,
         typer.Option("--systems", help="Comma-separated system identifiers."),
     ] = "B3,A6",
+    sources: Annotated[
+        str,
+        typer.Option(
+            "--sources",
+            help="Comma-separated source allowlist, or 'all'.",
+        ),
+    ] = "all",
     repeats: Annotated[
         int,
         typer.Option("--repeats", min=1, max=10, help="Runs per question."),
@@ -259,11 +266,32 @@ def evaluate(
         typer.echo(f"unknown systems: {', '.join(unknown)}", err=True)
         raise typer.Exit(code=1)
 
+    allowed_sources: tuple[str, ...] | None
+    if sources.strip().lower() == "all":
+        allowed_sources = None
+    else:
+        allowed_sources = tuple(
+            item.strip() for item in sources.split(",") if item.strip()
+        )
+        if not allowed_sources:
+            typer.echo("--sources must name at least one source or be 'all'", err=True)
+            raise typer.Exit(code=1)
+        unknown_sources = [
+            source for source in allowed_sources if source not in SUPPORTED_SOURCES
+        ]
+        if unknown_sources:
+            typer.echo(
+                f"unknown sources: {', '.join(unknown_sources)}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
     settings = CaseRunnerSettings(
         db_path=db,
         reports_root=reports_dir,
         max_results_per_source=max_results,
         dataset_version=dataset_version_from_path(dataset),
+        allowed_sources=allowed_sources,
     )
     # Evaluation never lets an entry expire: the same key must always return
     # the same bytes, or the arms are not comparable.
@@ -300,6 +328,7 @@ def evaluate(
                         "systems": system_ids,
                         "repeats": repeats,
                         "max_results_per_source": max_results,
+                        "allowed_sources": allowed_sources,
                         "cache_dir": cache_dir.as_posix(),
                         "b0_corpus": b0_corpus.as_posix(),
                         "b0_corpus_hash": (
