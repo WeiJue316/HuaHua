@@ -106,7 +106,13 @@ def _handler(request: httpx.Request) -> httpx.Response:
     raise AssertionError(f"unexpected request: {request.url}")
 
 
-async def _run(tmp_path: Path, name: str, judge: RelevanceJudge | None) -> object:
+async def _run(
+    tmp_path: Path,
+    name: str,
+    judge: RelevanceJudge | None,
+    *,
+    evidence_chain: bool = True,
+) -> object:
     db_path = tmp_path / f"{name}.db"
     async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as http_client:
         clients = build_source_clients(http_client, SOURCES)
@@ -125,6 +131,7 @@ async def _run(tmp_path: Path, name: str, judge: RelevanceJudge | None) -> objec
             plan=plan,
             relevance_judge=judge,
             subquestions=("How is evaluation performed?",),
+            evidence_chain=evidence_chain,
         )
 
 
@@ -174,3 +181,16 @@ async def test_allowed_candidates_keep_their_claims(tmp_path: Path) -> None:
 
     assert result.relevance_dropped == 0  # type: ignore[attr-defined]
     assert result.claim_count == baseline.claim_count  # type: ignore[attr-defined]
+
+@pytest.mark.asyncio
+async def test_a1_direct_claims_respect_relevance_filtering(tmp_path: Path) -> None:
+    judge = StubJudge(deny_all=True)
+    result = await _run(
+        tmp_path,
+        "a1-filtered",
+        judge,
+        evidence_chain=False,
+    )
+
+    assert result.claim_count == 0  # type: ignore[attr-defined]
+    assert result.evidence_count == 0  # type: ignore[attr-defined]

@@ -10,6 +10,7 @@ from uuid import uuid4
 from research_agent.evidence.claims import (
     ClaimDraft,
     build_claims_from_evidence,
+    build_direct_claims,
     validate_claim_evidence,
 )
 from research_agent.executor.executor import Executor, StepSpec
@@ -239,6 +240,7 @@ async def run_federated_research(
     relevance_judge: RelevanceJudge | None = None,
     subquestions: Sequence[str] = (),
     response_cache: ResponseCache | None = None,
+    evidence_chain: bool = True,
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -268,6 +270,7 @@ async def run_federated_research(
                 "max_results_per_source": max_results_per_source,
                 "sources": sorted(clients),
                 "download_pdf": download_pdf,
+                "evidence_chain": evidence_chain,
                 "plan": plan.to_dict(),
             },
         )
@@ -393,7 +396,7 @@ async def run_federated_research(
                     abstract = candidate.abstract
                     if not abstract and abstract_resolver is not None:
                         abstract = await abstract_resolver.resolve_abstract(candidate)
-                    if abstract:
+                    if evidence_chain and abstract:
                         evidence_id = repository.record_evidence_span(
                             paper_id=paper_id,
                             source_record_id=stored_source_record_id,
@@ -470,7 +473,7 @@ async def run_federated_research(
                         )
                         context.document_count += 1
                         full_text_quote = parse_result.text.split("\n\n", 1)[0].strip()
-                        if full_text_quote:
+                        if evidence_chain and full_text_quote:
                             full_text_evidence_id = repository.record_evidence_span(
                                 paper_id=paper_id,
                                 source_record_id=stored_source_record_id,
@@ -580,7 +583,15 @@ async def run_federated_research(
                 for row in context.evidence_rows
                 if row[2] not in context.dropped_source_record_ids
             ]
-            context.claims = build_claims_from_evidence(usable)
+            if evidence_chain:
+                context.claims = build_claims_from_evidence(usable)
+            else:
+                papers_by_key = {
+                    canonical_key(paper): paper
+                    for paper, _source_record_id in context.source_records
+                    if canonical_key(paper) not in context.dropped_keys
+                }
+                context.claims = build_direct_claims(list(papers_by_key.values()))
             return {"claim_count": len(context.claims)}
 
         async def validate_citations_step() -> dict[str, object]:

@@ -179,7 +179,7 @@ async def test_denied_candidates_leave_the_kept_set_and_the_claims(
 async def test_unimplemented_system_is_reported_not_silently_run(
     tmp_path: Path,
 ) -> None:
-    outcome = await _run(tmp_path, "a1", "A1", None)
+    outcome = await _run(tmp_path, "a4", "A4", None)
 
     assert outcome.error_code == "NotImplementedError"
 
@@ -537,3 +537,34 @@ async def test_source_snapshot_replaces_live_source_clients(tmp_path: Path) -> N
 
     assert outcome.error_code is None
     assert (outcome.metrics or {})["recall"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_a1_has_claims_without_evidence_chain(tmp_path: Path) -> None:
+    outcome = await _run(tmp_path, "a1-run", "A1", StubGateway())
+
+    assert outcome.error_code is None
+    metrics = outcome.metrics or {}
+    assert metrics["claim_count"] > 0
+    assert metrics["evidence_coverage"] == 0.0
+    assert metrics["claims_with_evidence"] == 0.0
+    assert metrics["source_success_rate"] > 0.0
+
+
+@pytest.mark.asyncio
+async def test_a2_uses_a_fixed_single_query_plan(tmp_path: Path) -> None:
+    outcome = await _run(tmp_path, "a2-run", "A2", StubGateway())
+
+    assert outcome.error_code is None
+    assert outcome.research_run_id
+    from research_agent.storage.migrations import connect_database
+
+    with connect_database(tmp_path / "a2-run.db") as conn:
+        row = conn.execute(
+            "SELECT plan_json FROM plan WHERE run_id = ?",
+            (outcome.research_run_id,),
+        ).fetchone()
+    assert row is not None
+    plan = json.loads(row["plan_json"])
+    assert plan["reason"] == "A2_fixed_pipeline"
+    assert plan["query_variants"] == ["evidence chain"]

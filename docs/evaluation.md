@@ -211,6 +211,15 @@ csai_007 的金标只有 2 篇，而系统在 K=20 下保留 31 篇候选。此�
 A1–A4 与 A6 是核心消融；A5 作为多源联邦的补充实验。若时间不足，A5 可延后，
 但 A1–A4 与 A6 必须完成。A6 的判定阈值（严格 / 宽松）作为配置项，两种取值都需报告。
 
+实现状态：
+
+- A1 已实现：`evidence_chain=False`，论文仍持久化，但不创建 Evidence Span，
+  Claim 直接由通过相关性过滤的论文生成并标记为 `unsupported`。
+- A2 已实现：固定单查询 Plan（`reason=A2_fixed_pipeline`），不走 Planner 的查询变体。
+- A4 未实现：必须先提供可配置的 LLM synthesis/claim generation，否则无法真实测试
+  “自由生成引用和结论”。
+- A3/A6 已实现；A5 仍延后。
+
 A6 的依据见 `docs/adr/0012-semantic-relevance-filtering.md`：人工复核 pilot 数据集时发现，
 纯关键词匹配会稳定地把邻域论文收进候选，且该失败无法用词重合消除。
 

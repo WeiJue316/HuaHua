@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from research_agent.mcp_servers.common import PaperCandidate
+
 EvidenceRow = tuple[str, str, str, str, str, str]
 
 
@@ -47,6 +49,26 @@ def build_claims_from_evidence(evidence: list[EvidenceRow]) -> list[ClaimDraft]:
                 support_status="supported",
                 confidence=0.8,
                 evidence_span_ids=[evidence_id],
+            )
+        )
+    return claims
+
+
+def build_direct_claims(papers: list[PaperCandidate]) -> list[ClaimDraft]:
+    """Build claims directly from papers without Evidence Span linkage."""
+
+    claims: list[ClaimDraft] = []
+    for paper in papers:
+        title = " ".join(paper.title.split())
+        if not title:
+            continue
+        claims.append(
+            ClaimDraft(
+                claim_text=f"{title} reports findings relevant to the research question.",
+                claim_type="fact",
+                support_status="unsupported",
+                confidence=0.4,
+                evidence_span_ids=[],
             )
         )
     return claims

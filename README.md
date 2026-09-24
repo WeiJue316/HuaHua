@@ -17,14 +17,14 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 - Agent Core 尚未成型；Planner 与 Executor 只是其起点。
 - Claim 综合仍是模板化首句抽取，不是跨文献综合。
-- B0/B1/B2/B3/A3/A6 已接入评测矩阵；A1、A2、A4 和正式 30 题集尚未实现。
+- B0/B1/B2/B3/A1/A2/A3/A6 已接入评测矩阵；A4 需要 LLM synthesis 前置能力，正式 30 题集尚未实现。
 - 真实源站限制：arXiv 间歇 406/429、Semantic Scholar 429、DBLP 返回 bot challenge，三者当前无法稳定完成真实烟测；CI 全部使用 fixture 离线验证。
 - Crossref 搜索结果普遍不含 abstract，目前对证据链没有贡献。
 - Planner 生成的 `query_variants` 尚未被检索流程使用。
 
 ### 验证状态
 
-- 已通过：Ruff、mypy（strict）、pytest（225 passed）、`research-agent --help`、`python scripts/check_docs.py`。
+- 已通过：Ruff、mypy（strict）、pytest（230 passed）、`research-agent --help`、`python scripts/check_docs.py`。
 - 一键本地检查：`uv run python scripts/check_all.py`，执行与 CI 相同的命令组。
 - 关键日期：论文定稿 2027-03-19 17:00；答辩 2027-04-10。
 

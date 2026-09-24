@@ -79,17 +79,15 @@ SYSTEMS: dict[str, SystemConfig] = {
     ),
     "A1": SystemConfig(
         system_id="A1",
-        description="去证据链",
-        sources=(),
+        description="去证据链：直接生成 unsupported Claim，不创建 Evidence Span",
+        sources=None,
         relevance_filter=True,
-        implemented=False,
     ),
     "A2": SystemConfig(
         system_id="A2",
-        description="去规划器",
-        sources=(),
+        description="去规划器：固定单查询流水线",
+        sources=None,
         relevance_filter=True,
-        implemented=False,
     ),
     "A4": SystemConfig(
         system_id="A4",

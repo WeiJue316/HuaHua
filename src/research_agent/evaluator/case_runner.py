@@ -30,7 +30,7 @@ from research_agent.evaluator.systems import (
 from research_agent.evaluator.task_completion import TaskCompletionJudge
 from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
-from research_agent.planner.planner import plan_research
+from research_agent.planner.planner import ResearchPlan, plan_research
 from research_agent.policy.relevance import RelevanceJudge
 from research_agent.router.federation import SearchClient
 from research_agent.router.registry import build_source_clients
@@ -108,12 +108,23 @@ class ResearchCaseRunner:
             return EvaluationCaseOutcome(error_code="no_sources")
 
         clients = self._build_clients(source_ids)
-        plan = plan_research(
-            question.question,
-            available_sources=tuple(source_ids),
-            max_results_per_source=self.settings.max_results_per_source,
-            max_sources=len(source_ids),
-        )
+        if system_id == "A2":
+            plan = ResearchPlan(
+                question=question.question,
+                query_variants=(question.question,),
+                selected_sources=tuple(source_ids),
+                fallback_sources=(),
+                max_results_per_source=self.settings.max_results_per_source,
+                max_concurrency=len(source_ids),
+                reason="A2_fixed_pipeline",
+            )
+        else:
+            plan = plan_research(
+                question.question,
+                available_sources=tuple(source_ids),
+                max_results_per_source=self.settings.max_results_per_source,
+                max_sources=len(source_ids),
+            )
         judge = None
         if config.relevance_filter:
             if self.gateway is None:
@@ -130,6 +141,7 @@ class ResearchCaseRunner:
             relevance_judge=judge,
             subquestions=question.subquestions,
             response_cache=self.cache,
+            evidence_chain=system_id != "A1",
         )
 
         usage = load_model_usage_checked(self.settings.db_path, result.run_id)
