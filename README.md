@@ -11,20 +11,20 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 - M2 已完成：OpenAlex MCP server（含 citations/references）、并行 Federation、DOI 跨源合并、双源 provenance 保留、Evidence → Claim 构建与引用校验、限流/网络错误的有界重试与 `Retry-After` 支持，以及内容寻址 PDF 归档、Document 解析、full-text Evidence 和 File provenance。
 - M3 进行中：五源 MCP server、source registry、Federation 并发预算、部分源错误可见性、确定性 Planner、Plan/AuditEvent 持久化，以及由 Executor 驱动的六步 Run 流程、StepAttempt 和重试预算。开题报告与初步评测尚未完成。
 - 评测基础设施：JSONL 问题集加载与哈希、EvaluationRun/Case/Result 持久化、批量 case matrix 调度；Pilot v1（人工复核）和 v2（AI 审计）已冻结。
-- 当前阶段：M3 开题准备。功能实现已超前于路线图；B0 baseline 和 Pilot v2 已落地，B2 与正式 30 题集尚未完成。
+- 当前阶段：M3 开题准备。功能实现已超前于路线图；B0/B2 baseline、Pilot v2 和 ReAct smoke 已落地，正式 30 题集与 A1–A4 尚未完成。
 
 ### 未完成与已知限制
 
 - Agent Core 尚未成型；Planner 与 Executor 只是其起点。
 - Claim 综合仍是模板化首句抽取，不是跨文献综合。
-- B0/B1/B3/A3/A6 已接入评测矩阵；B2、A1、A2、A4 和正式 30 题集尚未实现。
+- B0/B1/B2/B3/A3/A6 已接入评测矩阵；A1、A2、A4 和正式 30 题集尚未实现。
 - 真实源站限制：arXiv 间歇 406/429、Semantic Scholar 429、DBLP 返回 bot challenge，三者当前无法稳定完成真实烟测；CI 全部使用 fixture 离线验证。
 - Crossref 搜索结果普遍不含 abstract，目前对证据链没有贡献。
 - Planner 生成的 `query_variants` 尚未被检索流程使用。
 
 ### 验证状态
 
-- 已通过：Ruff、mypy（strict）、pytest（205 passed）、`research-agent --help`、`python scripts/check_docs.py`。
+- 已通过：Ruff、mypy（strict）、pytest（210 passed）、`research-agent --help`、`python scripts/check_docs.py`。
 - 一键本地检查：`uv run python scripts/check_all.py`，执行与 CI 相同的命令组。
 - 关键日期：论文定稿 2027-03-19 17:00；答辩 2027-04-10。
 

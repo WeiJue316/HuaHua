@@ -17,6 +17,7 @@ from research_agent.evaluator.metrics import (
     retrieval_metrics,
     source_coverage,
 )
+from research_agent.evaluator.react import PureReActBaseline
 from research_agent.evaluator.runner import EvaluationCaseOutcome
 from research_agent.evaluator.systems import get_system
 from research_agent.llm.gateway import ModelGateway
@@ -77,6 +78,8 @@ class ResearchCaseRunner:
 
         if system_id == "B0":
             return await self._run_b0(question, run_number)
+        if system_id == "B2":
+            return await self._run_b2(question, run_number)
 
         source_ids = config.sources or self._default_sources()
         if not source_ids:
@@ -140,6 +143,41 @@ class ResearchCaseRunner:
                 "input_tokens": float(outcome.input_tokens or 0),
                 "output_tokens": float(outcome.output_tokens or 0),
                 "latency_ms": float(outcome.latency_ms or 0),
+                "report_written": 1.0,
+                "report_chars": float(len(outcome.report)),
+            }
+        )
+
+    async def _run_b2(
+        self,
+        question: EvaluationQuestion,
+        run_number: int,
+    ) -> EvaluationCaseOutcome:
+        if self.gateway is None:
+            return EvaluationCaseOutcome(error_code="no_model_gateway")
+        source_ids = self._default_sources()
+        clients = build_source_clients(self.http_client, source_ids, cache=self.cache)
+        baseline = PureReActBaseline(
+            clients=clients,
+            gateway=self.gateway,
+            reports_root=self.settings.reports_root,
+            max_steps=8,
+            max_results_per_search=self.settings.max_results_per_source,
+        )
+        outcome = await baseline.run(question, run_number=run_number)
+        retrieval = retrieval_metrics(
+            retrieved_keys=set(outcome.retrieved_keys),
+            gold_keys=set(question.gold_papers),
+        )
+        return EvaluationCaseOutcome(
+            metrics={
+                **retrieval.to_dict(),
+                "llm_calls": float(outcome.model_calls),
+                "input_tokens": float(outcome.input_tokens),
+                "output_tokens": float(outcome.output_tokens),
+                "latency_ms": float(outcome.latency_ms),
+                "steps_used": float(outcome.steps_used),
+                "search_calls": float(outcome.search_calls),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
             }

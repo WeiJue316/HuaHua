@@ -60,10 +60,9 @@ SYSTEMS: dict[str, SystemConfig] = {
     ),
     "B2": SystemConfig(
         system_id="B2",
-        description="纯 ReAct",
-        sources=(),
+        description="纯 ReAct：受限 search/finish 循环，无 Plan 和证据链",
+        sources=None,
         relevance_filter=False,
-        implemented=False,
     ),
     "A1": SystemConfig(
         system_id="A1",

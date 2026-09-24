@@ -31,3 +31,6 @@
 | 0009 | 正式评测规模与任务指标拆分 | Accepted |
 | 0010 | SQLite schema、迁移与完整性策略 | Accepted |
 | 0011 | 可移植性与 GitHub 分发 | Accepted |
+| 0012 | 语义相关性过滤 | Accepted |
+| 0013 | 源站响应缓存 | Accepted |
+| 0014 | 纯 ReAct baseline 使用独立受限循环 | Accepted |

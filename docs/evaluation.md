@@ -181,10 +181,14 @@ csai_007 的金标只有 2 篇，而系统在 K=20 下保留 31 篇候选。此�
 
 ### 4.3 B2：纯 ReAct
 
-- 让 LLM 通过工具调用循环自主决定下一步。
-- 工具集合与完整系统相同。
-- 不提供显式 Plan 状态机，不强制证据链校验。
+- 让 LLM 在受限循环中自主选择 `search` 或 `finish`。
+- 搜索工具复用与完整系统相同的源站 client、限流、缓存和候选结构。
+- 最大步数、单次结果数和输出预算固定；达到上限仍未 `finish` 则 case 失败。
+- 不提供显式 Plan 状态机，不强制 Evidence Span、Claim 或引用校验。
+- 每轮保存 trace，记录源站、查询、新论文数、模型调用、token 和延迟。
 - 用于衡量结构化运行时和受控语义步骤的价值。
+- 实现入口：`research_agent.evaluator.react.PureReActBaseline`。
+- Pilot smoke 记录：`evaluation/results/b2_pilot_smoke.md`。
 
 ### 4.4 B3：完整系统
 

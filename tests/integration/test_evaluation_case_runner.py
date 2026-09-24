@@ -343,3 +343,61 @@ async def test_b0_uses_the_frozen_corpus_and_calls_the_model_once(
     assert metrics["report_written"] == 1.0
     reports = list((tmp_path / "reports-b0" / "b0").glob("*.md"))
     assert len(reports) == 1
+
+
+class ScriptedReActGateway:
+    """Return a fixed sequence of B2 actions."""
+
+    def __init__(self, actions: list[dict[str, object]]) -> None:
+        self.actions = list(actions)
+        self.calls = 0
+
+    async def complete(
+        self,
+        *,
+        prompt_hash: str,
+        system: str,
+        user: str,
+        max_output_tokens: int = 900,
+        temperature: float = 0.0,
+        json_output: bool = False,
+    ) -> ModelResponse:
+        del system, user, max_output_tokens, temperature, json_output
+        content = json.dumps(self.actions[self.calls], ensure_ascii=False)
+        self.calls += 1
+        return ModelResponse(
+            provider="stub",
+            model="stub-react",
+            content=content,
+            prompt_hash=prompt_hash,
+            response_hash=f"react-{self.calls}",
+            input_tokens=20,
+            output_tokens=10,
+            latency_ms=4,
+            finish_reason="stop",
+        )
+
+
+@pytest.mark.asyncio
+async def test_b2_runs_a_react_search_finish_loop(tmp_path: Path) -> None:
+    gateway = ScriptedReActGateway(
+        [
+            {"action": "search", "source": "openalex", "query": "evidence chain"},
+            {"action": "finish", "report": "ReAct baseline report."},
+        ]
+    )
+
+    outcome = await _run(tmp_path, "b2", "B2", gateway)
+
+    assert outcome.error_code is None
+    metrics = outcome.metrics or {}
+    assert gateway.calls == 2
+    assert metrics["recall"] == 1.0
+    assert metrics["search_calls"] == 1.0
+    assert metrics["steps_used"] == 2.0
+    assert metrics["llm_calls"] == 2.0
+    assert metrics["report_written"] == 1.0
+    reports = list((tmp_path / "reports-b2" / "b2").glob("*.md"))
+    traces = list((tmp_path / "reports-b2" / "b2").glob("*.trace.json"))
+    assert len(reports) == 1
+    assert len(traces) == 1
