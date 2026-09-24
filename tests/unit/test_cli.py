@@ -47,3 +47,8 @@ def test_evaluate_help_lists_source_allowlist() -> None:
 
     assert result.exit_code == 0
     assert "--sources" in result.stdout
+    assert "--source-snapshot" in result.stdout
+    result = runner.invoke(app, ["evaluate", "--help"])
+
+    assert result.exit_code == 0
+    assert "--sources" in result.stdout

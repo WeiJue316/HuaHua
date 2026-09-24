@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +21,7 @@ from research_agent.evaluator.metrics import (
 )
 from research_agent.evaluator.react import PureReActBaseline
 from research_agent.evaluator.runner import EvaluationCaseOutcome
+from research_agent.evaluator.snapshot import SourceSnapshot
 from research_agent.evaluator.systems import (
     SystemConfig,
     get_system,
@@ -31,6 +32,7 @@ from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.planner.planner import plan_research
 from research_agent.policy.relevance import RelevanceJudge
+from research_agent.router.federation import SearchClient
 from research_agent.router.registry import build_source_clients
 from research_agent.runtime.research_service import (
     ResearchRunResult,
@@ -66,6 +68,7 @@ class ResearchCaseRunner:
         gateway: ModelGateway | None = None,
         cache: ResponseCache | None = None,
         b0_index: Bm25Index | None = None,
+        source_snapshot: SourceSnapshot | None = None,
     ) -> None:
         self.questions = {question.question_id: question for question in questions}
         self.settings = settings
@@ -73,6 +76,7 @@ class ResearchCaseRunner:
         self.gateway = gateway
         self.cache = cache
         self.b0_index = b0_index
+        self.source_snapshot = source_snapshot
         self.task_judge = (
             TaskCompletionJudge(
                 gateway=gateway,
@@ -103,7 +107,7 @@ class ResearchCaseRunner:
         if not source_ids:
             return EvaluationCaseOutcome(error_code="no_sources")
 
-        clients = build_source_clients(self.http_client, source_ids, cache=self.cache)
+        clients = self._build_clients(source_ids)
         plan = plan_research(
             question.question,
             available_sources=tuple(source_ids),
@@ -190,7 +194,7 @@ class ResearchCaseRunner:
         source_ids = self._source_ids_for(config)
         if not source_ids:
             return EvaluationCaseOutcome(error_code="no_sources")
-        clients = build_source_clients(self.http_client, source_ids, cache=self.cache)
+        clients = self._build_clients(source_ids)
         baseline = PureReActBaseline(
             clients=clients,
             gateway=self.gateway,
@@ -247,6 +251,14 @@ class ResearchCaseRunner:
             model_calls_used=model_calls_used,
         )
         return result.to_dict()
+
+    def _build_clients(
+        self,
+        source_ids: tuple[str, ...],
+    ) -> Mapping[str, SearchClient]:
+        if self.source_snapshot is not None:
+            return self.source_snapshot.clients_for(source_ids)
+        return build_source_clients(self.http_client, source_ids, cache=self.cache)
 
     def _source_ids_for(self, config: SystemConfig) -> tuple[str, ...]:
         requested = (

@@ -497,3 +497,43 @@ async def test_task_completion_metrics_are_baseline_neutral(tmp_path: Path) -> N
     assert metrics["subquestion_coverage_rate"] == 1.0
     assert metrics["within_model_budget"] == 1.0
     assert metrics["task_completion"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_source_snapshot_replaces_live_source_clients(tmp_path: Path) -> None:
+    from research_agent.evaluator.snapshot import SourceSnapshot
+    from research_agent.mcp_servers.common import OpenAccessInfo, PaperCandidate
+
+    paper = PaperCandidate(
+        source="openalex",
+        source_record_id="W-SNAPSHOT",
+        title="Evidence chain evaluation",
+        abstract="Evidence chain query methods.",
+        doi=GOLD_KEY.removeprefix("doi:"),
+        landing_url="https://example.org/snapshot",
+        open_access=OpenAccessInfo(is_oa=True, status="gold"),
+    )
+    snapshot = SourceSnapshot({"openalex": [paper]})
+    settings = CaseRunnerSettings(
+        db_path=tmp_path / "snapshot.db",
+        reports_root=tmp_path / "reports-snapshot",
+        max_results_per_source=5,
+        allowed_sources=("openalex",),
+        enable_task_completion_judge=False,
+    )
+
+    def forbidden(request: httpx.Request) -> httpx.Response:
+        raise AssertionError(f"snapshot run made a live request: {request.url}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(forbidden)) as http_client:
+        runner = ResearchCaseRunner(
+            questions=[_question()],
+            settings=settings,
+            http_client=http_client,
+            gateway=StubGateway(),  # type: ignore[arg-type]
+            source_snapshot=snapshot,
+        )
+        outcome = await runner("csai_test", "B3", 1)
+
+    assert outcome.error_code is None
+    assert (outcome.metrics or {})["recall"] == 1.0

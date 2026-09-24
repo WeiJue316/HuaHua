@@ -16,6 +16,7 @@ from .evaluator.case_runner import (
 )
 from .evaluator.dataset import dataset_version_from_path, load_questions
 from .evaluator.runner import EvaluationRunner, EvaluationSummary
+from .evaluator.snapshot import SourceSnapshot
 from .evaluator.systems import SYSTEMS
 from .llm.deepseek import DeepSeekGateway
 from .llm.gateway import ModelGatewayError
@@ -262,6 +263,13 @@ def evaluate(
             help="Maximum system model calls for baseline-neutral task completion.",
         ),
     ] = 20,
+    source_snapshot: Annotated[
+        Path | None,
+        typer.Option(
+            "--source-snapshot",
+            help="Frozen JSONL source snapshot for controlled comparisons.",
+        ),
+    ] = None,
 ) -> None:
     """Run an evaluation matrix over a frozen question set."""
 
@@ -306,6 +314,13 @@ def evaluate(
     # Evaluation never lets an entry expire: the same key must always return
     # the same bytes, or the arms are not comparable.
     cache = ResponseCache(cache_dir, ttl_seconds=None)
+    snapshot = None
+    if source_snapshot is not None:
+        if not source_snapshot.is_file():
+            typer.echo(f"source snapshot not found: {source_snapshot}", err=True)
+            raise typer.Exit(code=1)
+        snapshot = SourceSnapshot.from_jsonl(source_snapshot)
+
     b0_index = None
     if "B0" in system_ids:
         if not b0_corpus.is_file():
@@ -324,6 +339,7 @@ def evaluate(
                 gateway=gateway,
                 cache=cache,
                 b0_index=b0_index,
+                source_snapshot=snapshot,
             )
             with connect_database(db) as conn:
                 runner = EvaluationRunner(EvaluationRepository(conn))
@@ -344,6 +360,12 @@ def evaluate(
                         "b0_corpus": b0_corpus.as_posix(),
                         "b0_corpus_hash": (
                             b0_index.corpus_hash if b0_index is not None else None
+                        ),
+                        "source_snapshot": (
+                            source_snapshot.as_posix() if source_snapshot else None
+                        ),
+                        "source_snapshot_hash": (
+                            snapshot.snapshot_hash if snapshot is not None else None
                         ),
                     },
                 )

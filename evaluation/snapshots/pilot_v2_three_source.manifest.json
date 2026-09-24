@@ -1,0 +1,20 @@
+{
+  "snapshot_version": "pilot-v2-three-source-v1",
+  "dataset_path": "evaluation/datasets/pilot_questions.v2.jsonl",
+  "dataset_hash": "f0ce2276db698bf0e13754a8ec357fa8c37234ab687dd53d37f59a89d7dd18ac",
+  "sources": [
+    "openalex",
+    "crossref",
+    "semantic_scholar"
+  ],
+  "per_source_limit": 50,
+  "document_count": 1441,
+  "documents_by_source": {
+    "crossref": 500,
+    "openalex": 500,
+    "semantic_scholar": 500
+  },
+  "source_errors": {},
+  "cache_hash": "ce6d0919357ddd86bf05fe42d6fc48acfebbef15ac418ae4652e5ff033a2abc6",
+  "snapshot_hash": "87a9d5546e3ff66dea3446333664994c75407aaac5ce4a08a45be926f43c6e33"
+}
