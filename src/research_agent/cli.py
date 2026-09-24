@@ -253,6 +253,15 @@ def evaluate(
         Path,
         typer.Option("--b0-corpus", help="Frozen JSONL corpus for the BM25 baseline."),
     ] = Path("evaluation/corpora/pilot_v2_b0.jsonl"),
+    model_call_budget: Annotated[
+        int,
+        typer.Option(
+            "--model-call-budget",
+            min=1,
+            max=200,
+            help="Maximum system model calls for baseline-neutral task completion.",
+        ),
+    ] = 20,
 ) -> None:
     """Run an evaluation matrix over a frozen question set."""
 
@@ -292,6 +301,7 @@ def evaluate(
         max_results_per_source=max_results,
         dataset_version=dataset_version_from_path(dataset),
         allowed_sources=allowed_sources,
+        model_call_budget=model_call_budget,
     )
     # Evaluation never lets an entry expire: the same key must always return
     # the same bytes, or the arms are not comparable.
@@ -329,6 +339,7 @@ def evaluate(
                         "repeats": repeats,
                         "max_results_per_source": max_results,
                         "allowed_sources": allowed_sources,
+                        "model_call_budget": model_call_budget,
                         "cache_dir": cache_dir.as_posix(),
                         "b0_corpus": b0_corpus.as_posix(),
                         "b0_corpus_hash": (

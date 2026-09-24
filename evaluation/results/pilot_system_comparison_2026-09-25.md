@@ -56,3 +56,18 @@ B1、B2、B3 现在都在 `evaluation_case.metrics_json` 中输出相同字段
 `llm_calls`、`input_tokens`、`output_tokens`、`model_latency_ms`。
 
 该验证只证明指标口径已一致，不改变上面的 Pilot 结论或正式实验规模。
+
+
+## Task Completion Rate 口径验证
+
+2026-09-25 追加 1 题 smoke（评测运行 ID `6dc05a67-c656-4b90-a635-0b42ad3372f9`），
+统一使用 `task-completion-v1` 和 `--model-call-budget 20`：
+
+| 系统 | Task Completion | 子问题覆盖 | 模型调用 |
+|---|---:|---:|---:|
+| B1 | 0.0 | 0/2 | 5 |
+| B2 | 1.0 | 2/2 | 8 |
+| B3 | 0.0 | 1/2 | 15 |
+
+该 smoke 证明指标口径已经统一并可用，但单题结果不能外推。后续正式实验需要
+对全部问题运行，并报告 judge 失败率和人工抽检一致性。

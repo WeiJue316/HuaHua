@@ -93,6 +93,7 @@ def _settings(tmp_path: Path, name: str) -> CaseRunnerSettings:
         db_path=tmp_path / f"{name}.db",
         reports_root=tmp_path / f"reports-{name}",
         max_results_per_source=5,
+        enable_task_completion_judge=False,
     )
 
 
@@ -425,3 +426,70 @@ async def test_source_allowlist_can_disable_a_system_source(tmp_path: Path) -> N
         outcome = await runner("csai_test", "B1", 1)
 
     assert outcome.error_code == "no_sources"
+
+
+class CombinedEvaluationGateway:
+    """Answer relevance calls and the task-completion judge."""
+
+    async def complete(
+        self,
+        *,
+        prompt_hash: str,
+        system: str,
+        user: str,
+        max_output_tokens: int = 900,
+        temperature: float = 0.0,
+        json_output: bool = False,
+    ) -> ModelResponse:
+        del user, max_output_tokens, temperature, json_output
+        if "covers the requested subquestions" in system:
+            content = json.dumps(
+                {"subquestions": [{"index": 1, "covered": True}]}
+            )
+        else:
+            content = json.dumps(
+                {
+                    "abstract_available": True,
+                    "domain_scope": "in_scope",
+                    "answer_role": "direct",
+                    "reason": "stub",
+                }
+            )
+        return ModelResponse(
+            provider="stub",
+            model="stub-combined",
+            content=content,
+            prompt_hash=prompt_hash,
+            response_hash="stub",
+            input_tokens=1,
+            output_tokens=1,
+            latency_ms=1,
+            finish_reason="stop",
+        )
+
+
+@pytest.mark.asyncio
+async def test_task_completion_metrics_are_baseline_neutral(tmp_path: Path) -> None:
+    settings = CaseRunnerSettings(
+        db_path=tmp_path / "task-completion.db",
+        reports_root=tmp_path / "reports-task-completion",
+        max_results_per_source=5,
+        enable_task_completion_judge=True,
+        model_call_budget=20,
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as http_client:
+        runner = ResearchCaseRunner(
+            questions=[_question()],
+            settings=settings,
+            http_client=http_client,
+            gateway=CombinedEvaluationGateway(),
+        )
+        outcome = await runner("csai_test", "B3", 1)
+
+    assert outcome.error_code is None
+    metrics = outcome.metrics or {}
+    assert metrics["report_created"] == 1.0
+    assert metrics["subquestions_covered"] == 1.0
+    assert metrics["subquestion_coverage_rate"] == 1.0
+    assert metrics["within_model_budget"] == 1.0
+    assert metrics["task_completion"] == 1.0

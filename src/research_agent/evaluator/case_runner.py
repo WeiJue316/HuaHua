@@ -26,6 +26,7 @@ from research_agent.evaluator.systems import (
     get_system,
     restrict_sources,
 )
+from research_agent.evaluator.task_completion import TaskCompletionJudge
 from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.planner.planner import plan_research
@@ -49,6 +50,8 @@ class CaseRunnerSettings:
     max_results_per_source: int = 10
     dataset_version: str = "pilot-v2"
     allowed_sources: tuple[str, ...] | None = None
+    enable_task_completion_judge: bool = True
+    model_call_budget: int = 20
 
 
 class ResearchCaseRunner:
@@ -70,6 +73,14 @@ class ResearchCaseRunner:
         self.gateway = gateway
         self.cache = cache
         self.b0_index = b0_index
+        self.task_judge = (
+            TaskCompletionJudge(
+                gateway=gateway,
+                model_call_budget=settings.model_call_budget,
+            )
+            if settings.enable_task_completion_judge and gateway is not None
+            else None
+        )
 
     async def __call__(
         self, question_id: str, system_id: str, run_number: int
@@ -117,7 +128,13 @@ class ResearchCaseRunner:
             response_cache=self.cache,
         )
 
-        metrics = self._metrics(question, result)
+        usage = load_model_usage_checked(self.settings.db_path, result.run_id)
+        task_metrics = await self._task_completion_metrics(
+            question=question,
+            report_text=result.report_path.read_text(encoding="utf-8"),
+            model_calls_used=usage.calls,
+        )
+        metrics = self._metrics(question, result, usage, task_metrics)
         return EvaluationCaseOutcome(
             research_run_id=result.run_id,
             metrics=metrics,
@@ -139,6 +156,11 @@ class ResearchCaseRunner:
             top_k=self.settings.max_results_per_source,
         )
         outcome = await baseline.run(question, run_number=run_number)
+        task_metrics = await self._task_completion_metrics(
+            question=question,
+            report_text=outcome.report,
+            model_calls_used=1,
+        )
         retrieval = retrieval_metrics(
             retrieved_keys=set(outcome.retrieved_keys),
             gold_keys=set(question.gold_papers),
@@ -153,6 +175,7 @@ class ResearchCaseRunner:
                 "model_latency_ms": float(outcome.latency_ms or 0),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
+                **task_metrics,
             }
         )
 
@@ -176,6 +199,11 @@ class ResearchCaseRunner:
             max_results_per_search=self.settings.max_results_per_source,
         )
         outcome = await baseline.run(question, run_number=run_number)
+        task_metrics = await self._task_completion_metrics(
+            question=question,
+            report_text=outcome.report,
+            model_calls_used=outcome.model_calls,
+        )
         retrieval = retrieval_metrics(
             retrieved_keys=set(outcome.retrieved_keys),
             gold_keys=set(question.gold_papers),
@@ -192,8 +220,25 @@ class ResearchCaseRunner:
                 "search_calls": float(outcome.search_calls),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
+                **task_metrics,
             }
         )
+
+    async def _task_completion_metrics(
+        self,
+        *,
+        question: EvaluationQuestion,
+        report_text: str,
+        model_calls_used: int,
+    ) -> dict[str, float]:
+        if self.task_judge is None:
+            return {}
+        result = await self.task_judge.evaluate(
+            question=question,
+            report_text=report_text,
+            model_calls_used=model_calls_used,
+        )
+        return result.to_dict()
 
     def _source_ids_for(self, config: SystemConfig) -> tuple[str, ...]:
         requested = (
@@ -208,12 +253,15 @@ class ResearchCaseRunner:
         return tuple(SUPPORTED_SOURCES)
 
     def _metrics(
-        self, question: EvaluationQuestion, result: ResearchRunResult
+        self,
+        question: EvaluationQuestion,
+        result: ResearchRunResult,
+        usage: ModelUsage,
+        task_metrics: dict[str, float],
     ) -> dict[str, float]:
         stored = set(result.retrieved_paper_keys)
         kept = stored - set(result.dropped_paper_keys)
         claims = load_claim_rows_checked(self.settings.db_path, result.run_id)
-        usage = load_model_usage_checked(self.settings.db_path, result.run_id)
         contributing = {
             source for source, count in result.source_counts.items() if count > 0
         }
@@ -234,6 +282,7 @@ class ResearchCaseRunner:
             "relevance_dropped": float(result.relevance_dropped),
             "relevance_failures": float(result.relevance_failures),
             **usage.to_dict(),
+            **task_metrics,
             "retrieved_paper_count": float(result.paper_count),
             "stored_paper_count": float(len(stored)),
         }

@@ -307,6 +307,8 @@ TaskCompletionRate = 满足 baseline-neutral 任务完成清单的 Run 数 / 总
 - 在预算内完成。
 
 该指标不要求证据链、引用校验或多源调用，用于 RQ3 的公平 baseline 比较。
+自动评测使用 `task-completion-v1`：报告存在、全部子问题被实质性回答、没有未处理异常，
+且系统模型调用数不超过 `--model-call-budget`。评测 judge 自身的调用不计入系统成本。
 
 #### Evidence Compliance Rate
 
