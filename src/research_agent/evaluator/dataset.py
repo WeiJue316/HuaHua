@@ -93,6 +93,16 @@ def load_questions(path: Path) -> list[EvaluationQuestion]:
     return questions
 
 
+def dataset_version_from_path(path: Path) -> str:
+    """Return the stable label recorded in evaluation runs for a dataset file."""
+
+    stem = Path(path).stem
+    prefix = "pilot_questions."
+    if stem.startswith(prefix):
+        return "pilot-" + stem.removeprefix(prefix)
+    return stem
+
+
 def dataset_hash(questions: list[EvaluationQuestion]) -> str:
     """Return a stable hash for a frozen question set."""
 

@@ -96,7 +96,14 @@ def _settings(tmp_path: Path, name: str) -> CaseRunnerSettings:
     )
 
 
-async def _run(tmp_path: Path, name: str, system_id: str, gateway: object):
+async def _run(
+    tmp_path: Path,
+    name: str,
+    system_id: str,
+    gateway: object,
+    *,
+    b0_index: object | None = None,
+):
     settings = _settings(tmp_path, name)
     async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as http_client:
         runner = ResearchCaseRunner(
@@ -104,6 +111,7 @@ async def _run(tmp_path: Path, name: str, system_id: str, gateway: object):
             settings=settings,
             http_client=http_client,
             gateway=gateway,  # type: ignore[arg-type]
+            b0_index=b0_index,  # type: ignore[arg-type]
         )
         return await runner("csai_test", system_id, 1)
 
@@ -162,7 +170,7 @@ async def test_denied_candidates_leave_the_kept_set_and_the_claims(
 async def test_unimplemented_system_is_reported_not_silently_run(
     tmp_path: Path,
 ) -> None:
-    outcome = await _run(tmp_path, "b0", "B0", None)
+    outcome = await _run(tmp_path, "a1", "A1", None)
 
     assert outcome.error_code == "NotImplementedError"
 
@@ -274,3 +282,64 @@ async def test_second_run_against_the_same_db_still_counts_its_papers(
         "the second run retrieves the same papers and must count them all"
     )
     assert second_metrics["recall"] == first_metrics["recall"]
+
+
+class SummaryGateway:
+    """Return one plain-text summary for the B0 baseline."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def complete(
+        self,
+        *,
+        prompt_hash: str,
+        system: str,
+        user: str,
+        max_output_tokens: int = 900,
+        temperature: float = 0.0,
+        json_output: bool = False,
+    ) -> ModelResponse:
+        del system, user, max_output_tokens, temperature, json_output
+        self.calls += 1
+        return ModelResponse(
+            provider="stub",
+            model="stub-summary",
+            content="Baseline report.",
+            prompt_hash=prompt_hash,
+            response_hash="stub",
+            input_tokens=10,
+            output_tokens=5,
+            latency_ms=3,
+            finish_reason="stop",
+        )
+
+
+@pytest.mark.asyncio
+async def test_b0_uses_the_frozen_corpus_and_calls_the_model_once(
+    tmp_path: Path,
+) -> None:
+    from research_agent.evaluator.bm25 import Bm25Document, Bm25Index
+
+    gateway = SummaryGateway()
+    index = Bm25Index(
+        [
+            Bm25Document(
+                paper_key=GOLD_KEY,
+                title="Evidence chain evaluation",
+                abstract="How evaluation methods work for evidence chains.",
+            )
+        ]
+    )
+
+    outcome = await _run(tmp_path, "b0", "B0", gateway, b0_index=index)
+
+    assert outcome.error_code is None
+    metrics = outcome.metrics or {}
+    assert gateway.calls == 1
+    assert metrics["recall"] == 1.0
+    assert metrics["precision"] == 1.0
+    assert metrics["llm_calls"] == 1.0
+    assert metrics["report_written"] == 1.0
+    reports = list((tmp_path / "reports-b0" / "b0").glob("*.md"))
+    assert len(reports) == 1

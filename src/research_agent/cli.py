@@ -8,12 +8,13 @@ import httpx
 import typer
 
 from . import __version__
+from .evaluator.bm25 import Bm25Index
 from .evaluator.case_runner import (
     SYSTEM_VERSION,
     CaseRunnerSettings,
     ResearchCaseRunner,
 )
-from .evaluator.dataset import load_questions
+from .evaluator.dataset import dataset_version_from_path, load_questions
 from .evaluator.runner import EvaluationRunner, EvaluationSummary
 from .evaluator.systems import SYSTEMS
 from .llm.deepseek import DeepSeekGateway
@@ -213,7 +214,7 @@ def evaluate(
     dataset: Annotated[
         Path,
         typer.Option("--dataset", help="Frozen JSONL question set."),
-    ] = Path("evaluation/datasets/pilot_questions.v1.jsonl"),
+    ] = Path("evaluation/datasets/pilot_questions.v2.jsonl"),
     systems: Annotated[
         str,
         typer.Option("--systems", help="Comma-separated system identifiers."),
@@ -241,6 +242,10 @@ def evaluate(
             help="Frozen response cache shared by every system.",
         ),
     ] = Path("data/cache/http"),
+    b0_corpus: Annotated[
+        Path,
+        typer.Option("--b0-corpus", help="Frozen JSONL corpus for the BM25 baseline."),
+    ] = Path("evaluation/corpora/pilot_v2_b0.jsonl"),
 ) -> None:
     """Run an evaluation matrix over a frozen question set."""
 
@@ -258,10 +263,17 @@ def evaluate(
         db_path=db,
         reports_root=reports_dir,
         max_results_per_source=max_results,
+        dataset_version=dataset_version_from_path(dataset),
     )
     # Evaluation never lets an entry expire: the same key must always return
     # the same bytes, or the arms are not comparable.
     cache = ResponseCache(cache_dir, ttl_seconds=None)
+    b0_index = None
+    if "B0" in system_ids:
+        if not b0_corpus.is_file():
+            typer.echo(f"B0 corpus not found: {b0_corpus}", err=True)
+            raise typer.Exit(code=1)
+        b0_index = Bm25Index.from_jsonl(b0_corpus)
 
     async def run() -> EvaluationSummary:
         async with httpx.AsyncClient(timeout=60.0) as http_client:
@@ -273,6 +285,7 @@ def evaluate(
                 http_client=http_client,
                 gateway=gateway,
                 cache=cache,
+                b0_index=b0_index,
             )
             with connect_database(db) as conn:
                 runner = EvaluationRunner(EvaluationRepository(conn))
@@ -288,6 +301,10 @@ def evaluate(
                         "repeats": repeats,
                         "max_results_per_source": max_results,
                         "cache_dir": cache_dir.as_posix(),
+                        "b0_corpus": b0_corpus.as_posix(),
+                        "b0_corpus_hash": (
+                            b0_index.corpus_hash if b0_index is not None else None
+                        ),
                     },
                 )
 
@@ -312,7 +329,7 @@ def warm_cache(
     dataset: Annotated[
         Path,
         typer.Option("--dataset", help="Frozen JSONL question set."),
-    ] = Path("evaluation/datasets/pilot_questions.v1.jsonl"),
+    ] = Path("evaluation/datasets/pilot_questions.v2.jsonl"),
     cache_dir: Annotated[
         Path,
         typer.Option("--cache-dir", help="Directory to fill with responses."),

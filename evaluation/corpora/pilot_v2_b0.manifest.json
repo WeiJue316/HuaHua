@@ -1,0 +1,11 @@
+{
+  "corpus_version": "pilot-v2-b0",
+  "dataset_path": "evaluation/datasets/pilot_questions.v2.jsonl",
+  "dataset_hash": "f0ce2276db698bf0e13754a8ec357fa8c37234ab687dd53d37f59a89d7dd18ac",
+  "cache_entry_count": 174,
+  "parsed_paper_count": 964,
+  "document_count": 777,
+  "missing_gold_keys": [],
+  "cache_hash": "1419709409a7871ddbb241d445e1b1159cf073a48bf6612ff196406ef53612d4",
+  "corpus_hash": "0384a7c1b4abe73c1c1f31da6eed61fc3b522e8d96b41fe4d3179820dc0b5662"
+}

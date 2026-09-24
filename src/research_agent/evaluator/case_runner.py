@@ -8,6 +8,8 @@ from pathlib import Path
 
 import httpx
 
+from research_agent.evaluator.b0 import B0Baseline
+from research_agent.evaluator.bm25 import Bm25Index
 from research_agent.evaluator.dataset import EvaluationQuestion
 from research_agent.evaluator.metrics import (
     evidence_metrics,
@@ -38,7 +40,7 @@ class CaseRunnerSettings:
     db_path: Path
     reports_root: Path
     max_results_per_source: int = 10
-    dataset_version: str = "pilot-v1"
+    dataset_version: str = "pilot-v2"
 
 
 class ResearchCaseRunner:
@@ -52,17 +54,18 @@ class ResearchCaseRunner:
         http_client: httpx.AsyncClient,
         gateway: ModelGateway | None = None,
         cache: ResponseCache | None = None,
+        b0_index: Bm25Index | None = None,
     ) -> None:
         self.questions = {question.question_id: question for question in questions}
         self.settings = settings
         self.http_client = http_client
         self.gateway = gateway
         self.cache = cache
+        self.b0_index = b0_index
 
     async def __call__(
         self, question_id: str, system_id: str, run_number: int
     ) -> EvaluationCaseOutcome:
-        del run_number  # recorded by the evaluation repository, not the run
         try:
             question = self.questions[question_id]
         except KeyError:
@@ -71,6 +74,9 @@ class ResearchCaseRunner:
             config = get_system(system_id)
         except (KeyError, NotImplementedError) as exc:
             return EvaluationCaseOutcome(error_code=type(exc).__name__)
+
+        if system_id == "B0":
+            return await self._run_b0(question, run_number)
 
         source_ids = config.sources or self._default_sources()
         if not source_ids:
@@ -105,6 +111,38 @@ class ResearchCaseRunner:
         return EvaluationCaseOutcome(
             research_run_id=result.run_id,
             metrics=metrics,
+        )
+
+    async def _run_b0(
+        self,
+        question: EvaluationQuestion,
+        run_number: int,
+    ) -> EvaluationCaseOutcome:
+        if self.b0_index is None:
+            return EvaluationCaseOutcome(error_code="b0_corpus_missing")
+        if self.gateway is None:
+            return EvaluationCaseOutcome(error_code="no_model_gateway")
+        baseline = B0Baseline(
+            index=self.b0_index,
+            gateway=self.gateway,
+            reports_root=self.settings.reports_root,
+            top_k=self.settings.max_results_per_source,
+        )
+        outcome = await baseline.run(question, run_number=run_number)
+        retrieval = retrieval_metrics(
+            retrieved_keys=set(outcome.retrieved_keys),
+            gold_keys=set(question.gold_papers),
+        )
+        return EvaluationCaseOutcome(
+            metrics={
+                **retrieval.to_dict(),
+                "llm_calls": 1.0,
+                "input_tokens": float(outcome.input_tokens or 0),
+                "output_tokens": float(outcome.output_tokens or 0),
+                "latency_ms": float(outcome.latency_ms or 0),
+                "report_written": 1.0,
+                "report_chars": float(len(outcome.report)),
+            }
         )
 
     @staticmethod

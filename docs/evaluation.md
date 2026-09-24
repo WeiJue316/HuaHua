@@ -164,10 +164,14 @@ csai_007 的金标只有 2 篇，而系统在 K=20 下保留 31 篇候选。此�
 
 ### 4.1 B0：BM25 + 单次 LLM
 
-- 使用冻结的本地 metadata/abstract 语料构建 BM25 索引；语料版本和来源快照写入配置。
-- 取 Top-K 后一次性交给 LLM 生成摘要。
-- 允许模型生成引用，但不提供证据定位和引用校验。
+- 使用冻结的本地 metadata/abstract 语料构建 BM25 索引；当前语料为
+  `evaluation/corpora/pilot_v2_b0.jsonl`，777 篇文档，哈希由 manifest 固定。
+- 取 Top-K 后一次性交给 LLM 生成摘要；当前输出预算为 6000 token。
+- 不允许模型访问检索清单之外的论文；不提供证据定位和引用校验。
 - 用于衡量“仅检索 + 总结”的基础水平。
+- 实现入口：`research_agent.evaluator.bm25`、`research_agent.evaluator.b0`。
+- Smoke 命令：
+  `uv run research-agent evaluate --systems B0 --max-results 5 --repeats 1 --db data/b0_smoke.db --reports-dir reports/b0-smoke --b0-corpus evaluation/corpora/pilot_v2_b0.jsonl`
 
 ### 4.2 B1：单源 MCP
 

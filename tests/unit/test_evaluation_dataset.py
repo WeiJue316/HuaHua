@@ -7,6 +7,7 @@ import pytest
 from research_agent.evaluator.dataset import (
     DatasetValidationError,
     dataset_hash,
+    dataset_version_from_path,
     load_questions,
 )
 
@@ -33,3 +34,11 @@ def test_load_questions_rejects_duplicate_ids(tmp_path: Path) -> None:
 
     with pytest.raises(DatasetValidationError, match="duplicate"):
         load_questions(duplicate)
+
+
+def test_dataset_version_is_derived_from_the_frozen_filename() -> None:
+    assert (
+        dataset_version_from_path(Path("evaluation/datasets/pilot_questions.v2.jsonl"))
+        == "pilot-v2"
+    )
+    assert dataset_version_from_path(Path("custom.jsonl")) == "custom"

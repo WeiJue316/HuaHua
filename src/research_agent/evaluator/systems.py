@@ -57,7 +57,6 @@ SYSTEMS: dict[str, SystemConfig] = {
         description="BM25/关键词检索 + 单次 LLM 总结",
         sources=(),
         relevance_filter=False,
-        implemented=False,
     ),
     "B2": SystemConfig(
         system_id="B2",
