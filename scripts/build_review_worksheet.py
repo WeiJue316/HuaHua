@@ -137,7 +137,7 @@ def render_worksheet(dataset_path: Path) -> str:
             "| 复核人 | |",
             "| 复核日期 | |",
             "| 来源数据集哈希 | |",
-            "| 冻结版数据集路径 | `evaluation/datasets/pilot_questions.v1.jsonl` |",
+            "| 冻结版数据集路径 | `evaluation/datasets/pilot_questions.v2.jsonl` |",
             "| 冻结版哈希 | |",
             "| 修改原因汇总 | |",
             "",

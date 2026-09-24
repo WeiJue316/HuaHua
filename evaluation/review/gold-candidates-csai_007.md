@@ -2,12 +2,12 @@
 
 **问题**：What methods are used for query expansion in neural information retrieval?
 
-　　→ 神经信息检索中用于查询扩展的方法有哪些？
+　　→ 在神经信息检索中，查询扩展使用了哪些方法？
 
 **子问题**：
 
 1. What are the main query expansion families?
-　　→ 查询扩展的主要类别有哪些？
+　　→ 查询扩展的主要家族有哪些？
 
 2. What evidence supports their effectiveness?
 　　→ 有哪些证据支持其有效性？
@@ -20,9 +20,12 @@
 一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。
 按子问题分别判定，因为证据是按子问题分配的。
 
-**「初审建议」是模型预判，只是给你省时间，不是结论。**
-最终「判定」必须由你确认——金标是评测系统的尺子，
-由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。
+**「初审建议」是模型预判；「判定」栏是当前审计结论，不因填写「判定」就自动等于人工审核。**
+每条「采纳」都附带一句从摘要逐字摘出的引文，程序已核对引文确实
+出现在摘要中——**核对引文比通读摘要快得多，这是本表的验证单元**。
+
+标注来源需在 `evaluation/datasets/VERSIONS.md` 中如实记录：
+模型初审 + Codex 逐条审计 + 摘要逐字核验；不等同于独立人工金标。
 
 逐条检查：
 
@@ -35,31 +38,31 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|---|---|
-| 1 | 2024 | "In-Context Learning" or: How I learned to stop worrying and love "App | "上下文学习"，或：我如何学会不再担忧并爱上"应用信息检索" | `10.1145/3626772.3657842` | 12 | 引用了种子 | 5 | 建议不采纳 | | | 论文讨论ICL中少样本示例选择与IR检索的类比，未涉及查询扩展方法或其有效性，属于主题相邻。 |
-| 2 | 2022 | Query Expansion Using Contextual Clue Sampling with Language Models | 使用语言模型与上下文线索采样的查询扩展 | `10.48550/arxiv.2210.07093` | 3 | 被种子引用 | 5 | 建议采纳(两个子问题) | | | 论文提出基于语言模型上下文采样的查询扩展方法，属于一个查询扩展家族，并给出检索与QA性能提升的实验证据支持其有效性。 |
-| 3 | 2024 | Semantic grounding of LLMs using knowledge graphs for query reformulat | 面向医学信息检索查询重构的基于知识图谱的大语言模型语义接地 | `10.1109/bigdata62323.2024.10826117` | 1 | 引用了种子 | 5 | 建议不采纳 | | | 主题相邻：该文研究查询重构/精炼而非查询扩展，且未提供查询扩展有效性的证据。 |
-| 4 | 2026 | A critical evaluation of generative query expansion on biomedical lite | 生成式查询扩展在生物医学文献检索中的批判性评估 | `10.1093/jamia/ocag037` | 0 | 引用了种子 | 5 | 建议采纳(两个子问题) | | | 该文系统评估了八种生成式查询扩展方法在生物医学检索中的效果，既涉及生成式查询扩展这一方法家族，也提供了其有效性的量化证据。 |
-| 5 | 2025 | Large Language Models for Information Retrieval: A Survey | 大语言模型用于信息检索：综述 | `10.1145/3748304` | 98 | 引用了种子 | 4 | 建议采纳(子问题1) | | | 该综述涵盖LLM在IR中的查询重写器，与查询扩展家族直接相关，但摘要未提供关于其有效性的具体证据。 |
-| 6 | 2024 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序模型的泛化能力？ | `10.1145/3626772.3657979` | 13 | 引用了种子 | 4 | 建议采纳(子问题2) | | | 该论文通过BEIR和TREC DL实验证明，采用推理链关键词生成及自一致性、倒数排名加权与融合等查询扩展步骤能提升强交叉编码器排序器（MonoT5、RankT5）的nDCG@10，为查询扩展有效性提供证据，但未系统梳理查询扩展的主要方法家族。 |
-| 7 | 2023 | A Test Collection of Synthetic Documents for Training Rankers: ChatGPT | 用于训练排序模型的合成文档测试集：ChatGPT 与人类专家的对比 | `10.1145/3583780.3615111` | 12 | 引用了种子 | 4 | 建议不采纳 | | | 主题相邻：该论文研究用合成文档训练神经重排序器，而非查询扩展方法或其有效性证据。 |
-| 8 | 2024 | Drop your Decoder: Pre-training with Bag-of-Word Prediction for Dense  | 丢弃解码器：基于词袋预测的预训练用于稠密段落检索 | `10.1145/3626772.3657792` | 5 | 引用了种子 | 4 | 建议不采纳 | | | 该文研究密集段落检索的MAE预训练与Bag-of-Word预测，未涉及查询扩展方法或其有效性，属于主题相邻。 |
-| 9 | 2023 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序模型的泛化能力？ | `10.48550/arxiv.2311.09175` | 0 | 引用了种子 | 4 | 建议采纳(子问题2) | | | 论文通过实验证明对强交叉编码器排序器进行查询扩展并融合扩展查询排名可提升 nDCG@10，因此可作为查询扩展有效性的证据，但未系统梳理主要查询扩展家族。 |
-| 10 | 2026 | Bmqexpander: ontology-guided query expansion for biomedical document r | BMQExpander：基于大语言模型的本体引导生物医学文档检索查询扩展 | `10.1007/s10618-026-01220-z` | 0 | 引用了种子 | 4 | 建议采纳(两个子问题) | | | 该文提出一种本体引导的LLM查询扩展方法并报告了NDCG@10提升（最高22.1%），既可作为查询扩展家族（本体+LLM生成式扩展）的证据，也提供了其有效性的实证结果。 |
-| 11 | 2022 | Text Embeddings by Weakly-Supervised Contrastive Pre-training | 基于弱监督对比预训练的文本嵌入 | `10.48550/arxiv.2212.03533` | 123 | 被种子引用 | 3 | 建议不采纳 | | | 该文提出通用文本嵌入模型E5并评估检索效果，未涉及查询扩展方法或其有效性证据，属于神经检索主题相邻。 |
-| 12 | 2024 | Fine-Tuning LLaMA for Multi-Stage Text Retrieval | 面向多阶段文本检索的LLaMA微调 | `10.1145/3626772.3657951` | 112 | 引用了种子 | 3 | 建议不采纳 | | | 该文聚焦于微调 LLaMA 作为稠密检索器与重排序器，仅在背景处提及提示 LLM 生成查询扩展，未研究任何查询扩展家族或其有效性证据，属于主题相邻（神经检索）而非查询扩展证据。 |
-| 13 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：面向大语言模型检索增强生成的综合性中文基准 | `10.1145/3701228` | 96 | 引用了种子 | 3 | 建议不采纳 | | | 该论文是RAG系统评测基准，涉及检索器与知识库构建，但未讨论查询扩展方法或其实证效果，属于主题相邻而非直接相关。 |
-| 14 | 2024 | When Search Engine Services Meet Large Language Models: Visions and Ch | 当搜索引擎服务遇上大语言模型：愿景与挑战 | `10.1109/tsc.2024.3451185` | 65 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：讨论LLM与搜索引擎整合，仅泛泛提到通过优化改善查询结果，未具体涉及查询扩展方法族或其效果证据。 |
-| 15 | 2025 | A Survey of Conversational Search | 对话式搜索综述 | `10.1145/3759453` | 42 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该综述关注对话式搜索与查询重构，但未涉及神经信息检索中的查询扩展方法家族或其有效性证据。 |
-| 16 | 2025 | A Comprehensive Survey of Retrieval-Augmented Large Language Models fo | 面向农业决策的检索增强大语言模型综合综述：未解决的问题与研究机遇 | `10.2478/jaiscr-2025-0007` | 28 | 引用了种子 | 3 | 建议不采纳 | | | 该论文讨论农业决策支持中的检索增强生成（RAG），虽与检索相关，但未涉及神经信息检索中的查询扩展方法或其有效性证据，属于主题相邻。 |
-| 17 | 2024 | SimIIR 3: A Framework for the Simulation of Interactive and Conversati | SimIIR 3：交互式与会话式信息检索模拟框架 | `10.1145/3673791.3698427` | 13 | 引用了种子 | 3 | 建议不采纳 | | | 该摘要仅介绍交互与对话式信息检索仿真框架，未涉及任何查询扩展方法或其有效性证据，属于主题相邻但无法回答子问题。 |
-| 18 | 2024 | Exploration Robot Chat: Uncovering Decades of Exploration Knowledge an | Exploration Robot Chat：利用会话式大语言模型挖掘数十年的探索知识与数据 | `10.2118/218439-ms` | 8 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：论文讨论检索增强生成（RAG）与LLM在勘探数据中的应用，但未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
-| 19 | 2023 | Report on the 1st Workshop on Generative Information Retrieval (Gen-IR | 第 1 届生成式信息检索研讨会（Gen-IR 2023）报告（SIGIR 2023） | `10.1145/3642979.3642995` | 0 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该报告聚焦生成式信息检索与LLM/diffusion模型，但摘要未涉及查询扩展方法家族或其有效性证据。 |
-| 20 | 2026 | When More Reformulations Hurt: Avoiding Drift using Ranker Feedback | 当更多查询改写反而有害：利用排序器反馈避免漂移 | `10.1145/3805712.3809721` | 0 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：讨论查询改写/重排序的推理预算与漂移权衡，但未梳理查询扩展方法族，也未提供其有效性的证据（摘要中亦无实验结果）。 |
-| 21 | 2024 | A Survey on Hallucination in Large Language Models: Principles, Taxono | 大型语言模型幻觉研究综述：原理、分类、挑战与开放问题 | `10.1145/3703155` | 2084 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：该文综述LLM幻觉检测与缓解及检索增强LLM，但未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
-| 22 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT 擅长搜索吗？探究大型语言模型作为重排序智能体 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 2 | 建议不采纳 | | | 该论文研究LLM作为相关性重排序代理（ranking/re-ranking），未涉及查询扩展方法或其有效性证据，属于主题相邻（LLM与IR）而非查询扩展。 |
-| 23 | 2025 | Hallucination Mitigation for Retrieval-Augmented Large Language Models | 检索增强大型语言模型的幻觉缓解：综述 | `10.3390/math13050856` | 130 | 引用了种子 | 2 | 建议不采纳 | | | 该综述聚焦RAG幻觉缓解，未涉及神经信息检索中的查询扩展方法家族或效果证据，属于主题相邻。 |
-| 24 | 2026 | Retrieval-Augmented Generation for AI-Generated Content: A Survey | 面向人工智能生成内容的检索增强生成：综述 | `10.1007/s41019-025-00335-5` | 106 | 引用了种子 | 2 | 建议不采纳 | | | 该综述聚焦检索增强生成（RAG）的整体框架与应用，摘要中未涉及查询扩展方法或其有效性证据，属于主题相邻而非直接相关。 |
-| 25 | 2022 | Generate rather than Retrieve: Large Language Models are Strong Contex | 生成而非检索：大型语言模型是强大的上下文生成器 | `10.48550/arxiv.2209.10063` | 86 | 被种子引用 | 2 | 建议不采纳 | | | 主题相邻：该论文研究用LLM生成上下文替代文档检索，而非神经信息检索中的查询扩展方法或其有效性证据。 |
+| 1 | 2024 | "In-Context Learning" or: How I learned to stop worrying and love "App | “上下文学习”，或：我如何学会不再担忧并爱上“应用信息检索” | `10.1145/3626772.3657842` | 12 | 引用了种子 | 5 | 建议不采纳 | 不采纳 |  | 主题相邻：论文讨论ICL中few-shot示例选择与神经排序器，但未涉及查询扩展方法或其有效性证据。 |
+| 2 | 2022 | Query Expansion Using Contextual Clue Sampling with Language Models | 使用基于语言模型的上下文线索采样进行查询扩展 | `10.48550/arxiv.2210.07093` | 3 | 被种子引用 | 5 | 建议采纳(两个子问题) | 采纳 | 1 | 引文｜One recent line of research uses language models to generate query-related contexts for expansion.｜理由｜审计修正：该句支持查询扩展方法家族，不提供有效性对比证据。 |
+| 3 | 2024 | Semantic grounding of LLMs using knowledge graphs for query reformulat | 基于知识图谱的大语言模型语义接地用于医学信息检索中的查询重构 | `10.1109/bigdata62323.2024.10826117` | 1 | 引用了种子 | 5 | 建议不采纳 | 不采纳 |  | 主题相邻：论文聚焦医学检索中基于知识图谱的查询重构/精炼，未直接讨论 query expansion 的方法家族或其有效性证据。 |
+| 4 | 2026 | A critical evaluation of generative query expansion on biomedical lite | 对生物医学文献检索中生成式查询扩展的批判性评估 | `10.1093/jamia/ocag037` | 0 | 引用了种子 | 5 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜On BioASQ-Y/N, GPT-4o-based query expansion shifts Recall@10 to 0.417-0.512 and nDCG@10 to 0.358-0.479, relative to a baseline of 0.491 and 0.456.｜理由｜该文系统评估了八种生成式查询扩展方法在多个数据集上的检索效果，提供了支持查询扩展有效性的定量证据。 |
+| 5 | 2025 | Large Language Models for Information Retrieval: A Survey | 大语言模型在信息检索中的应用：综述 | `10.1145/3748304` | 98 | 引用了种子 | 4 | 建议采纳(子问题1) | 采纳 | 1 | 引文｜In this survey, we delve into the confluence of LLMs and IR systems, including crucial aspects such as query rewriters, retrievers, rerankers, readers, and search agents.｜理由｜该综述明确将查询重写器（query rewriters）列为LLM与IR结合的关键环节，可作为梳理查询扩展/重写方法家族的证据，但摘要未提供任何效果验证的实验证据，故不支持子问题2。 |
+| 6 | 2024 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序器的泛化能力？ | `10.1145/3626772.3657979` | 13 | 引用了种子 | 4 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜Experiments on BEIR and TREC Deep Learning 2019/2020 show that the nDCG@10 scores of both MonoT5 and RankT5 following these steps are improved, which points out a direction for applying query expansion to strong cross-encoder rankers.｜理由｜该文通过BEIR和TREC DL实验证明查询扩展步骤能提升强交叉编码器排序器的nDCG@10，为查询扩展有效性提供了直接证据，但未梳理查询扩展方法家族，故仅支持子问题2。 |
+| 7 | 2023 | A Test Collection of Synthetic Documents for Training Rankers: ChatGPT | 用于训练排序器的合成文档测试集：ChatGPT 与人类专家之比较 | `10.1145/3583780.3615111` | 12 | 引用了种子 | 4 | 建议不采纳 | 不采纳 |  | 主题相邻：该文研究用LLM生成合成文档来训练cross-encoder重排器，属于神经检索的训练数据增强，并未涉及查询扩展方法或其有效性证据。 |
+| 8 | 2024 | Drop your Decoder: Pre-training with Bag-of-Word Prediction for Dense  | 丢弃解码器：基于词袋预测的稠密段落检索预训练 | `10.1145/3626772.3657792` | 5 | 引用了种子 | 4 | 建议不采纳 | 不采纳 |  | 该论文研究稠密检索的预训练方法（用词袋预测替代解码器），与查询扩展方法及其有效性证据无关，属于主题相邻。 |
+| 9 | 2023 | Can Query Expansion Improve Generalization of Strong Cross-Encoder Ran | 查询扩展能否提升强交叉编码器排序器的泛化能力？ | `10.48550/arxiv.2311.09175` | 0 | 引用了种子 | 4 | 建议采纳(子问题2) | 不采纳 |  | 审计排除｜与已采纳的 10.1145/3626772.3657979 标题和引文完全相同，属同一论文的重复版本。 |
+| 10 | 2026 | Bmqexpander: ontology-guided query expansion for biomedical document r | BMQExpander：利用大语言模型的本体引导生物医学文档检索查询扩展 | `10.1007/s10618-026-01220-z` | 0 | 引用了种子 | 4 | 建议采纳(两个子问题) | 采纳 | 1,2 | 引文｜We show that BMQExpander has superior retrieval performance on three popular biomedical Information Retrieval (IR) benchmarks: NFCorpus, TREC-COVID, and SciFact—with improvements of up to 22.1% in NDCG@10 over sparse baselines and up to 6.5% over the strongest baseline.｜理由｜The paper proposes an ontology-guided, LLM-based query expansion pipeline (a query expansion family) and reports quantified retrieval gains (NDCG@10 improvements over sparse, dense and QE baselines), giving evidence for effectiveness. |
+| 11 | 2022 | Text Embeddings by Weakly-Supervised Contrastive Pre-training | 基于弱监督对比预训练的文本嵌入 | `10.48550/arxiv.2212.03533` | 123 | 被种子引用 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该文提出E5文本嵌入模型，属于神经检索的表示学习，但全文未涉及任何查询扩展方法或其有效性证据。 |
+| 12 | 2024 | Fine-Tuning LLaMA for Multi-Stage Text Retrieval | 微调LLaMA用于多阶段文本检索 | `10.1145/3626772.3657951` | 112 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：摘要仅在背景中提及 query expansion，研究重点是微调 LLaMA 作为检索器与重排序器，未涉及查询扩展家族分类或有效性证据。 |
+| 13 | 2024 | CRUD-RAG: A Comprehensive Chinese Benchmark for Retrieval-Augmented Ge | CRUD-RAG：面向大语言模型检索增强生成的综合中文基准 | `10.1145/3701228` | 96 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该论文是RAG系统评测基准，仅涉及检索器组件整体评估，未讨论任何查询扩展方法或其有效性证据，属于主题相邻。 |
+| 14 | 2024 | When Search Engine Services Meet Large Language Models: Visions and Ch | 当搜索引擎服务遇上大语言模型：愿景与挑战 | `10.1109/tsc.2024.3451185` | 65 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该文是对搜索引擎与大语言模型融合（Search4LLM/LLM4Search）的愿景与挑战综述，仅笼统提及“improve query outcomes through optimization”，未涉及查询扩展方法家族或其实证效果，属主题相邻。 |
+| 15 | 2025 | A Survey of Conversational Search | 对话式搜索综述 | `10.1145/3759453` | 42 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该文是对话式搜索综述，仅在列举系统模块时提及 query reformulation，未涉及神经信息检索中查询扩展的方法家族或有效性证据。 |
+| 16 | 2025 | A Comprehensive Survey of Retrieval-Augmented Large Language Models fo | 面向农业决策的检索增强大语言模型综合综述：未解决的问题与研究机遇 | `10.2478/jaiscr-2025-0007` | 28 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该文讨论农业决策支持系统中LLM与RAG的应用，未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
+| 17 | 2024 | SimIIR 3: A Framework for the Simulation of Interactive and Conversati | SimIIR 3：用于交互式和会话式信息检索模拟的框架 | `10.1145/3673791.3698427` | 13 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该摘要描述的是交互式与会话式信息检索的模拟框架（SimIIR 3）及其组件，属于IR主题相邻工作，但未涉及任何查询扩展方法或其有效性证据，无法回答任一子问题。 |
+| 18 | 2024 | Exploration Robot Chat: Uncovering Decades of Exploration Knowledge an | Exploration Robot Chat：利用会话式大语言模型发掘数十年的探索知识与数据 | `10.2118/218439-ms` | 8 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：论文讨论面向油气勘探的检索增强生成（RAG）系统与对话式LLM，未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
+| 19 | 2023 | Report on the 1st Workshop on Generative Information Retrieval (Gen-IR | SIGIR 2023 第一届生成式信息检索研讨会（Gen-IR 2023）报告 | `10.1145/3642979.3642995` | 0 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该摘要仅介绍生成式信息检索研讨会的目标、形式与成果，未涉及查询扩展方法或有效性证据，属于主题相邻但无关。 |
+| 20 | 2026 | When More Reformulations Hurt: Avoiding Drift using Ranker Feedback | 当更多改写反而有害：利用排序器反馈避免漂移 | `10.1145/3805712.3809721` | 0 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该文讨论查询改写/扩展结果的自适应选择与推理预算权衡，但摘要既未梳理查询扩展方法的主要类别，也未提供有效性证据。 |
+| 21 | 2024 | A Survey on Hallucination in Large Language Models: Principles, Taxono | 大语言模型幻觉综述：原理、分类、挑战与开放问题 | `10.1145/3703155` | 2084 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该综述主题是 LLM 幻觉的检测与缓解，虽涉及信息检索但完全未讨论查询扩展方法或其有效性，属于「主题相邻」而非相关证据。 |
+| 22 | 2023 | Is ChatGPT Good at Search? Investigating Large Language Models as Re-R | ChatGPT擅长搜索吗？探究大语言模型作为重排序智能体 | `10.18653/v1/2023.emnlp-main.923` | 230 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻：论文研究LLM作为重排序代理，而非查询扩展方法。 |
+| 23 | 2025 | Hallucination Mitigation for Retrieval-Augmented Large Language Models | 检索增强大语言模型的幻觉缓解：综述 | `10.3390/math13050856` | 130 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻：论文讨论RAG/LLM幻觉缓解，未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
+| 24 | 2026 | Retrieval-Augmented Generation for AI-Generated Content: A Survey | 面向AI生成内容的检索增强生成：综述 | `10.1007/s41019-025-00335-5` | 106 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该论文是检索增强生成（RAG）综述，聚焦检索器如何增强生成器及RAG应用，未涉及神经信息检索中的查询扩展方法或其实证证据，属于主题相邻。 |
+| 25 | 2022 | Generate rather than Retrieve: Large Language Models are Strong Contex | 生成而非检索：大语言模型是强大的上下文生成器 | `10.48550/arxiv.2209.10063` | 86 | 被种子引用 | 2 | 建议不采纳 | 不采纳 |  | 该论文研究用大语言模型生成上下文文档替代检索，属于知识密集型任务与检索生成结合，主题相邻但并未涉及神经信息检索中的查询扩展方法或其有效性证据。 |
 
 ## 摘要（判定用）
 
@@ -246,7 +249,8 @@ Knowledge-intensive tasks, such as open-domain question answering (QA), require 
 
 | 字段 | 内容 |
 |---|---|
-| 复核人 | |
-| 日期 | |
-| 采纳的候选编号 | |
+| 复核人 | Codex（AI 审计，非独立人工复核） |
+| 日期 | 2026-09-24 |
+| 采纳的候选编号 | 2, 4, 5, 6, 10 |
 | 候选来源说明 | 引用图扩展（OpenAlex citations / references） |
+| 审计方法 | 模型初审 + Codex 逐条复核 + 摘要逐字引文核验 + 标题去重 |

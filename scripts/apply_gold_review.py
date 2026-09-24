@@ -23,13 +23,14 @@
 
     · 按 DOI 去 OpenAlex 取题录与摘要
     · 校验年份是否在题目的 year_range 内
-    · 抽取可作为证据的完整句子
+    · 校验复核表里的逐字引文确实出现在摘要中
     · 去重、追加到 gold_papers 与 gold_evidence
 
 脚本**不会**替你做的事：
 
     · 判断论文是否该采纳（那是标注，不是脚本的职责）
     · 在摘要抽不出可用句子时编造引文——这种情况会列出来让你手工补
+    · 接受没有可核验引文的「采纳」行——这类行会安全地跳过
 
 注意：数据集里的 paper_key 是 `doi:...` 形式，且年份校验使用题目自带的
 `year_range`，与复核表里显示的年份可能因数据源更新而不同，脚本以数据集为准。
@@ -62,7 +63,7 @@ from research_agent.mcp_servers.cache import (  # noqa: E402
 )
 from research_agent.router.registry import build_openalex_client  # noqa: E402
 
-DEFAULT_DATASET = ROOT / "evaluation" / "datasets" / "pilot_questions.v1.jsonl"
+DEFAULT_DATASET = ROOT / "evaluation" / "datasets" / "pilot_questions.v2.jsonl"
 
 # 复核表的列顺序，与 expand_gold_candidates.py 生成的表头一致
 COL_INDEX = 0
@@ -71,9 +72,18 @@ COL_TITLE = 2
 COL_DOI = 4
 COL_VERDICT = 9
 COL_SUBQUESTION = 10
+COL_NOTES = 11
 
 ACCEPT = "采纳"
 REJECT = "不采纳"
+AUDIT_QUOTE = re.compile(r"引文[｜|](.+?)[｜|]理由[｜|]", re.S)
+
+
+def parse_audit_quote(notes: str) -> str:
+    """从备注栏取出模型逐字摘出的审计引文。"""
+
+    match = AUDIT_QUOTE.search(notes)
+    return match.group(1).strip() if match else ""
 
 
 @dataclass
@@ -85,6 +95,7 @@ class ReviewRow:
     doi: str
     verdict: str
     subquestions: list[int] = field(default_factory=list)
+    audit_quote: str = ""
 
     @property
     def accepted(self) -> bool:
@@ -140,6 +151,9 @@ def parse_worksheet(path: Path) -> tuple[str, list[ReviewRow]]:
                 doi=doi,
                 verdict=parse_verdict(cells[COL_VERDICT]),
                 subquestions=parse_subquestions(cells[COL_SUBQUESTION]),
+                audit_quote=parse_audit_quote(
+                    cells[COL_NOTES] if len(cells) > COL_NOTES else ""
+                ),
             )
         )
     return question_id, rows
@@ -214,8 +228,6 @@ async def apply_worksheet(
             notes.append(f"第 {row.line_number} 行 OpenAlex 查无此 DOI：{row.doi}")
             continue
         key = paper_key(paper)
-        if key in known:
-            continue
         if not within_year_range(paper, parsed_range):
             notes.append(
                 f"第 {row.line_number} 行年份 {paper.year} 超出 "
@@ -223,24 +235,45 @@ async def apply_worksheet(
             )
             continue
 
-        # 一篇论文只挂一个子问题：证据是按子问题分配的，
-        # 若同一篇要支撑两个子问题，请在复核表里为它写两行（DOI 相同、编号不同）。
-        sub_index = row.subquestions[0]
-        annotation = paper_to_annotation(
-            paper,
-            supports_subquestion=sub_index,
-            prefer_terms=match_terms(subquestions[sub_index - 1]),
-        )
-        if annotation is None:
+        if not row.audit_quote:
             notes.append(
-                f"第 {row.line_number} 行摘要抽不出可用句子，需手工补 quote：{key}"
+                f"第 {row.line_number} 行标记为采纳但没有可核验引文：{key}"
             )
             continue
 
-        gold_papers.append(key)
-        gold_evidence.append(annotation)
-        known.add(key)
-        added += 1
+        existing_subquestions = {
+            int(item["supports_subquestion"])
+            for item in gold_evidence
+            if item.get("paper_key") == key
+            and isinstance(item.get("supports_subquestion"), int)
+        }
+        annotations: list[dict[str, object]] = []
+        for sub_index in row.subquestions:
+            if sub_index in existing_subquestions:
+                continue
+            annotation = paper_to_annotation(
+                paper,
+                supports_subquestion=sub_index,
+                prefer_terms=match_terms(subquestions[sub_index - 1]),
+                evidence_quote=row.audit_quote,
+            )
+            if annotation is None:
+                notes.append(
+                    f"第 {row.line_number} 行引文无法通过摘要逐字核验"
+                    f"（子问题 {sub_index}）：{key}"
+                )
+                annotations = []
+                break
+            annotations.append(annotation)
+
+        if not annotations:
+            continue
+
+        if key not in known:
+            gold_papers.append(key)
+            known.add(key)
+        gold_evidence.extend(annotations)
+        added += len(annotations)
 
     if added and not dry_run:
         target["gold_papers"] = gold_papers

@@ -132,7 +132,7 @@ PILOT_SEEDS: tuple[dict[str, Any], ...] = (
 
 MIN_RELEVANCE_TERMS = 2
 MIN_EVIDENCE_WORDS = 8
-MAX_EVIDENCE_CHARS = 400
+MAX_EVIDENCE_CHARS = 600
 MAX_GOLD_PAPERS = 3
 
 SENTENCE_ENDINGS = (".", "!", "?")
@@ -373,19 +373,38 @@ def paper_to_annotation(
     *,
     supports_subquestion: int,
     prefer_terms: set[str] | None = None,
+    evidence_quote: str | None = None,
 ) -> dict[str, Any] | None:
     """Convert a paper into one gold-evidence annotation.
 
     Returns None when the record has no sentence that can carry evidence. The
     paper year is recorded so the review can check the year range without
     re-querying the source.
+
+    When ``evidence_quote`` is supplied, it is accepted only if it is a complete,
+    usable sentence that appears verbatim in the paper abstract. This prevents a
+    review worksheet's verified quote from being silently replaced by a
+    different automatically selected sentence.
     """
 
-    quote = usable_evidence_sentence(
-        paper.abstract,
-        prefer_terms=prefer_terms,
-        reject_exact={paper.venue or "", paper.title},
-    )
+    quote = None
+    if evidence_quote is not None:
+        normalized_quote = " ".join(evidence_quote.replace("\\n", " ").split())
+        normalized_abstract = " ".join(
+            (paper.abstract or "").replace("\\n", " ").split()
+        )
+        if (
+            normalized_quote
+            and normalized_quote in normalized_abstract
+            and _is_usable_sentence(normalized_quote)
+        ):
+            quote = normalized_quote
+    else:
+        quote = usable_evidence_sentence(
+            paper.abstract,
+            prefer_terms=prefer_terms,
+            reject_exact={paper.venue or "", paper.title},
+        )
     if quote is None:
         return None
     return {

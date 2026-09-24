@@ -380,3 +380,44 @@ async def test_build_seed_questions_assigns_subquestions() -> None:
 
     assigned = {item["supports_subquestion"] for item in records[0]["gold_evidence"]}
     assert assigned == {1}
+
+
+
+def test_paper_to_annotation_keeps_a_verbatim_audit_quote() -> None:
+    paper = _paper(
+        abstract=(
+            "Retrieval augmented generation has become a common research topic. "
+            "We evaluate our systems on Natural Questions using exact match. "
+            "The results show consistent improvements."
+        )
+    )
+
+    annotation = paper_to_annotation(
+        paper,
+        supports_subquestion=1,
+        evidence_quote=(
+            "We evaluate our systems on Natural Questions using exact match."
+        ),
+    )
+
+    assert annotation is not None
+    assert annotation["quote"] == (
+        "We evaluate our systems on Natural Questions using exact match."
+    )
+
+
+def test_paper_to_annotation_rejects_a_non_verbatim_audit_quote() -> None:
+    paper = _paper(
+        abstract=(
+            "We evaluate our systems on Natural Questions using exact match. "
+            "The results show consistent improvements."
+        )
+    )
+
+    annotation = paper_to_annotation(
+        paper,
+        supports_subquestion=1,
+        evidence_quote="The paper uses exact match.",
+    )
+
+    assert annotation is None

@@ -59,7 +59,7 @@ from research_agent.mcp_servers.common import PaperCandidate  # noqa: E402
 from research_agent.mcp_servers.openalex.client import OpenAlexClient  # noqa: E402
 from research_agent.router.registry import build_openalex_client  # noqa: E402
 
-DEFAULT_DATASET = ROOT / "evaluation" / "datasets" / "pilot_questions.v1.jsonl"
+DEFAULT_DATASET = ROOT / "evaluation" / "datasets" / "pilot_questions.v2.jsonl"
 DEFAULT_OUTPUT_DIR = ROOT / "evaluation" / "review"
 
 # 模型常把 JSON 包在说明文字里，解析前先取出对象
@@ -201,6 +201,7 @@ def render_worksheet(
     translations: dict[int, str] | None = None,
     header_translations: dict[int, str] | None = None,
     prescreen: dict[int, tuple[str, str]] | None = None,
+    fill_verdict: bool = False,
 ) -> str:
     """把候选渲染成人工复核表。
 
@@ -240,9 +241,13 @@ def render_worksheet(
             "一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。",
             "按子问题分别判定，因为证据是按子问题分配的。",
             "",
-            "**「初审建议」是模型预判，只是给你省时间，不是结论。**",
-            "最终「判定」必须由你确认——金标是评测系统的尺子，",
-            "由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。",
+            "**「初审建议」是模型预判；「判定」栏是当前审计结论，"
+            "不因填写「判定」就自动等于人工审核。**",
+            "每条「采纳」都附带一句从摘要逐字摘出的引文，程序已核对引文确实",
+            "出现在摘要中——**核对引文比通读摘要快得多，这是本表的验证单元**。",
+            "",
+            "标注来源需在 `evaluation/datasets/VERSIONS.md` 中如实记录：",
+            "模型初审 + Codex 逐条审计 + 摘要逐字核验；不等同于独立人工金标。",
             "",
             "逐条检查：",
             "",
@@ -264,10 +269,22 @@ def render_worksheet(
         cited = paper.raw.get("cited_by_count") or 0
         zh = translations.get(index, "")
         draft, draft_reason = prescreen.get(index, ("", ""))
+        if fill_verdict and draft.startswith("建议采纳"):
+            verdict_cell = "采纳"
+            sub_cell = (
+                "1,2" if "两个子问题" in draft else (draft[-2] if draft[-2].isdigit() else "")
+            )
+        elif fill_verdict and draft == "建议不采纳":
+            verdict_cell = "不采纳"
+            sub_cell = ""
+        else:
+            verdict_cell = ""
+            sub_cell = ""
         lines.append(
             f"| {index} | {paper.year or '?'} | {title[:70]} | {zh} "
             f"| `{paper.doi or ''}` | {cited} | {item.relation} "
-            f"| {item.topic_overlap} | {draft} | | | {draft_reason} |"
+            f"| {item.topic_overlap} | {draft} | {verdict_cell} | {sub_cell} "
+            f"| {draft_reason} |"
         )
     lines.extend(
         [
@@ -383,6 +400,7 @@ async def run(args: argparse.Namespace) -> int:
                 translations=translations,
                 header_translations=header_translations,
                 prescreen=prescreen,
+                fill_verdict=args.fill_verdict,
             )
             out = args.output_dir / f"gold-candidates-{question.question_id}.md"
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -522,7 +540,11 @@ async def prescreen_candidates(
         "你在为系统性文献综述筛选金标论文。金标的定义是："
         "**领域专家会把它作为回答某个子问题的证据引用**。"
         "只依据摘要判断，不要依据标题推断内容；"
-        "读完整段摘要再下结论。只输出 JSON。"
+        "读完整段摘要再下结论。\n\n"
+        "判为可采纳时，必须从摘要里**逐字**摘出一句能支撑该判断的原句，"
+        "不要改写、不要拼接、不要用省略号。程序会拿这句话回摘要里核对，"
+        "查不到就说明你在编造依据，该条会被打回。"
+        "判为不可采纳时 quote 留空。只输出 JSON。"
     )
     result: dict[int, tuple[str, str]] = {}
     failures: list[str] = []
@@ -541,7 +563,9 @@ async def prescreen_candidates(
             "判断这篇论文是否可作为某个子问题的证据。"
             "support 取值：1 / 2 / both / none。"
             "若为 none，请在 reason 里说明它是「主题相邻」还是「完全无关」。"
-            '返回格式：{"support":"1|2|both|none","reason":"一句话"}'
+            "若为 1/2/both，必须给出 quote（摘要原文的逐字句子）。"
+            '返回格式：{"support":"1|2|both|none","quote":"<逐字原句或空>",'
+            '"reason":"一句话"}'
         )
         suggestion = reason = None
         last_error = ""
@@ -574,9 +598,23 @@ async def prescreen_candidates(
                 "none": "建议不采纳",
             }.get(support)
             reason = str(payload.get("reason") or "").strip()
-            if suggestion:
-                break
-            last_error = f"support 取值无法识别：{support!r}"
+            quote = str(payload.get("quote") or "").strip()
+            if not suggestion:
+                last_error = f"support 取值无法识别：{support!r}"
+                continue
+            # 机械核对：判为采纳时，引文必须真的出现在摘要里。
+            # 这一步是为了让"采纳"可核查——否则你只能选择相信我，
+            # 而我在这轮里已经出过若干可验证的错误。
+            if support != "none":
+                if not quote:
+                    last_error = "判为采纳但未给出引文"
+                    continue
+                normalized_quote = " ".join(quote.split())
+                if normalized_quote not in abstract:
+                    last_error = "引文在摘要里找不到（疑似编造）"
+                    continue
+                reason = f"引文｜{quote}｜理由｜{reason}"
+            break
         if suggestion is None:
             failures.append(f"第 {index} 条：{last_error}")
             suggestion, reason = "待人工判断", ""
@@ -613,6 +651,11 @@ def main() -> int:
         "--prescreen",
         action="store_true",
         help="用模型初审候选并填入建议与理由，供人工确认（需 DEEPSEEK_API_KEY）",
+    )
+    parser.add_argument(
+        "--fill-verdict",
+        action="store_true",
+        help="把初审建议直接写进「判定」栏（等价于采用模型判定，非人工审核）",
     )
     args = parser.parse_args()
 

@@ -7,7 +7,7 @@
 **子问题**：
 
 1. Which artifacts and metadata are shared?
-　　→ 共享了哪些工件与元数据？
+　　→ 共享了哪些制品和元数据？
 
 2. What barriers to reproducibility are reported?
 　　→ 报告了哪些可复现性障碍？
@@ -20,9 +20,12 @@
 一篇论文算作 gold，当且仅当**领域专家会把它作为回答某个子问题的证据引用**。
 按子问题分别判定，因为证据是按子问题分配的。
 
-**「初审建议」是模型预判，只是给你省时间，不是结论。**
-最终「判定」必须由你确认——金标是评测系统的尺子，
-由被测系统自己判定会构成循环论证，项目评测设计也禁止这样做。
+**「初审建议」是模型预判；「判定」栏是当前审计结论，不因填写「判定」就自动等于人工审核。**
+每条「采纳」都附带一句从摘要逐字摘出的引文，程序已核对引文确实
+出现在摘要中——**核对引文比通读摘要快得多，这是本表的验证单元**。
+
+标注来源需在 `evaluation/datasets/VERSIONS.md` 中如实记录：
+模型初审 + Codex 逐条审计 + 摘要逐字核验；不等同于独立人工金标。
 
 逐条检查：
 
@@ -35,31 +38,31 @@
 
 | # | 年份 | 标题 | 中文标题(机翻) | DOI | 被引 | 关系 | 命中 | 初审建议 | 判定 | 子问题 | 备注 |
 |---:|---:|---|---|---|---:|---|---:|---|---:|---|---|
-| 1 | 2024 | Data leakage inflates prediction performance in connectome-based machi | 数据泄漏会虚高基于连接组的机器学习模型的预测性能 | `10.1038/s41467-024-46150-w` | 205 | 引用了种子 | 4 | 建议采纳(子问题2) | | | 该文将数据泄漏识别为影响预测建模有效性和可重复性的普遍错误做法，可作为报告可重复性障碍的证据。 |
-| 2 | 2024 | Capturing end-to-end provenance for machine learning pipelines | 为机器学习流水线捕获端到端溯源信息 | `10.1016/j.is.2024.102495` | 22 | 引用了种子 | 4 | 建议不采纳 | | | 主题相邻：讨论ML管道的溯源工具与局限，而非机器学习基准论文中报告的可复现性实践或障碍。 |
-| 3 | 2023 | Metadata Representations for Queryable Repositories of Machine Learnin | 面向可查询机器学习模型仓库的元数据表示 | `10.1109/access.2023.3330647` | 8 | 引用了种子 | 4 | 建议不采纳 | | | 主题相邻：该文讨论模型库的元数据表示与复用，并未报告机器学习基准论文共享了哪些工件/元数据或可复现性障碍。 |
-| 4 | 2024 | Avoiding common machine learning pitfalls | 避免常见的机器学习陷阱 | `10.1016/j.patter.2024.101046` | 125 | 引用了种子 | 3 | 建议不采纳 | | | 该教程讨论机器学习常见错误与报告规范，但未涉及基准论文中共享的工件/元数据，也未报告可复现性障碍，属于主题相邻。 |
-| 5 | 2024 | Cracking the black box of deep sequence-based protein–protein interact | 破解基于深度序列的蛋白质-蛋白质相互作用预测黑箱 | `10.1093/bib/bbae076` | 93 | 引用了种子 | 3 | 建议采纳(子问题2) | | | 该摘要报告了可重复性障碍（数据泄漏、序列相似性和节点度导致性能高估），但未提及共享任何制品或元数据。 |
-| 6 | 2025 | Don’t push the button! Exploring data leakage risks in machine learnin | 别按那个按钮！探索机器学习与迁移学习中的数据泄漏风险 | `10.1007/s10462-025-11326-3` | 75 | 引用了种子 | 3 | 建议采纳(子问题2) | | | 摘要讨论数据泄漏及乐观性能估计等评估缺陷，可作为机器学习中可复现性/可靠性障碍的证据，但未涉及共享的工件或元数据。 |
-| 7 | 2025 | Reproducibility in machine‐learning‐based research: Overview, barriers | 基于机器学习的研究中的可复现性：概述、障碍与驱动因素 | `10.1002/aaai.70002` | 68 | 引用了种子 | 3 | 建议采纳(子问题2) | | | 该文聚焦机器学习研究中可复现性的障碍与驱动因素，明确指出缺乏透明性、数据和代码等障碍，可作为子问题2的证据；但未具体报告基准论文中共享了哪些工件与元数据，故不支持子问题1。 |
-| 8 | 2025 | Exploring the Intersection of Machine Learning and Big Data: A Survey | 探索机器学习与大数据的交叉：综述 | `10.3390/make7010013` | 51 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该综述讨论机器学习与大数据的应用挑战，未涉及基准论文的可复现实践、共享工件/元数据或复现障碍。 |
-| 9 | 2024 | An Exploratory Study of Dataset and Model Management in Open Source Ma | 开源机器学习应用中数据集与模型管理的探索性研究 | `10.1145/3644815.3644963` | 6 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：研究开源ML应用中的数据集/模型管理与版本控制可复现性问题，但并非针对机器学习基准论文。 |
-| 10 | 2023 | Integration of Open-Source Machine Learning Operations Tools into a Si | 将开源机器学习运维工具集成到单一框架中 | `10.1109/icccis60361.2023.10425558` | 4 | 引用了种子 | 3 | 建议不采纳 | | | 该论文是关于将MLOps工具（MLflow）集成到单一框架以进行实验跟踪与模型监控，并未报告机器学习基准论文中共享的工件/元数据，也未报告可复现性障碍，因此属于主题相邻（ML实验工具与可复现性基础设施）而非直接证据。 |
-| 11 | 2024 | Collaboration Management for Federated Learning | 联邦学习中的协作管理 | `10.1109/icdew61823.2024.00043` | 4 | 引用了种子 | 3 | 建议不采纳 | | | 主题相邻：该文讨论联邦学习协作管理与工件溯源，虽提及使用障碍与工件管理，但并非关于机器学习基准论文中报告的可复现性实践、共享工件/元数据或可复现性障碍。 |
-| 12 | 2024 | A Digital Twin System for Oil And Gas Industry: A Use Case on Mooring  | 面向油气行业的数字孪生系统：系泊缆完整性监测应用案例 | `10.1145/3652620.3688244` | 4 | 引用了种子 | 3 | 建议不采纳 | | | 该论文讨论油气行业数字孪生平台，虽提及机器学习预测算法，但未涉及机器学习基准论文的可复现性实践、共享工件或复现障碍，属于主题相邻而非相关证据。 |
-| 13 | 2023 | Artificial Intelligence for Drug Discovery: Are We There Yet? | 人工智能用于药物发现：我们是否已抵达目标？ | `10.1146/annurev-pharmtox-040323-040828` | 227 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：讨论AI药物发现中的可重复性危机，但未涉及机器学习基准论文的工件/元数据共享或可重复性障碍。 |
-| 14 | 2024 | Simple Behavioral Analysis (SimBA) as a platform for explainable machi | 简单行为分析（SimBA）：行为神经科学中可解释机器学习的平台 | `10.1038/s41593-024-01649-9` | 210 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
-| 15 | 2025 | Machine‐Learning‐Aided Advanced Electrochemical Biosensors | 机器学习辅助的先进电化学生物传感器 | `10.1002/adma.202417520` | 145 | 引用了种子 | 2 | 建议不采纳 | | | This review discusses machine learning applications in electrochemical biosensors, not reproducibility practices or artifacts/metadata shared in machine learning benchmark papers, making it only topically adjacent. |
-| 16 | 2024 | Guiding questions to avoid data leakage in biological machine learning | 避免生物机器学习应用中数据泄漏的指导性问题 | `10.1038/s41592-024-02362-y` | 137 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
-| 17 | 2025 | A multimodal whole-slide foundation model for pathology | 面向病理学的多模态全切片基础模型 | `10.1038/s41591-025-03982-3` | 137 | 引用了种子 | 2 | 建议不采纳 | | | 该论文是病理学多模态基础模型的方法开发，未报告可复现性实践、制品/元数据共享或复现障碍，与子问题仅主题相邻。 |
-| 18 | 2024 | A review of model evaluation metrics for machine learning in genetics  | 遗传学与基因组学中机器学习的模型评估指标综述 | `10.3389/fbinf.2024.1457619` | 123 | 引用了种子 | 2 | 建议不采纳 | | | 该文是遗传学/基因组学中机器学习模型评价指标的综述，虽与模型评估相关，但未报告基准论文的制品/元数据共享或可复现性障碍，因此对两个子问题均无直接证据。 |
-| 19 | 2022 | Systematic review of the radiomics quality score applications: an EuSo | 影像组学质量评分应用的系统综述：EuSoMII影像组学审计组倡议 | `10.1007/s00330-022-09187-3` | 120 | 引用了种子 | 2 | 建议不采纳 | | | 该论文关注放射组学质量评分与可重复性/泛化性问题，但并非关于机器学习基准论文的可重复性实践，属于主题相邻。 |
-| 20 | 2024 | REFORMS: Consensus-based Recommendations for Machine-learning-based Sc | REFORMS：基于机器学习的科学研究的共识性建议 | `10.1126/sciadv.adk3452` | 117 | 引用了种子 | 2 | 建议不采纳 | | | 该文提出ML科学报告与可复现性建议清单，并未实证报告机器学习基准论文中共享的工件/元数据或复现障碍，属于主题相邻。 |
-| 21 | 2024 | Recent methodological advances in federated learning for healthcare | 面向医疗的联邦学习近期方法学进展 | `10.1016/j.patter.2024.101006` | 116 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：这是医疗联邦学习方法学的系统综述，未涉及机器学习基准论文的复现实践、共享制品或复现障碍。 |
-| 22 | 2024 | Weak baselines and reporting biases lead to overoptimism in machine le | 弱基线与报告偏倚导致流体相关偏微分方程机器学习过度乐观 | `10.1038/s42256-024-00897-5` | 102 | 引用了种子 | 2 | 无法判断 | | | 源站未提供摘要，需另行获取 |
-| 23 | 2025 | Data splitting to avoid information leakage with DataSAIL | 使用 DataSAIL 进行数据划分以避免信息泄漏 | `10.1038/s41467-025-58606-8` | 89 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：该文讨论数据泄漏与评估问题并发布DataSAIL包，但未报告机器学习基准论文中的工件与元数据共享或复现障碍。 |
-| 24 | 2024 | Toward Improving Breast Cancer Classification Using an Adaptive Voting | 基于自适应投票集成学习算法改进乳腺癌分类 | `10.1109/access.2024.3356602` | 78 | 引用了种子 | 2 | 建议不采纳 | | | This paper is about breast cancer classification using ensemble learning, not about reproducibility practices, artifacts, or barriers in machine learning benchmark papers; it is topic-adjacent (ML application) but irrelevant to the subquestions. |
-| 25 | 2024 | Lung Sound Classification With Multi-Feature Integration Utilizing Lig | 利用轻量级 CNN 模型进行多特征融合的肺音分类 | `10.1109/access.2024.3361943` | 75 | 引用了种子 | 2 | 建议不采纳 | | | 主题相邻：该论文是机器学习医学分类应用，虽使用公开数据集，但未报告基准论文的可复现实践、共享工件/元数据或复现障碍。 |
+| 1 | 2024 | Data leakage inflates prediction performance in connectome-based machi | 数据泄露会夸大基于连接组的机器学习模型的预测性能 | `10.1038/s41467-024-46150-w` | 205 | 引用了种子 | 4 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜Overall, our results illustrate the variable effects of leakage and underscore the importance of avoiding data leakage to improve the validity and reproducibility of predictive modeling.｜理由｜该文明确将数据泄漏识别为损害预测建模有效性与可复现性的障碍，可作为子问题2（可复现性障碍）的证据。 |
+| 2 | 2024 | Capturing end-to-end provenance for machine learning pipelines | 捕获机器学习流水线的端到端溯源 | `10.1016/j.is.2024.102495` | 22 | 引用了种子 | 4 | 建议不采纳 | 不采纳 |  | 主题相邻，论文聚焦 ML 流水线的 provenance 模型与工具，未涉及机器学习基准论文中共享的 artifact/metadata 或报告的复现障碍。 |
+| 3 | 2023 | Metadata Representations for Queryable Repositories of Machine Learnin | 面向可查询机器学习模型仓库的元数据表示 | `10.1109/access.2023.3330647` | 8 | 引用了种子 | 4 | 建议采纳(子问题1) | 采纳 | 1 | 引文｜These model zoos contain metadata describing the properties of the ML models and datasets.｜理由｜摘要明确描述了模型库中所共享的元数据类型（描述ML模型与数据集属性的元数据），可作为子问题1关于共享元数据的证据。 |
+| 4 | 2024 | Avoiding common machine learning pitfalls | 避免常见的机器学习陷阱 | `10.1016/j.patter.2024.101046` | 125 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该教程讨论机器学习常见错误，但未涉及基准论文中的可复现性实践或具体障碍。 |
+| 5 | 2024 | Cracking the black box of deep sequence-based protein–protein interact | 破解基于深度序列的蛋白质-蛋白质相互作用预测的黑箱 | `10.1093/bib/bbae076` | 93 | 引用了种子 | 3 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜We found that overlaps between training and test sets resulting from random splitting lead to strongly overestimated performances.｜理由｜This identifies data leakage from random splitting as a barrier to reproducibility in machine learning models. |
+| 6 | 2025 | Don’t push the button! Exploring data leakage risks in machine learnin | 别按那个按钮！探究机器学习与迁移学习中的数据泄漏风险 | `10.1007/s10462-025-11326-3` | 75 | 引用了种子 | 3 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜In particular, this paper addresses a critical issue in ML, known as data leakage, where unintended information contaminates the training data, impacting model performance evaluation.｜理由｜该论文讨论数据泄漏作为影响模型性能评估与可靠复现的障碍，因此可作为子问题2的证据。 |
+| 7 | 2025 | Reproducibility in machine‐learning‐based research: Overview, barriers | 基于机器学习的研究中的可复现性：概述、障碍与驱动因素 | `10.1002/aaai.70002` | 68 | 引用了种子 | 3 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜Issues including lack of transparency, data or code, poor adherence to standards, and the sensitivity of ML training conditions mean that many papers are not even reproducible in principle.｜理由｜该文明确综述了机器学习研究中阻碍可复现性的各类障碍（透明度缺失、数据/代码缺失、标准遵循差、训练条件敏感），直接对应子问题2关于可复现性障碍的报道。 |
+| 8 | 2025 | Exploring the Intersection of Machine Learning and Big Data: A Survey | 探究机器学习与大数据的交叉：综述 | `10.3390/make7010013` | 51 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该文是机器学习与大数据交叉领域的综述，聚焦可扩展性、数据质量、可解释性、隐私等挑战，属于主题相邻，但未涉及基准论文的可复现实践、共享的制品与元数据或可复现性障碍。 |
+| 9 | 2024 | An Exploratory Study of Dataset and Model Management in Open Source Ma | 开源机器学习应用中数据集与模型管理的探索性研究 | `10.1145/3644815.3644963` | 6 | 引用了种子 | 3 | 建议采纳(子问题2) | 采纳 | 2 | 引文｜Most of the datasets and models lack proper integration with the version control system, posing potential trace-ability and reproducibility issues.｜理由｜It reports a lack of version control integration as a reproducibility barrier for ML artifacts. |
+| 10 | 2023 | Integration of Open-Source Machine Learning Operations Tools into a Si | 将开源机器学习运维工具集成到单一框架中 | `10.1109/icccis60361.2023.10425558` | 4 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该文主题为将开源MLOps工具集成到MLflow统一框架，未报告机器学习基准论文的复现实践或复现障碍，属于主题相邻（MLOps工具链）而非证据相关。 |
+| 11 | 2024 | Collaboration Management for Federated Learning | 联邦学习中的协作管理 | `10.1109/icdew61823.2024.00043` | 4 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 主题相邻：该文讨论联邦学习协作的障碍与工件/溯源管理，但未涉及机器学习基准论文中的可复现性实践或其工件、元数据与障碍。 |
+| 12 | 2024 | A Digital Twin System for Oil And Gas Industry: A Use Case on Mooring  | 面向石油和天然气行业的数字孪生系统：系泊缆完整性监测用例 | `10.1145/3652620.3688244` | 4 | 引用了种子 | 3 | 建议不采纳 | 不采纳 |  | 该文是油气行业数字孪生系统的应用案例论文，虽提及机器学习预测算法，但完全未涉及机器学习基准论文的可复现性实践、共享工件/元数据或复现障碍，属于主题相邻但无关。 |
+| 13 | 2023 | Artificial Intelligence for Drug Discovery: Are We There Yet? | 人工智能用于药物发现：我们到达了吗？ | `10.1146/annurev-pharmtox-040323-040828` | 227 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻：讨论AI在药物发现中的可重复性危机，但未涉及机器学习基准论文的工件、元数据共享或可重复性障碍。 |
+| 14 | 2024 | Simple Behavioral Analysis (SimBA) as a platform for explainable machi | 简单行为分析（SimBA）：行为神经科学中可解释机器学习的平台 | `10.1038/s41593-024-01649-9` | 210 | 引用了种子 | 2 | 无法判断 | 暂不纳入 |  | 暂不纳入｜源站未提供摘要，无法核验可引用证据。 |
+| 15 | 2025 | Machine‐Learning‐Aided Advanced Electrochemical Biosensors | 机器学习辅助的先进电化学生物传感器 | `10.1002/adma.202417520` | 145 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该文是机器学习辅助电化学生物传感器的综述，通篇未涉及机器学习基准论文的可复现性实践或障碍，与子问题完全无关。 |
+| 16 | 2024 | Guiding questions to avoid data leakage in biological machine learning | 在生物机器学习应用中避免数据泄漏的指导性问题 | `10.1038/s41592-024-02362-y` | 137 | 引用了种子 | 2 | 无法判断 | 暂不纳入 |  | 暂不纳入｜源站未提供摘要，无法核验可引用证据。 |
+| 17 | 2025 | A multimodal whole-slide foundation model for pathology | 面向病理学的多模态全切片基础模型 | `10.1038/s41591-025-03982-3` | 137 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该论文是病理学多模态基础模型的构建与评测论文，主题与机器学习教育基准论文的可复现性实践（共享的工件/元数据、可复现性障碍）完全无关，仅属主题相邻的机器学习模型研究。 |
+| 18 | 2024 | A review of model evaluation metrics for machine learning in genetics  | 遗传学与基因组学中机器学习模型评估指标的综述 | `10.3389/fbinf.2024.1457619` | 123 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该论文综述的是遗传学/基因组学中机器学习模型的评价指标及其常见陷阱，属于主题相邻的方法学综述，未报告任何可复现性实践、共享的工件/元数据或复现障碍。 |
+| 19 | 2022 | Systematic review of the radiomics quality score applications: an EuSo | 影像组学质量评分应用的系统综述：EuSoMII 影像组学审计组倡议 | `10.1007/s00330-022-09187-3` | 120 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻：该文讨论放射组学研究的可重复性缺陷，但并非针对机器学习基准论文，无法作为该子问题的直接证据。 |
+| 20 | 2024 | REFORMS: Consensus-based Recommendations for Machine-learning-based Sc | REFORMS：面向基于机器学习的科学研究的共识性建议 | `10.1126/sciadv.adk3452` | 117 | 引用了种子 | 2 | 建议不采纳 | 采纳 | 2 | 引文｜However, the adoption of these methods has been accompanied by failures of validity, reproducibility, and generalizability.｜理由｜审计修正：该共识报告直接列出 ML 科学中的可重复性与泛化障碍。 |
+| 21 | 2024 | Recent methodological advances in federated learning for healthcare | 医疗领域中联邦学习的最新方法学进展 | `10.1016/j.patter.2024.101006` | 116 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻：该文是医疗联邦学习方法学综述，讨论方法学系统性问题，未涉及机器学习基准论文中的工件/元数据共享或可复现性障碍。 |
+| 22 | 2024 | Weak baselines and reporting biases lead to overoptimism in machine le | 弱基线与报告偏倚导致用于流体相关偏微分方程的机器学习过度乐观 | `10.1038/s42256-024-00897-5` | 102 | 引用了种子 | 2 | 无法判断 | 暂不纳入 |  | 暂不纳入｜源站未提供摘要，无法核验可引用证据。 |
+| 23 | 2025 | Data splitting to avoid information leakage with DataSAIL | 利用 DataSAIL 进行数据划分以避免信息泄漏 | `10.1038/s41467-025-58606-8` | 89 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该文主题是关于减少信息泄漏的数据划分工具 DataSAIL，与机器学习基准论文的可复现性实践、共享工件/元数据或复现障碍无关，属于主题相邻但非直接证据。 |
+| 24 | 2024 | Toward Improving Breast Cancer Classification Using an Adaptive Voting | 利用自适应投票集成学习算法改进乳腺癌分类 | `10.1109/access.2024.3356602` | 78 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 该文是乳腺癌分类的集成学习应用研究，未报告任何制品/元数据共享或可复现性障碍，属于与机器学习基准可复现性主题相邻但无相关证据的内容。 |
+| 25 | 2024 | Lung Sound Classification With Multi-Feature Integration Utilizing Lig | 利用轻量级 CNN 模型进行多特征融合的肺音分类 | `10.1109/access.2024.3361943` | 75 | 引用了种子 | 2 | 建议不采纳 | 不采纳 |  | 主题相邻——这是一篇肺音分类的机器学习应用论文，摘要未涉及任何可复现性实践、共享的工件与元数据或可复现性障碍。 |
 
 ## 摘要（判定用）
 
@@ -246,7 +249,8 @@ Detecting respiratory diseases is of utmost importance, considering that respira
 
 | 字段 | 内容 |
 |---|---|
-| 复核人 | |
-| 日期 | |
-| 采纳的候选编号 | |
+| 复核人 | Codex（AI 审计，非独立人工复核） |
+| 日期 | 2026-09-24 |
+| 采纳的候选编号 | 1, 3, 5, 6, 7, 9, 20 |
 | 候选来源说明 | 引用图扩展（OpenAlex citations / references） |
+| 审计方法 | 模型初审 + Codex 逐条复核 + 摘要逐字引文核验 + 标题去重 |
