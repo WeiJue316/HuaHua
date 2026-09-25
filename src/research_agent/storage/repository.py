@@ -10,6 +10,12 @@ from typing import Any
 from uuid import uuid4
 
 from research_agent.evidence.claims import ClaimDraft
+from research_agent.identity import (
+    arxiv_id_from_doi,
+    normalize_doi,
+    primary_identity,
+    strip_arxiv_version,
+)
 from research_agent.mcp_servers.common import PaperCandidate
 
 
@@ -33,24 +39,10 @@ def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def normalize_doi(value: str) -> str:
-    """Normalize a DOI for identity comparison."""
-
-    normalized = value.strip().lower()
-    normalized = normalized.removeprefix("https://doi.org/")
-    normalized = normalized.removeprefix("http://doi.org/")
-    normalized = normalized.removeprefix("doi:")
-    return normalized
-
-
 def canonical_key(candidate: PaperCandidate) -> str:
     """Build the canonical paper key from stable identifiers."""
 
-    if candidate.doi:
-        return f"doi:{normalize_doi(candidate.doi)}"
-    if candidate.source == "arxiv":
-        return f"arxiv:{candidate.source_record_id}"
-    return f"{candidate.source}:{candidate.source_record_id}"
+    return primary_identity(candidate)
 
 
 class ResearchRepository:
@@ -279,22 +271,25 @@ class ResearchRepository:
         return paper_id, True
 
     def _find_existing_paper(self, candidate: PaperCandidate) -> str | None:
+        lookups: list[tuple[str, str]] = []
         if candidate.doi:
+            lookups.append(("doi", normalize_doi(candidate.doi)))
+            arxiv_id = arxiv_id_from_doi(candidate.doi)
+            if arxiv_id is not None:
+                lookups.append(("arxiv_id", arxiv_id))
+        if candidate.source == "arxiv":
+            lookups.append(("arxiv_id", strip_arxiv_version(candidate.source_record_id).lower()))
+        lookups.append((f"{candidate.source}_id", candidate.source_record_id))
+        for identifier_type, normalized_value in lookups:
             row = self.connection.execute(
-                "SELECT paper_id FROM paper_identifier WHERE type = 'doi' AND normalized_value = ?",
-                (normalize_doi(candidate.doi),),
+                """
+                SELECT paper_id FROM paper_identifier
+                WHERE type = ? AND normalized_value = ?
+                """,
+                (identifier_type, normalized_value),
             ).fetchone()
             if row is not None:
                 return str(row[0])
-        row = self.connection.execute(
-            """
-            SELECT paper_id FROM paper_identifier
-            WHERE type = ? AND normalized_value = ?
-            """,
-            (f"{candidate.source}_id", candidate.source_record_id),
-        ).fetchone()
-        if row is not None:
-            return str(row[0])
         row = self.connection.execute(
             "SELECT id FROM paper WHERE canonical_key = ?",
             (canonical_key(candidate),),
@@ -305,11 +300,17 @@ class ResearchRepository:
         identifiers: list[tuple[str, str, str, int]] = []
         if candidate.doi:
             identifiers.append(("doi", candidate.doi, normalize_doi(candidate.doi), 1))
+            arxiv_id = arxiv_id_from_doi(candidate.doi)
+            if arxiv_id is not None:
+                identifiers.append(("arxiv_id", arxiv_id, arxiv_id, 0))
+        source_normalized = candidate.source_record_id
+        if candidate.source == "arxiv":
+            source_normalized = strip_arxiv_version(candidate.source_record_id).lower()
         identifiers.append(
             (
                 f"{candidate.source}_id",
                 candidate.source_record_id,
-                candidate.source_record_id,
+                source_normalized,
                 0 if candidate.doi else 1,
             )
         )

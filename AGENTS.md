@@ -32,7 +32,7 @@
 - 存储：SQLite + FTS5 + 不可变文件系统。
 - 证据链：Claim、Evidence Span、Paper、File 的完整关联。
 - 输出：Markdown 证据报告、JSON/CSV 证据表、BibTeX。
-- 最小 Web UI：任务状态、来源列表、证据链可视化。
+- 最小 Web UI：任务状态、来源列表、证据链可视化。按 ADR-0016 作为用户前端的第一版实现；面向普通用户的完整前端（提问、进度、报告、导出）属于 v1 之后。
 
 ### v1 明确不做
 
@@ -61,40 +61,59 @@
 │   ├── mcp-contract.md           # MCP 公共契约与源站适配规范
 │   ├── data-model.md             # 核心实体、关系、状态和存储约定
 │   ├── evaluation.md             # 数据集、baseline、指标和消融实验
-│   ├── roadmap.md                # 时间线、里程碑和风险控制
+│   ├── roadmap.md                # 开发与评测的里程碑、问题清单和风险控制
+│   ├── thesis-plan.md            # 论文计划（学校节点、写作节奏）；默认休眠，与开发计划互不驱动
 │   ├── glossary.md               # 统一术语，避免同义词漂移
 │   ├── references/               # 外部框架和资料来源
 │   │   └── pi-investigation.md
 │   └── adr/                      # 架构决策记录
 │       ├── README.md
 │       └── NNNN-kebab-case.md
-├── src/research_agent/           # Python 包，后续创建
+├── .github/workflows/ci.yml      # 三平台 CI；修改属于红线
+├── src/research_agent/           # Python 包
+│   ├── cli.py                   # research / evaluate / warm-cache / doctor 命令
+│   ├── identity.py              # 论文身份键：DOI、arXiv ID、arXiv DOI、OpenAlex ID
 │   ├── runtime/
-│   │   └── research_service.py  # M1 纵向编排
+│   │   ├── research_service.py  # 七步 Run 编排与 Markdown 报告
+│   │   └── enrichment.py        # 缺摘要时按 DOI 从 OpenAlex 补全
 │   ├── planner/
 │   │   └── planner.py           # 确定性源选择、查询变体和预算计划
 │   ├── executor/
 │   │   └── executor.py          # PlanStep 状态机、StepAttempt 和重试
-│   ├── memory/
+│   ├── memory/                  # 空包；v1 边界见 docs/roadmap.md §5 D3
 │   ├── router/
 │   │   ├── federation.py        # 多源并行搜索、并发预算与部分失败处理
 │   │   └── registry.py          # 五源 client registry
-│   ├── llm/                     # 模型网关协议与 provider 实现
+│   ├── llm/
+│   │   ├── gateway.py           # ModelGateway 协议
+│   │   └── deepseek.py          # DeepSeek provider
 │   ├── policy/
+│   │   └── relevance.py         # 语义相关性判断（ADR-0012）
 │   ├── evaluator/
-│   │   ├── dataset.py             # JSONL 问题集加载与哈希
-│   │   ├── pilot_seed.py          # Pilot 种子问题与 OpenAlex 标注草稿
-│   │   └── runner.py              # EvaluationRun/Case 矩阵调度
+│   │   ├── dataset.py           # JSONL 问题集加载与哈希
+│   │   ├── pilot_seed.py        # Pilot 种子问题与 OpenAlex 标注草稿
+│   │   ├── runner.py            # EvaluationRun/Case 矩阵调度
+│   │   ├── case_runner.py       # 把各系统接到评测回调
+│   │   ├── systems.py           # B0–B3、A1–A4、A6 配置
+│   │   ├── metrics.py           # 检索、证据、成本指标
+│   │   ├── task_completion.py   # baseline-neutral 任务完成 judge
+│   │   ├── bm25.py              # 本地 BM25 索引
+│   │   ├── b0.py                # B0：BM25 + 单次 LLM
+│   │   ├── react.py             # B2：纯 ReAct（ADR-0014）
+│   │   └── snapshot.py          # 冻结源站快照
 │   ├── evidence/
-│   │   └── claims.py            # Evidence → Claim 与引用校验
+│   │   ├── claims.py            # Evidence → Claim 与引用校验
+│   │   └── synthesis.py         # LLM Claim 综合（synthesis-v1）
 │   ├── storage/                 # 迁移、repository、不可变文件归档
-│   │   ├── migrations/
+│   │   ├── migrations/          # NNNN_*.sql
+│   │   ├── migrations.py
 │   │   ├── artifacts.py
 │   │   ├── evaluation_repository.py
 │   │   ├── pdf_parser.py
 │   │   └── repository.py
 │   ├── mcp_servers/
-│   │   ├── common.py            # 公共 envelope 与数据模型
+│   │   ├── common.py            # 公共 envelope、数据模型、重试与限流
+│   │   ├── cache.py             # 源站响应缓存（ADR-0013）
 │   │   ├── arxiv/               # arXiv 适配与 MCP server
 │   │   │   ├── client.py
 │   │   │   ├── parser.py
@@ -115,15 +134,21 @@
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py
-│   └── interfaces/
+│   └── interfaces/              # 空包；计划放 FastAPI 本地 API（ADR-0016，路线图 FE-02）
+├── web/                          # 用户前端（React + Vite + TypeScript，ADR-0016）；尚未创建，见路线图 FE-03
 ├── tests/
 │   ├── fixtures/                # 可公开的脱敏测试响应
 │   ├── unit/
 │   ├── integration/
-│   └── e2e/
-├── evaluation/                   # 数据集、问题集、脚本、结果
+│   └── e2e/                     # 尚未创建
+├── evaluation/
+│   ├── datasets/                # 冻结问题集与 VERSIONS.md
+│   ├── corpora/                 # B0 冻结语料
+│   ├── snapshots/               # 冻结源站快照
+│   ├── review/                  # 金标审阅记录
+│   └── results/                 # 结果摘要（Markdown）；原始数据库在 data/
 ├── configs/                      # 非密钥配置
-├── scripts/                      # 开发与运维脚本
+├── scripts/                      # 开发与运维脚本（check_all、check_docs、金标与快照构建）
 ├── data/                         # 本地运行数据，禁止提交
 ├── reports/                      # 生成的报告，默认禁止提交
 └── local/                        # 个人与学位材料，禁止提交
@@ -160,7 +185,8 @@
 3. 纵向切片：每次实现尽量交付一个可运行、可测试、可演示的端到端能力。
 4. 测试先行：核心逻辑采用 TDD；至少覆盖去重、证据定位、引用约束、权限策略和失败重试。
 5. 改动即验证：完成实现后运行格式检查、静态检查、单元测试和相关集成测试。
-6. 论文同步：每个里程碑结束后更新实验记录、图表素材和论文草稿，不能等到 2027-03 再写正文。
+6. 实验记录：每个里程碑结束后更新 `evaluation/results/` 的实验记录和图表素材。论文写作由 `docs/thesis-plan.md` 单独管理，开发排期不因论文计划调整；论文需要的新实验或修复先在路线图登记编号。
+7. 路线图对齐：修复和优化以 `docs/roadmap.md` §4 问题清单为准，提交说明和汇报引用问题编号（如 `EV-01`）；新发现的问题先登记再修，完成后更新状态和验证方式。
 
 ### 验证命令
 
@@ -182,14 +208,31 @@ python scripts/check_docs.py
 
 ## 7. 红线：必须先获得用户确认
 
+本节约束在本仓库工作的开发者与编码 Agent。运行时 Agent 对最终用户的确认规则见 `docs/PRD.md` §7，两者不混用。
+
 以下操作即使处于 auto-accept 模式，也必须先停下来询问：
 
-- 删除文件、目录或 Git 历史。
-- 修改 `.env`、密钥、token 或 CI/CD 配置。
-- 数据库 schema 变更或数据迁移。
-- `git push`、`git rebase`、`git reset --hard` 或强制推送。
-- 安装新的全局依赖或修改系统配置。
-- 公开发布，包括部署生产环境、发布包或公开发表文章。
+1. 不可恢复的删除：删除受版本控制的文件或目录、`data/` 中的数据库与归档、`local/` 中的任何内容，或删除 Git 历史。
+2. 丢弃未提交的改动：`git reset --hard`、`git checkout -- <path>`、`git restore`、`git clean`、`git stash drop`。
+3. 改写或推送远端：`git push`（含强制推送）、`git rebase`、修改已推送的提交、创建远程仓库。
+4. 密钥：修改 `.env`、密钥或 token；读取或输出任何密钥的值（只允许检查是否存在）。
+5. CI/CD：修改 `.github/workflows/` 或新增自动化流程。
+6. 数据：对已有本地数据库执行迁移或批量改写；修改已冻结的数据集、快照、语料或金标（只能新建版本）。
+7. 环境：安装全局依赖、修改系统配置或系统环境变量。
+8. 外发数据：把 `local/` 内容或用户私有文件发送给云端模型或第三方服务。
+9. 费用：单次任务预计模型调用超过 50 次（如 Pilot 全量重跑、正式评测批次）。
+10. 公开发布：部署、发布包、公开发表文章。
+11. 规则本身：修改本节，或推翻已接受的 ADR。
+
+不需要确认，但必须在汇报中说明：
+
+- 删除本次会话自己创建、未纳入版本控制的临时文件，以及 `.pytest_cache/`、`.ruff_cache/`、`.mypy_cache/` 等可再生缓存。
+- 新增迁移文件并在临时数据库上测试（仍按 ADR-0010 与 §6 先写文档）。
+- 新增或升级项目依赖（写入 `pyproject.toml` 与 `uv.lock`）。
+- 本地 `git commit`。
+- 阈值以内的付费模型调用，汇报调用次数与 token。
+
+确认结果记入 `docs/roadmap.md` §5“已确认”，注明日期与范围；一次确认只覆盖所述范围。
 
 ## 8. 汇报格式
 
@@ -205,4 +248,4 @@ python scripts/check_docs.py
 - 受版本控制的文件不得包含本机绝对路径、个人目录、密钥或本地数据库。
 - 配置路径相对于项目根目录解析；密钥只能来自环境变量或系统凭据管理器。
 - 代码、配置和文档统一使用 UTF-8；跨平台换行规则由 `.gitattributes` 维护。
-- GitHub 发布、创建远程仓库、推送代码、添加 CI/CD 或公开发布包，均属于红线，必须先获得用户确认。
+- 远程仓库、推送、CI/CD 与公开发布的确认规则以 §7 为准。

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -28,22 +29,76 @@ def test_retrieval_metrics_counts_matches() -> None:
     )
 
     assert metrics.matched_count == 2
-    assert metrics.recall == pytest.approx(2 / 3)
-    assert metrics.precision == pytest.approx(2 / 3)
+    assert metrics.recall_kept == pytest.approx(2 / 3)
+    assert metrics.precision_kept == pytest.approx(2 / 3)
+
+
+def test_retrieval_metrics_treat_arxiv_doi_and_arxiv_id_as_one_paper() -> None:
+    metrics = retrieval_metrics(
+        retrieved_keys={"arxiv:2312.10997"},
+        gold_keys={"doi:10.48550/arxiv.2312.10997", "doi:10.1000/missing"},
+    )
+
+    assert metrics.matched_count == 1
+    assert metrics.recall_kept == pytest.approx(0.5)
 
 
 def test_retrieval_metrics_handles_empty_gold() -> None:
     metrics = retrieval_metrics(retrieved_keys={"doi:a"}, gold_keys=set())
 
-    assert metrics.recall == 0.0
-    assert metrics.precision == 0.0
+    assert metrics.recall_kept == 0.0
+    assert metrics.precision_kept == 0.0
 
 
 def test_retrieval_metrics_handles_empty_retrieval() -> None:
     metrics = retrieval_metrics(retrieved_keys=set(), gold_keys={"doi:a"})
 
-    assert metrics.recall == 0.0
-    assert metrics.precision == 0.0
+    assert metrics.recall_kept == 0.0
+    assert metrics.precision_kept == 0.0
+
+
+def test_ranked_metrics_use_k_as_the_precision_denominator() -> None:
+    """Hand check: one hit in a two-item list, K=4.
+
+    Precision@4 = 1/4, not 1/2. Recall@4 = 1/2.
+    Gains are [1, 0, 0, 0], so DCG = 1/log2(2) = 1.
+    Ideal gains for two gold papers are [1, 1, 0, 0],
+    IDCG = 1 + 1/log2(3). nDCG = 1 / (1 + 1/log2(3)).
+    """
+
+    metrics = retrieval_metrics(
+        retrieved_keys={"doi:hit", "doi:miss"},
+        gold_keys={"doi:hit", "doi:other"},
+        ranked_keys=("doi:hit", "doi:miss"),
+        k=4,
+    )
+
+    ideal = 1 + 1 / math.log2(3)
+    assert metrics.precision_at_k == pytest.approx(1 / 4)
+    assert metrics.recall_at_k == pytest.approx(1 / 2)
+    assert metrics.ndcg_at_k == pytest.approx(1 / ideal)
+    assert metrics.precision_kept == pytest.approx(1 / 2)
+
+
+def test_ranked_metrics_prefer_an_earlier_hit() -> None:
+    """The same hit at rank 2 instead of rank 1 lowers nDCG and leaves P@K."""
+
+    early = retrieval_metrics(
+        retrieved_keys={"doi:hit", "doi:miss"},
+        gold_keys={"doi:hit"},
+        ranked_keys=("doi:hit", "doi:miss"),
+        k=2,
+    )
+    late = retrieval_metrics(
+        retrieved_keys={"doi:hit", "doi:miss"},
+        gold_keys={"doi:hit"},
+        ranked_keys=("doi:miss", "doi:hit"),
+        k=2,
+    )
+
+    assert early.precision_at_k == late.precision_at_k == pytest.approx(1 / 2)
+    assert early.ndcg_at_k == pytest.approx(1.0)
+    assert late.ndcg_at_k == pytest.approx((1 / math.log2(3)) / 1)
 
 
 def test_evidence_metrics_separate_partial_from_supported() -> None:
@@ -64,6 +119,19 @@ def test_evidence_metrics_separate_partial_from_supported() -> None:
     assert metrics.claims_with_evidence == 4
     assert metrics.evidence_coverage == pytest.approx(4 / 5)
     assert metrics.unsupported_claim_rate == pytest.approx(1 / 5)
+
+
+def test_evidence_metrics_count_supported_claims_with_no_span() -> None:
+    metrics = evidence_metrics(
+        [
+            ("supported", 1),
+            ("supported", 0),
+            ("partially_supported", 0),
+        ]
+    )
+
+    assert metrics.dangling_support_count == 2
+    assert metrics.unsupported_claim_rate == 0.0
 
 
 def test_evidence_metrics_handle_no_claims() -> None:

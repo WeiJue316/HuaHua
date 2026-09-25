@@ -8,9 +8,13 @@ computed here; they are recorded separately as manual review.
 
 from __future__ import annotations
 
+import math
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
+
+from research_agent.identity import label_aliases, matched_gold_keys
 
 
 @dataclass(frozen=True)
@@ -20,28 +24,83 @@ class RetrievalMetrics:
     retrieved_count: int
     gold_count: int
     matched_count: int
-    recall: float
-    precision: float
+    recall_kept: float
+    precision_kept: float
+    k: int
+    precision_at_k: float
+    recall_at_k: float
+    ndcg_at_k: float
 
     def to_dict(self) -> dict[str, float]:
         payload: dict[str, Any] = asdict(self)
         return {key: float(value) for key, value in payload.items()}
 
 
+def _deduped(keys: Sequence[str]) -> list[str]:
+    """Keep the first spelling of each paper."""
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for key in keys:
+        aliases = set(label_aliases(key))
+        if aliases & seen:
+            continue
+        seen.update(aliases)
+        ordered.append(key)
+    return ordered
+
+
+def _matches_gold(key: str, gold_aliases: set[str]) -> bool:
+    return bool(label_aliases(key) & gold_aliases)
+
+
+def _dcg(gains: Sequence[int]) -> float:
+    return sum(gain / math.log2(rank + 2) for rank, gain in enumerate(gains))
+
+
 def retrieval_metrics(
     *,
     retrieved_keys: set[str],
     gold_keys: set[str],
+    extra_aliases: set[str] | None = None,
+    ranked_keys: Sequence[str] = (),
+    k: int = 0,
 ) -> RetrievalMetrics:
-    """Compare the retrieved papers against the frozen gold set."""
+    """Compare retrieved papers with the gold set, as a set and as Top-K.
 
-    matched = retrieved_keys & gold_keys
+    ``recall_kept`` and ``precision_kept`` use the whole kept set. ``precision_at_k``,
+    ``recall_at_k`` and ``ndcg_at_k`` use the first ``k`` items of ``ranked_keys``.
+    Precision@K divides by ``k`` even when the list is shorter. Identity aliases
+    make an arXiv id and its arXiv DOI the same paper.
+    """
+
+    if k < 0:
+        raise ValueError("k must not be negative")
+    matched = matched_gold_keys(
+        retrieved_keys,
+        gold_keys,
+        extra_aliases=extra_aliases,
+    )
+    gold_aliases: set[str] = set()
+    for gold in gold_keys:
+        gold_aliases.update(label_aliases(gold))
+    top = _deduped(ranked_keys)[:k]
+    top_hits = matched_gold_keys(set(top), gold_keys)
+    gains = [1 if _matches_gold(key, gold_aliases) else 0 for key in top]
+    gains.extend([0] * (k - len(gains)))
+    ideal_hits = min(k, len(gold_keys))
+    ideal = [1] * ideal_hits + [0] * (k - ideal_hits)
+    ideal_dcg = _dcg(ideal)
     return RetrievalMetrics(
         retrieved_count=len(retrieved_keys),
         gold_count=len(gold_keys),
         matched_count=len(matched),
-        recall=len(matched) / len(gold_keys) if gold_keys else 0.0,
-        precision=len(matched) / len(retrieved_keys) if retrieved_keys else 0.0,
+        recall_kept=len(matched) / len(gold_keys) if gold_keys else 0.0,
+        precision_kept=len(matched) / len(retrieved_keys) if retrieved_keys else 0.0,
+        k=k,
+        precision_at_k=len(top_hits) / k if k else 0.0,
+        recall_at_k=len(top_hits) / len(gold_keys) if gold_keys and k else 0.0,
+        ndcg_at_k=_dcg(gains) / ideal_dcg if ideal_dcg else 0.0,
     )
 
 
@@ -55,6 +114,7 @@ class EvidenceMetrics:
     unsupported_count: int
     disputed_count: int
     claims_with_evidence: int
+    dangling_support_count: int
     evidence_coverage: float
     unsupported_claim_rate: float
 
@@ -73,6 +133,11 @@ def evidence_metrics(claim_rows: list[tuple[str, int]]) -> EvidenceMetrics:
     total = len(claim_rows)
     statuses = [status for status, _ in claim_rows]
     with_evidence = sum(1 for _, count in claim_rows if count > 0)
+    dangling = sum(
+        1
+        for status, count in claim_rows
+        if status in {"supported", "partially_supported"} and count == 0
+    )
     unsupported = statuses.count("unsupported")
     return EvidenceMetrics(
         claim_count=total,
@@ -81,6 +146,7 @@ def evidence_metrics(claim_rows: list[tuple[str, int]]) -> EvidenceMetrics:
         unsupported_count=unsupported,
         disputed_count=statuses.count("disputed"),
         claims_with_evidence=with_evidence,
+        dangling_support_count=dangling,
         evidence_coverage=with_evidence / total if total else 0.0,
         unsupported_claim_rate=unsupported / total if total else 0.0,
     )

@@ -33,6 +33,7 @@ class SystemConfig:
     description: str
     sources: tuple[str, ...] | None
     relevance_filter: bool
+    citation_constraint: bool = True
     implemented: bool = True
 
     def __post_init__(self) -> None:
@@ -91,10 +92,10 @@ SYSTEMS: dict[str, SystemConfig] = {
     ),
     "A4": SystemConfig(
         system_id="A4",
-        description="无引用约束",
-        sources=(),
-        relevance_filter=False,
-        implemented=False,
+        description="无引用约束：同一综合，不把悬空引用降为 unsupported",
+        sources=None,
+        relevance_filter=True,
+        citation_constraint=False,
     ),
 }
 

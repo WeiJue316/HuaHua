@@ -44,6 +44,7 @@ class ReActOutcome:
     """Artifacts and cost metadata from one B2 case."""
 
     retrieved_keys: frozenset[str]
+    ranked_keys: tuple[str, ...]
     report: str
     report_path: Path
     trace_path: Path
@@ -197,6 +198,7 @@ class PureReActBaseline:
                 self._write_trace(trace_path, question, trace, success=True)
                 return ReActOutcome(
                     retrieved_keys=frozenset(retrieved),
+                    ranked_keys=tuple(retrieved),
                     report=report,
                     report_path=report_path,
                     trace_path=trace_path,

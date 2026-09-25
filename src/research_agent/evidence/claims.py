@@ -74,6 +74,70 @@ def build_direct_claims(papers: list[PaperCandidate]) -> list[ClaimDraft]:
     return claims
 
 
+def persistable_evidence_ids(
+    claim: ClaimDraft,
+    available_evidence_ids: set[str],
+) -> list[str]:
+    """Return evidence IDs that exist and can be written to claim_evidence."""
+
+    return [
+        evidence_id
+        for evidence_id in claim.evidence_span_ids
+        if evidence_id in available_evidence_ids
+    ]
+
+
+def detach_unknown_span_ids(
+    claims: list[ClaimDraft],
+    available_evidence_ids: set[str],
+) -> list[ClaimDraft]:
+    """Drop span IDs that are not in the store, and keep the model's status.
+
+    Unknown IDs cannot be written to ``claim_evidence``. Keeping
+    ``support_status`` is what makes the no-constraint ablation measurable:
+    a claim can still say it is supported after its citation has been detached.
+    """
+
+    return [
+        ClaimDraft(
+            claim_text=claim.claim_text,
+            claim_type=claim.claim_type,
+            support_status=claim.support_status,
+            confidence=claim.confidence,
+            evidence_span_ids=persistable_evidence_ids(claim, available_evidence_ids),
+        )
+        for claim in claims
+    ]
+
+
+def constrain_claim_citations(
+    claims: list[ClaimDraft],
+    available_evidence_ids: set[str],
+) -> list[ClaimDraft]:
+    """Drop unknown span IDs and demote supported claims that have none left.
+
+    The citation constraint is a code-side filter. It never invents locators or
+    quotes; it only refuses to treat a dangling reference as support.
+    """
+
+    constrained: list[ClaimDraft] = []
+    for claim in claims:
+        kept = persistable_evidence_ids(claim, available_evidence_ids)
+        status = claim.support_status
+        if status in {"supported", "partially_supported"} and not kept:
+            status = "unsupported"
+        constrained.append(
+            ClaimDraft(
+                claim_text=claim.claim_text,
+                claim_type=claim.claim_type,
+                support_status=status,
+                confidence=claim.confidence if kept else min(claim.confidence, 0.4),
+                evidence_span_ids=kept,
+            )
+        )
+    return constrained
+
+
 def validate_claim_evidence(
     claim: ClaimDraft,
     available_evidence_ids: set[str],

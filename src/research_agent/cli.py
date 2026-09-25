@@ -18,6 +18,7 @@ from .evaluator.dataset import dataset_version_from_path, load_questions
 from .evaluator.runner import EvaluationRunner, EvaluationSummary
 from .evaluator.snapshot import SourceSnapshot
 from .evaluator.systems import SYSTEMS
+from .evidence.synthesis import ClaimSynthesizer
 from .llm.deepseek import DeepSeekGateway
 from .llm.gateway import ModelGatewayError
 from .mcp_servers.cache import ResponseCache
@@ -104,6 +105,13 @@ def research(
             help="Judge candidate relevance with a language model before claims.",
         ),
     ] = True,
+    synthesis: Annotated[
+        bool,
+        typer.Option(
+            "--synthesis/--no-synthesis",
+            help="Write claims with the model from stored evidence spans.",
+        ),
+    ] = False,
     cache_dir: Annotated[
         Path | None,
         typer.Option(
@@ -147,11 +155,13 @@ def research(
             abstract_resolver = OpenAlexAbstractResolver(
                 build_openalex_client(http_client)
             )
-            judge = (
-                RelevanceJudge(DeepSeekGateway(http_client=http_client))
-                if relevance_filter
+            gateway = (
+                DeepSeekGateway(http_client=http_client)
+                if relevance_filter or synthesis
                 else None
             )
+            judge = RelevanceJudge(gateway) if relevance_filter and gateway else None
+            synthesizer = ClaimSynthesizer(gateway) if synthesis and gateway else None
             return await run_federated_research(
                 question=question,
                 db_path=db,
@@ -162,6 +172,7 @@ def research(
                 plan=plan,
                 abstract_resolver=abstract_resolver,
                 relevance_judge=judge,
+                claim_synthesizer=synthesizer,
                 response_cache=cache,
             )
 
@@ -169,8 +180,8 @@ def research(
         result = asyncio.run(run())
     except ModelGatewayError as exc:
         typer.echo(
-            f"relevance filter unavailable: {exc}\n"
-            "Set DEEPSEEK_API_KEY, or pass --no-relevance-filter to run without it.",
+            f"model provider unavailable: {exc}\n"
+            "Set DEEPSEEK_API_KEY, or pass --no-relevance-filter --no-synthesis.",
             err=True,
         )
         raise typer.Exit(code=1) from exc
@@ -367,6 +378,7 @@ def evaluate(
                         "source_snapshot_hash": (
                             snapshot.snapshot_hash if snapshot is not None else None
                         ),
+                        "claim_synthesis": "synthesis-v1",
                     },
                 )
 

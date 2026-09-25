@@ -28,6 +28,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from research_agent.identity import primary_identity
 from research_agent.llm.gateway import ModelGateway, ModelGatewayError, ModelResponse
 from research_agent.mcp_servers.common import PaperCandidate
 
@@ -271,6 +272,4 @@ class RelevanceJudge:
 def paper_key(paper: PaperCandidate) -> str:
     """Stable identifier used in verdicts and audit records."""
 
-    if paper.doi:
-        return f"doi:{paper.doi}"
-    return f"{paper.source}:{paper.source_record_id}"
+    return primary_identity(paper)

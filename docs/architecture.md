@@ -79,8 +79,11 @@
 职责：
 
 - CLI：项目创建、问题输入、运行、暂停、恢复、查看状态和导出。
-- Web UI：任务状态、Plan 进度、来源分布、候选论文和证据链可视化。
-- 人工确认：删除、移动、公开发送、高风险下载和 schema 迁移。
+- 本地 HTTP API（FastAPI，`src/research_agent/interfaces/`）：为前端提供只读查询与任务提交接口；默认只监听 `127.0.0.1`。
+- 用户前端（React + Vite + TypeScript，`web/`，ADR-0016）：
+  - 第一版（v1 最小 Web UI）：任务状态、Plan 进度、来源分布、候选论文和证据链可视化。
+  - 第二版（v1 之后）：提交研究问题、实时进度、报告浏览、导出下载和人工确认。
+- 人工确认：删除、移动、公开发送、高风险下载和 schema 迁移；前端只发起待确认请求，由 Policy 执行。
 
 不负责：
 
@@ -161,6 +164,9 @@
 - 执行 DOI/arXiv ID/标题/作者去重。
 - 合并 provenance 和冲突字段。
 
+实现现状：Federation 目前只在单个源站的查询变体之间按 `source_record_id` 去重；跨源 DOI
+合并发生在存储层 `ResearchRepository.upsert_paper`。归属待定，见路线图 §5 D1。
+
 不负责：
 
 - 生成研究结论。
@@ -178,7 +184,7 @@
 - `semantic-scholar-mcp`
 - `dblp-mcp`
 
-共享代码只允许放在 `mcp-common`：
+共享代码只允许放在 `src/research_agent/mcp_servers/common.py`（原设计中称为 `mcp-common`）及同目录的 `cache.py`：
 
 - MCP 协议初始化。
 - 日志与错误类型。
@@ -423,9 +429,9 @@ Report
 - Python 3.12。
 - FastAPI 提供本地 API。
 - SQLite + FTS5。
-- CLI 为主入口。
+- CLI 为主入口；用户前端第二版完成后，浏览器成为普通用户的入口。
 - MCP servers 以本地子进程或 stdio 方式启动。
-- Web UI 与 API 同机运行。
+- 前端与 API 同机运行；前端构建需要 Node.js，运行 CLI 不需要。
 
 ### 后续
 
@@ -441,6 +447,7 @@ Report
 允许的依赖方向：
 
 ```text
+web（前端）→ interfaces（HTTP API）
 interfaces → runtime → planner / executor / policy / evaluator
 runtime → llm（仅用于注入具体 provider）
 planner / policy / evidence → llm（仅协议）
@@ -452,6 +459,8 @@ storage → sqlite / filesystem
 
 禁止的依赖：
 
+- 前端 → SQLite 或文件系统直读（只能经 HTTP API）。
+- 前端 → 生成或改写 Claim、Evidence Span。
 - MCP server → Agent Core。
 - MCP server → 另一个 MCP server。
 - Evidence Engine → UI。
@@ -470,3 +479,26 @@ storage → sqlite / filesystem
 - `docs/adr/0007-mcp-protocol-vs-source-adapters.md`
 - `docs/adr/0008-evidence-chain-cardinality-and-provenance.md`
 - `docs/adr/0009-evaluation-scale-and-task-metric-separation.md`
+- `docs/adr/0010-sqlite-schema-and-migration-strategy.md`
+- `docs/adr/0011-portability-and-github-distribution.md`
+- `docs/adr/0012-semantic-relevance-filtering.md`
+- `docs/adr/0013-source-response-cache.md`
+- `docs/adr/0014-pure-react-baseline.md`
+- `docs/adr/0015-evaluation-protocol-corrections.md`
+- `docs/adr/0016-user-frontend-spa.md`
+
+## 15. 设计与实现的差距（2026-09-26）
+
+本文件描述目标架构。以下部分尚未实现或与设计不一致，处理计划以 `docs/roadmap.md` §4 为准：
+
+| 设计 | 实现现状 | 路线图 |
+|---|---|---|
+| Interface Layer 的本地 API 与用户前端 | `interfaces/` 为空包，`web/` 未创建；只有 CLI | `SC-04`、`FE-01`–`FE-10` |
+| Memory 模块 | `memory/` 为空包；项目与 Run 状态由存储层承担 | `SC-06`、D3 |
+| Policy 管理下载白名单、预算与审计 | `policy/` 只有语义相关性判断 | `SC-02` |
+| Runtime 暂停、恢复与检查点 | Executor 只支持顺序执行与步骤重试；重试尚不幂等 | `SC-05`、`EC-04` |
+| Router 按能力与预算选择源站并降级 | Planner 打分只排序；评测中不截断源站；`fallback_sources` 未使用 | `EV-04` |
+| Federation 负责跨源去重 | 跨源合并在存储层 | D1 |
+| 引用校验第 4 条：locator 可重新定位 | 全文 locator 页码写死为 1，偏移不可重新定位 | `EC-02` |
+| 导出 BibTeX、JSON、CSV | 只有 Markdown 报告 | `SC-01` |
+| FTS5 用于检索 | 索引与触发器已建，应用代码未使用 | `SC-06`、D4 |

@@ -342,7 +342,7 @@ Paper 与源站记录的关联，保留合并依据。
 | `paper_id` | TEXT | FK | Paper |
 | `kind` | TEXT | NOT NULL | `pdf`, `html`, `text` |
 | `sha256` | TEXT | NOT NULL | 文件哈希 |
-| `path` | TEXT | NOT NULL | 项目相对路径 |
+| `path` | TEXT | NOT NULL | 项目相对路径（当前实现保存传入路径，常为绝对路径，见路线图 `CL-02`） |
 | `size_bytes` | INTEGER | NOT NULL | 文件大小 |
 | `content_type` | TEXT | NOT NULL | MIME type |
 | `source_url` | TEXT | NOT NULL | 原始下载地址 |
@@ -621,7 +621,7 @@ UNIQUE(source_call_id, attempt_no)
 | `id` | TEXT | PK | UUID |
 | `evaluation_run_id` | TEXT | FK | EvaluationRun |
 | `question_id` | TEXT | NOT NULL | 正式问题 ID |
-| `system_id` | TEXT | NOT NULL | B0、B1、B2、B3、A1–A4 |
+| `system_id` | TEXT | NOT NULL | B0、B1、B2、B3、A1–A4、A6 |
 | `run_number` | INTEGER | NOT NULL | 从 1 开始 |
 | `research_run_id` | TEXT | NULL | FK Run |
 | `status` | TEXT | NOT NULL | `pending`, `running`, `completed`, `failed` |

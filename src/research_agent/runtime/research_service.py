@@ -11,9 +11,13 @@ from research_agent.evidence.claims import (
     ClaimDraft,
     build_claims_from_evidence,
     build_direct_claims,
+    constrain_claim_citations,
+    detach_unknown_span_ids,
     validate_claim_evidence,
 )
+from research_agent.evidence.synthesis import ClaimSynthesizer
 from research_agent.executor.executor import Executor, StepSpec
+from research_agent.identity import identity_aliases
 from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import PaperCandidate
@@ -60,6 +64,7 @@ class ResearchRunResult:
     relevance_skipped: bool = False
     retrieved_paper_keys: tuple[str, ...] = ()
     dropped_paper_keys: tuple[str, ...] = ()
+    paper_aliases: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
 
 @dataclass
@@ -86,12 +91,15 @@ class _RunContext:
     claims: list[ClaimDraft] = field(default_factory=list)
     dropped_source_record_ids: set[str] = field(default_factory=set)
     retrieved_keys: set[str] = field(default_factory=set)
+    retrieved_order: list[str] = field(default_factory=list)
     dropped_keys: set[str] = field(default_factory=set)
+    identity_aliases: dict[str, frozenset[str]] = field(default_factory=dict)
     verdicts: list[RelevanceVerdict] = field(default_factory=list)
     relevance_failures: int = 0
     relevance_skipped: bool = False
     retrieved_paper_keys: tuple[str, ...] = ()
     dropped_paper_keys: tuple[str, ...] = ()
+    findings: str = ""
     report_path: Path | None = None
     report_id: str | None = None
 
@@ -110,6 +118,7 @@ def render_report(
     evidence: list[tuple[str, str, str, str, str, str]],
     claims: list[ClaimDraft],
     files: list[tuple[str, str, str, str]],
+    findings: str = "",
 ) -> str:
     """Render a minimal evidence-first Markdown report."""
 
@@ -172,6 +181,9 @@ def render_report(
             f"| F{index} | {_md_cell(title)} | {_md_cell(source)} "
             f"| `{sha256}` | `{_md_cell(path)}` |"
         )
+
+    if findings.strip():
+        lines.extend(["", "## Findings", "", findings.strip()])
 
     lines.extend(
         [
@@ -241,6 +253,8 @@ async def run_federated_research(
     subquestions: Sequence[str] = (),
     response_cache: ResponseCache | None = None,
     evidence_chain: bool = True,
+    claim_synthesizer: ClaimSynthesizer | None = None,
+    citation_constraint: bool = True,
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -271,6 +285,12 @@ async def run_federated_research(
                 "sources": sorted(clients),
                 "download_pdf": download_pdf,
                 "evidence_chain": evidence_chain,
+                "synthesis": (
+                    claim_synthesizer.prompt_version
+                    if claim_synthesizer is not None
+                    else "template"
+                ),
+                "citation_constraint": citation_constraint,
                 "plan": plan.to_dict(),
             },
         )
@@ -374,7 +394,11 @@ async def run_federated_research(
                 ):
                     paper_id, _ = repository.upsert_paper(candidate)
                     context.paper_ids.add(paper_id)
-                    context.retrieved_keys.add(canonical_key(candidate))
+                    paper_key = canonical_key(candidate)
+                    if paper_key not in context.retrieved_keys:
+                        context.retrieved_keys.add(paper_key)
+                        context.retrieved_order.append(paper_key)
+                    context.identity_aliases[paper_key] = identity_aliases(candidate)
                     stored_source_record_id = repository.record_source_record(
                         source_call_id=source_call_id,
                         candidate=candidate,
@@ -583,22 +607,92 @@ async def run_federated_research(
                 for row in context.evidence_rows
                 if row[2] not in context.dropped_source_record_ids
             ]
-            if evidence_chain:
-                context.claims = build_claims_from_evidence(usable)
-            else:
+            available_evidence_ids = {row[4] for row in usable}
+            mode = "template"
+            if not evidence_chain:
                 papers_by_key = {
                     canonical_key(paper): paper
                     for paper, _source_record_id in context.source_records
                     if canonical_key(paper) not in context.dropped_keys
                 }
                 context.claims = build_direct_claims(list(papers_by_key.values()))
-            return {"claim_count": len(context.claims)}
+                context.findings = ""
+                mode = "direct"
+            elif claim_synthesizer is None:
+                context.claims = build_claims_from_evidence(usable)
+                context.findings = ""
+            else:
+                synthesized = await claim_synthesizer.synthesize(
+                    question=question,
+                    subquestions=subquestions,
+                    evidence=usable,
+                    citation_constraint=citation_constraint,
+                )
+                mode = "fallback" if synthesized.used_fallback else "llm"
+                context.findings = synthesized.findings
+                if synthesized.response is not None:
+                    repository.record_model_call(
+                        run_id=run_id,
+                        provider=synthesized.response.provider,
+                        model=synthesized.response.model,
+                        purpose="claim_synthesis",
+                        prompt_hash=synthesized.response.prompt_hash,
+                        prompt_version=claim_synthesizer.prompt_version,
+                        response_hash=synthesized.response.response_hash,
+                        input_tokens=synthesized.response.input_tokens,
+                        output_tokens=synthesized.response.output_tokens,
+                        latency_ms=synthesized.response.latency_ms,
+                        status="success",
+                    )
+                else:
+                    repository.record_model_call(
+                        run_id=run_id,
+                        provider="unknown",
+                        model="unknown",
+                        purpose="claim_synthesis",
+                        prompt_hash="",
+                        prompt_version=claim_synthesizer.prompt_version,
+                        status="failed",
+                        error_code="model_gateway_error",
+                    )
+                if citation_constraint:
+                    context.claims = constrain_claim_citations(
+                        synthesized.claims,
+                        available_evidence_ids,
+                    )
+                else:
+                    context.claims = detach_unknown_span_ids(
+                        synthesized.claims,
+                        available_evidence_ids,
+                    )
+            repository.record_audit_event(
+                run_id=run_id,
+                action="synthesize_claims",
+                target_type="run",
+                target_id=run_id,
+                decision="allowed",
+                details={
+                    "mode": mode,
+                    "citation_constraint": citation_constraint,
+                    "claim_count": len(context.claims),
+                },
+            )
+            return {
+                "claim_count": len(context.claims),
+                "mode": mode,
+                "citation_constraint": citation_constraint,
+            }
 
         async def validate_citations_step() -> dict[str, object]:
+            if not citation_constraint:
+                return {"validated_claims": 0, "citation_constraint": False}
             available_evidence_ids = {row[4] for row in context.evidence_rows}
             for claim in context.claims:
                 validate_claim_evidence(claim, available_evidence_ids)
-            return {"validated_claims": len(context.claims)}
+            return {
+                "validated_claims": len(context.claims),
+                "citation_constraint": True,
+            }
 
         async def generate_report_step() -> dict[str, object]:
             report_text = render_report(
@@ -608,6 +702,7 @@ async def run_federated_research(
                 evidence=context.evidence_rows,
                 claims=context.claims,
                 files=context.file_rows,
+                findings=context.findings,
             )
             report_path = reports_root / run_id / "report.md"
             report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -694,8 +789,12 @@ async def run_federated_research(
             relevance_dropped=len(context.dropped_source_record_ids),
             relevance_failures=context.relevance_failures,
             relevance_skipped=context.relevance_skipped,
-            retrieved_paper_keys=tuple(sorted(context.retrieved_keys)),
+            retrieved_paper_keys=tuple(context.retrieved_order),
             dropped_paper_keys=tuple(sorted(context.dropped_keys)),
+            paper_aliases=tuple(
+                (key, tuple(sorted(aliases)))
+                for key, aliases in sorted(context.identity_aliases.items())
+            ),
         )
 
 

@@ -114,6 +114,32 @@ def test_repository_deduplicates_paper_by_canonical_key(tmp_path: Path) -> None:
         assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 1
 
 
+def test_repository_merges_arxiv_record_with_arxiv_doi(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+    arxiv = _candidate()
+    arxiv = arxiv.model_copy(
+        update={"doi": None, "source_record_id": "2407.18940"}
+    )
+    openalex = _candidate().model_copy(
+        update={
+            "source": "openalex",
+            "source_record_id": "W999",
+            "doi": "10.48550/arXiv.2407.18940",
+            "landing_url": "https://openalex.org/W999",
+        }
+    )
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        first_id, _ = repo.upsert_paper(arxiv)
+        second_id, created = repo.upsert_paper(openalex)
+
+        assert created is False
+        assert second_id == first_id
+        assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 1
+
+
 def test_repository_rejects_full_text_evidence_without_file(tmp_path: Path) -> None:
     db_path = tmp_path / "research_agent.db"
     apply_migrations(db_path)

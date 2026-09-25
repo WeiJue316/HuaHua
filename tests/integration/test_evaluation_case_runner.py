@@ -129,7 +129,7 @@ async def test_full_system_case_reports_retrieval_and_evidence_metrics(
     metrics = outcome.metrics or {}
     assert metrics["gold_count"] == 1.0
     assert metrics["matched_count"] == 1.0, "the gold paper must be found"
-    assert metrics["recall"] == 1.0
+    assert metrics["recall_kept"] == 1.0
     assert metrics["stored_paper_count"] >= metrics["retrieved_count"]
     assert "evidence_coverage" in metrics
     assert "unsupported_claim_rate" in metrics
@@ -175,13 +175,73 @@ async def test_denied_candidates_leave_the_kept_set_and_the_claims(
     )
 
 
-@pytest.mark.asyncio
-async def test_unimplemented_system_is_reported_not_silently_run(
-    tmp_path: Path,
-) -> None:
-    outcome = await _run(tmp_path, "a4", "A4", None)
+class _SynthesisGateway(StubGateway):
+    """Relevance verdicts, plus one synthesis reply with a dangling citation."""
 
-    assert outcome.error_code == "NotImplementedError"
+    async def complete(
+        self,
+        *,
+        prompt_hash: str,
+        system: str,
+        user: str,
+        max_output_tokens: int = 900,
+        temperature: float = 0.0,
+        json_output: bool = False,
+    ) -> ModelResponse:
+        if "Evidence spans:" in user:
+            self.prompts.append(user)
+            payload = {
+                "findings": "The stored span answers the question.",
+                "claims": [
+                    {
+                        "claim_text": "Claims can be bound to stored spans.",
+                        "support_status": "supported",
+                        "evidence_labels": ["E1"],
+                    },
+                    {
+                        "claim_text": "An unseen paper refutes the result.",
+                        "support_status": "supported",
+                        "evidence_labels": ["E99"],
+                    },
+                ],
+            }
+            return ModelResponse(
+                provider="stub",
+                model="stub-model",
+                content=json.dumps(payload),
+                prompt_hash=prompt_hash,
+                response_hash="stub-synthesis",
+                input_tokens=4,
+                output_tokens=8,
+                latency_ms=2,
+                finish_reason="stop",
+            )
+        return await super().complete(
+            prompt_hash=prompt_hash,
+            system=system,
+            user=user,
+            max_output_tokens=max_output_tokens,
+            temperature=temperature,
+            json_output=json_output,
+        )
+
+
+@pytest.mark.asyncio
+async def test_a4_keeps_dangling_support_that_b3_demotes(tmp_path: Path) -> None:
+    constrained = await _run(tmp_path, "b3-cite", "B3", _SynthesisGateway())
+    unconstrained = await _run(tmp_path, "a4-cite", "A4", _SynthesisGateway())
+
+    assert constrained.error_code is None
+    assert unconstrained.error_code is None
+    b3 = constrained.metrics or {}
+    a4 = unconstrained.metrics or {}
+    assert b3["dangling_support_count"] == 0.0
+    assert b3["unsupported_claim_rate"] > 0.0
+    assert a4["dangling_support_count"] == 1.0
+    assert a4["unsupported_claim_rate"] == 0.0
+    assert a4["claims_with_evidence"] == 1.0
+    report = next((tmp_path / "reports-b3-cite").rglob("report.md"))
+    assert "The stored span answers the question." in report.read_text(encoding="utf-8")
 
 
 @pytest.mark.asyncio
@@ -247,7 +307,7 @@ async def test_evaluation_runner_does_not_deadlock_against_the_research_db(
     assert row is not None
     assert row["status"] == "completed"
     assert row["error_code"] is None
-    assert "recall" in row["metrics_json"]
+    assert "recall_kept" in row["metrics_json"]
 
 
 @pytest.mark.asyncio
@@ -290,7 +350,7 @@ async def test_second_run_against_the_same_db_still_counts_its_papers(
     assert second_metrics["stored_paper_count"] == first_metrics["stored_paper_count"], (
         "the second run retrieves the same papers and must count them all"
     )
-    assert second_metrics["recall"] == first_metrics["recall"]
+    assert second_metrics["recall_kept"] == first_metrics["recall_kept"]
 
 
 class SummaryGateway:
@@ -346,8 +406,8 @@ async def test_b0_uses_the_frozen_corpus_and_calls_the_model_once(
     assert outcome.error_code is None
     metrics = outcome.metrics or {}
     assert gateway.calls == 1
-    assert metrics["recall"] == 1.0
-    assert metrics["precision"] == 1.0
+    assert metrics["recall_kept"] == 1.0
+    assert metrics["precision_kept"] == 1.0
     assert metrics["llm_calls"] == 1.0
     assert metrics["report_written"] == 1.0
     reports = list((tmp_path / "reports-b0" / "b0").glob("*.md"))
@@ -401,7 +461,7 @@ async def test_b2_runs_a_react_search_finish_loop(tmp_path: Path) -> None:
     assert outcome.error_code is None
     metrics = outcome.metrics or {}
     assert gateway.calls == 2
-    assert metrics["recall"] == 1.0
+    assert metrics["recall_kept"] == 1.0
     assert metrics["search_calls"] == 1.0
     assert metrics["steps_used"] == 2.0
     assert metrics["llm_calls"] == 2.0
@@ -536,7 +596,7 @@ async def test_source_snapshot_replaces_live_source_clients(tmp_path: Path) -> N
         outcome = await runner("csai_test", "B3", 1)
 
     assert outcome.error_code is None
-    assert (outcome.metrics or {})["recall"] == 1.0
+    assert (outcome.metrics or {})["recall_kept"] == 1.0
 
 
 @pytest.mark.asyncio

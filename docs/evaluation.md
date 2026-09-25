@@ -2,10 +2,10 @@
 
 | 字段 | 内容 |
 |---|---|
-| 文档版本 | v0.1 |
-| 状态 | 实验设计基线 |
-| 日期 | 2026-09-23 |
-| 关联文档 | `docs/PRD.md`, `docs/architecture.md`, `docs/data-model.md` |
+| 文档版本 | v0.2 |
+| 状态 | 实验设计基线（2026-09-26 按 ADR-0015 修正口径） |
+| 日期 | 2026-09-26 |
+| 关联文档 | `docs/PRD.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/roadmap.md` |
 
 ## 1. 评测目标
 
@@ -195,7 +195,9 @@ csai_007 的金标只有 2 篇，而系统在 K=20 下保留 31 篇候选。此�
 - 状态机 + Plan-and-Execute。
 - 五源 MCP + Federation Router。
 - 完整证据链和引用校验。
-- 输出 Markdown、JSON/CSV 和 BibTeX。
+- 输出 Markdown、JSON/CSV 和 BibTeX。当前只有 Markdown 报告；JSON/CSV 证据表与 BibTeX
+  导出见路线图 `SC-01`。
+- Router 每题最多选择 3 个源站（ADR-0015），其余源站作为降级备选。
 
 ## 5. 消融实验
 
@@ -216,14 +218,33 @@ A1–A4 与 A6 是核心消融；A5 作为多源联邦的补充实验。若时�
 - A1 已实现：`evidence_chain=False`，论文仍持久化，但不创建 Evidence Span，
   Claim 直接由通过相关性过滤的论文生成并标记为 `unsupported`。
 - A2 已实现：固定单查询 Plan（`reason=A2_fixed_pipeline`），不走 Planner 的查询变体。
-- A4 未实现：必须先提供可配置的 LLM synthesis/claim generation，否则无法真实测试
-  “自由生成引用和结论”。
-- A3/A6 已实现；A5 仍延后。
+- A4 已接入但尚不是单因素消融：当前实现在约束关闭时额外给模型一段“可以引用列表外标签”
+  的提示（`evidence/synthesis.py` 的 `CONSTRAINT_OFF_NOTE`），因此同时改变了提示词和后处理。
+  按 ADR-0015，A4 与 B3 必须使用完全相同的 `synthesis-v1` 提示，唯一区别是后处理：
+  B3 把没有真实 span 的 `supported` / `partially_supported` Claim 降为 `unsupported`；
+  A4 保留模型给出的状态，只丢掉无法写入 `claim_evidence` 的未知 span id（路线图 `EV-05`）。
+- A4 相对 B3 自动可比的是 `dangling_support_count`（标成有支持、但没有 Evidence Span 的
+  Claim 数）与 Unsupported Claim Rate；后者只在约束打开时上升，因为降级发生在代码侧。
+- A3 已接入但当前与 B3 相同：评测中 B3 的 Planner 未设源站上限，本就查询全部五源。
+  按 ADR-0015，B3 每题最多选择 3 个源站，A3 固定查询全部五源（路线图 `EV-04`）。
+- A6 已实现开关；严格 / 宽松两种阈值尚未实现（路线图 `EC-08`）。A5 仍延后。
+- 无模型网关时综合退回模板首句；模板路径的结果不得与 LLM 综合的结果混合比较。
 
 A6 的依据见 `docs/adr/0012-semantic-relevance-filtering.md`：人工复核 pilot 数据集时发现，
 纯关键词匹配会稳定地把邻域论文收进候选，且该失败无法用词重合消除。
 
 ## 6. 指标定义
+
+### 6.0 口径修正（ADR-0015）
+
+2026-09-26 审阅发现评测实现与本节定义不一致，修正决策见
+`docs/adr/0015-evaluation-protocol-corrections.md`，实施项见路线图 §4.2。要点：
+
+- 检索指标一律在长度为 K 的**有序候选列表**上计算；当前实现使用无序集合、Precision
+  除以保留论文数，尚未修正（`EV-02`、`EV-03`）。
+- 比对金标前，DOI、arXiv ID、arXiv DOI（`10.48550/arxiv.<id>`）、OpenAlex ID 统一映射到同一
+  **论文身份键**（`EV-01`）。
+- 2026-09-25 及之前的 Pilot 对比与消融数字口径作废，不得作为实验结论引用。
 
 ### 6.1 检索指标
 
@@ -247,6 +268,17 @@ Precision@K = |Relevant ∩ TopK| / K
 
 使用二元相关性计算，排名越靠前的高相关论文贡献越大。用于比较不同检索排序策略。
 
+#### 候选列表的排序规则
+
+| 系统 | 排序依据 |
+|---|---|
+| B0 | BM25 得分 |
+| B1/B3/A1–A4/A6 | 按源站轮转交错，源内保持源站返回顺序；相关性过滤只删除、不重排 |
+| B2 | 论文首次被检索到的顺序 |
+
+列表按论文身份键去重并保留首次出现的位置，然后截断为 K。相关性过滤后的集合指标保留为
+`precision_kept`、`recall_kept`，只用于诊断过滤行为，不进入论文主表。
+
 #### Source Coverage
 
 ```text
@@ -264,6 +296,10 @@ EvidenceCoverage = 至少有一个有效 Evidence Span 的 Claim 数 / 全部 Cl
 ```
 
 “有效”指 Paper 存在、Evidence 原文可定位、支持状态一致。
+
+当前实现只检查 Claim 是否关联了至少一个 Evidence Span，尚未检查可定位性与支持状态；
+全文 locator 的重新定位见路线图 `EC-02`。在此之前该指标应称为“证据关联率”，不作为
+“有效证据覆盖率”报告。
 
 #### Citation Accuracy
 
@@ -287,6 +323,16 @@ UnsupportedClaimRate = unsupported Claim 数 / 全部 Claim 数
 ```
 
 `partially_supported` 单独统计，不并入 supported。
+
+#### Dangling Support Count
+
+```text
+DanglingSupportCount = support_status 为 supported 或 partially_supported
+                       且没有 Evidence Span 的 Claim 数
+```
+
+用于区分“模型自称有支持”和“引用确实落到已存储 span”。B3 在写入前把这类
+Claim 降为 `unsupported`，所以该计数应为 0；A4 保留模型状态，该计数上升。
 
 #### Locator Validity
 
@@ -318,6 +364,11 @@ TaskCompletionRate = 满足 baseline-neutral 任务完成清单的 Run 数 / 总
 该指标不要求证据链、引用校验或多源调用，用于 RQ3 的公平 baseline 比较。
 自动评测使用 `task-completion-v1`：报告存在、全部子问题被实质性回答、没有未处理异常，
 且系统模型调用数不超过 `--model-call-budget`。评测 judge 自身的调用不计入系统成本。
+
+当前 `--model-call-budget` 默认为 20，而 B3 每篇候选论文一次相关性调用加一次综合调用，
+K=20 时几乎必然超出预算，Task Completion 会被系统性判为 0。正式实验前预算改为按系统配置
+估算并写入配置快照（ADR-0015，路线图 `EV-07`）。judge 读取报告前 12000 个字符；
+judge 失败时单独记录 `judge_failed` 并排除出分母，不得当作任务未完成。
 
 #### Evidence Compliance Rate
 
@@ -364,7 +415,8 @@ RecoveryRate = 从失败或暂停状态恢复并完成的 Run 数 / 发生失败
 - 输入和输出 token：`input_tokens`、`output_tokens`。
 - 模型调用累计延迟：`model_latency_ms`；它不等于端到端延迟。
 - LLM 成本。
-- 源站请求次数、重试次数、限流次数。
+- 源站请求次数、重试次数、限流次数。H2b 使用 `source_http_calls`（实际请求次数，含查询
+  变体与重试）；现有 `source_attempts` 只统计被调用的源站个数（路线图 `EV-06`）。
 - 源站健康：`source_attempts`、`source_successes`、`source_failures`、
   `source_success_rate`。跨系统比较必须同时报告这些字段。
 - PDF 下载成功率。
@@ -407,7 +459,8 @@ RecoveryRate = 从失败或暂停状态恢复并完成的 Run 数 / 发生失败
 
 ### 8.1 运行控制
 
-- 核心 8 配置在每个正式问题上运行 3 次，温度设为 0；若模型仍随机，记录方差。
+- 核心 8 配置在每个正式问题上运行 3 次，温度设为 0；若模型仍随机，记录方差。评测使用
+  永不过期的源站响应缓存，因此 3 次重复只反映模型侧的随机性，不反映源站波动。
 - B0/B1/B2 于 2026-12-01 至 2027-01-15 完成；B3/A1–A4 于 2027-01-16 至 2027-02-28 完成。B0/B1/B2 一旦开始正式运行，其配置和问题集不得再变。
 - 正式跨系统比较必须通过 `research-agent evaluate --sources ...` 固定源站白名单；未能稳定查询的源站要显式排除并记录原因。
 - 控制变量实验可使用 `--source-snapshot`，让所有系统在同一 per-source 候选池上排序；快照模式与 live-source 模式必须分开报告。
@@ -491,7 +544,7 @@ RecoveryRate = 从失败或暂停状态恢复并完成的 Run 数 / 发生失败
 - 多个指标比较需要校正。
 - 不把相关性解释为因果关系；结论限定在实验条件下。
 
-## 13. 预期论文图表
+## 13. 预期实验图表
 
 1. 系统架构图。
 2. 证据链数据模型图。

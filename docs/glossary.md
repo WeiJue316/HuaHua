@@ -2,9 +2,9 @@
 
 | 字段 | 内容 |
 |---|---|
-| 文档版本 | v0.1 |
+| 文档版本 | v0.2 |
 | 状态 | 设计基线 |
-| 日期 | 2026-09-23 |
+| 日期 | 2026-09-26 |
 
 ## 1. 使用规则
 
@@ -55,6 +55,12 @@
 
 不要混用：Federation、负载均衡器。
 
+### Routing Budget / 路由预算
+
+Router 每题最多选择的源站数。完整系统 B3 为 3；A3 消融不设预算，查询全部五个源站（ADR-0015）。
+
+不要混用：并发度、请求次数。
+
 ### Source / 源站
 
 外部学术数据来源，例如 arXiv、OpenAlex、Crossref、Semantic Scholar、DBLP。
@@ -72,6 +78,12 @@
 跨源归一化后的规范文献实体。一个 Paper 可以关联多个 Source Record。
 
 不要混用：Work、文献条目、源站记录。
+
+### Paper Identity Key / 论文身份键
+
+判断两条记录是否为同一篇论文的规范键。DOI、arXiv ID、arXiv DOI（`10.48550/arxiv.<id>`）和 OpenAlex ID 映射到同一身份键；运行时、相关性过滤、评测指标和金标比对必须使用同一个身份键函数（ADR-0015）。
+
+不要混用：`source_record_id`、`canonical_key` 的某一种写法。
 
 ### File / 文件
 
@@ -157,6 +169,12 @@ Plan 中可独立执行、记录状态和重试的最小单元。
 
 不要混用：权限系统、Prompt 规则。
 
+### User Frontend / 用户前端
+
+面向普通用户的浏览器界面（`web/`，React + Vite + TypeScript），只通过本地 HTTP API 访问数据（ADR-0016）。第一版是 v1 要求的最小 Web UI（证据链查看器），第二版增加提问、实时进度、报告浏览、导出和人工确认。
+
+不要混用：CLI、本地 API、MCP server。
+
 ### Evaluator / 评测器
 
 运行问题集和 baseline，计算指标并保存实验结果的组件。
@@ -198,6 +216,18 @@ Plan 中可独立执行、记录状态和重试的最小单元。
 `unsupported` Claim 占全部 Claim 的比例。
 
 不要混用：错误率。
+
+### Dangling Support / 悬空支持
+
+`support_status` 为 `supported` 或 `partially_supported`、却没有关联任何 Evidence Span 的 Claim。完整系统在写入前把它降为 `unsupported`；A4 消融保留它，用 `dangling_support_count` 统计。
+
+不要混用：无支撑结论（`unsupported`）。
+
+### Ranked Candidate List / 有序候选列表
+
+系统输出、用于计算 Precision@K、Recall@K 和 nDCG@K 的论文列表：按身份键去重、按规定规则排序、截断为 K（ADR-0015）。
+
+不要混用：相关性过滤后的无序集合（只用于 `precision_kept`、`recall_kept`）。
 
 ### Task Success Rate / 任务成功率
 

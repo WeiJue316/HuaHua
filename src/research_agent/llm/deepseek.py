@@ -52,8 +52,7 @@ class DeepSeekGateway:
         key = api_key or api_key_from_environment()
         if not key:
             raise ModelGatewayError(
-                f"{DEEPSEEK_API_KEY_ENV_VAR} is not set; the semantic relevance "
-                "filter needs a model provider"
+                f"{DEEPSEEK_API_KEY_ENV_VAR} is not set; a model provider is required"
             )
         self.api_key = key
         self.model = model

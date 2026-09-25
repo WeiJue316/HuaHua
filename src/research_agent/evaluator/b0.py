@@ -16,6 +16,7 @@ class B0Outcome:
     """Artifacts and cost metadata from one B0 case."""
 
     retrieved_keys: frozenset[str]
+    ranked_keys: tuple[str, ...]
     report: str
     report_path: Path
     corpus_hash: str
@@ -75,6 +76,7 @@ class B0Baseline:
         report_path.write_text(report, encoding="utf-8", newline="\n")
         return B0Outcome(
             retrieved_keys=frozenset(hit.document.paper_key for hit in hits),
+            ranked_keys=tuple(hit.document.paper_key for hit in hits),
             report=report,
             report_path=report_path,
             corpus_hash=self.index.corpus_hash,

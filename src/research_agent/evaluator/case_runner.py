@@ -28,6 +28,7 @@ from research_agent.evaluator.systems import (
     restrict_sources,
 )
 from research_agent.evaluator.task_completion import TaskCompletionJudge
+from research_agent.evidence.synthesis import ClaimSynthesizer
 from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.planner.planner import ResearchPlan, plan_research
@@ -130,6 +131,9 @@ class ResearchCaseRunner:
             if self.gateway is None:
                 return EvaluationCaseOutcome(error_code="no_model_gateway")
             judge = RelevanceJudge(self.gateway)
+        synthesizer = None
+        if system_id != "A1" and self.gateway is not None:
+            synthesizer = ClaimSynthesizer(self.gateway)
 
         result = await run_federated_research(
             question=question.question,
@@ -142,6 +146,8 @@ class ResearchCaseRunner:
             subquestions=question.subquestions,
             response_cache=self.cache,
             evidence_chain=system_id != "A1",
+            claim_synthesizer=synthesizer,
+            citation_constraint=config.citation_constraint,
         )
 
         usage = load_model_usage_checked(self.settings.db_path, result.run_id)
@@ -180,6 +186,8 @@ class ResearchCaseRunner:
         retrieval = retrieval_metrics(
             retrieved_keys=set(outcome.retrieved_keys),
             gold_keys=set(question.gold_papers),
+            ranked_keys=outcome.ranked_keys,
+            k=self.settings.max_results_per_source,
         )
         return EvaluationCaseOutcome(
             metrics={
@@ -223,6 +231,8 @@ class ResearchCaseRunner:
         retrieval = retrieval_metrics(
             retrieved_keys=set(outcome.retrieved_keys),
             gold_keys=set(question.gold_papers),
+            ranked_keys=outcome.ranked_keys,
+            k=self.settings.max_results_per_source,
         )
         return EvaluationCaseOutcome(
             metrics={
@@ -298,9 +308,20 @@ class ResearchCaseRunner:
             source for source, count in result.source_counts.items() if count > 0
         }
 
+        dropped = set(result.dropped_paper_keys)
+        ranked = [key for key in result.retrieved_paper_keys if key not in dropped]
+        alias_map = dict(result.paper_aliases)
+        extra_aliases = {
+            alias
+            for key in kept
+            for alias in alias_map.get(key, ())
+        }
         retrieval = retrieval_metrics(
             retrieved_keys=kept,
             gold_keys=set(question.gold_papers),
+            extra_aliases=extra_aliases,
+            ranked_keys=ranked,
+            k=self.settings.max_results_per_source,
         )
         evidence = evidence_metrics(claims)
         coverage = source_coverage(

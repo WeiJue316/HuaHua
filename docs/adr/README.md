@@ -34,3 +34,5 @@
 | 0012 | 语义相关性过滤 | Accepted |
 | 0013 | 源站响应缓存 | Accepted |
 | 0014 | 纯 ReAct baseline 使用独立受限循环 | Accepted |
+| 0015 | 评测口径修正：排序 Top-K、论文身份键、路由预算、单因素 A4 | Accepted |
+| 0016 | 用户前端采用独立 SPA，分两阶段交付 | Accepted |

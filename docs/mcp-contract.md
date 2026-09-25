@@ -16,7 +16,7 @@
 1. 每个源站独立实现 MCP server。
 2. 公共 envelope 只保证联邦层可处理，不强行抹平源站字段。
 3. 源站原始记录必须保留在 `raw` 或 Source Record 中。
-4. 去重、冲突合并和 provenance 合并属于 Federation，不属于单个 MCP server。
+4. 去重、冲突合并和 provenance 合并属于 Federation，不属于单个 MCP server。（实现现状：跨源 DOI 合并目前在存储层完成，归属待定，见 `docs/roadmap.md` §5 D1。）
 5. 不支持的 capability 必须明确返回，不得用空结果伪装成功。
 6. 下载行为必须经过 Policy，且 MCP server 不直接写入最终归档。
 
