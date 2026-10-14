@@ -3,8 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from research_agent.mcp_servers.openalex.parser import (
+    normalize_doi,
     normalize_openalex_id,
     parse_search_response,
+    parse_work,
     reconstruct_abstract,
 )
 
@@ -64,3 +66,22 @@ def test_parse_work_preserves_the_citation_count() -> None:
     )
 
     assert paper.raw["cited_by_count"] == 42
+
+
+def test_normalize_openalex_doi_strips_resolver_hosts() -> None:
+    assert normalize_doi("https://dx.doi.org/10.1/AbC") == "10.1/abc"
+    assert normalize_doi("https://www.doi.org/10.1/AbC") == "10.1/abc"
+
+
+def test_parse_work_reads_arxiv_id_without_a_doi() -> None:
+    paper = parse_work(
+        {
+            "id": "https://openalex.org/W1",
+            "display_name": "A paper without a DOI",
+            "ids": {"arxiv": "https://arxiv.org/abs/2312.10997v2"},
+            "primary_location": {},
+        }
+    )
+
+    assert paper.doi is None
+    assert paper.raw["arxiv_id"] == "2312.10997"

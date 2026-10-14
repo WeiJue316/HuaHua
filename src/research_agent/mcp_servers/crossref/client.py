@@ -18,6 +18,7 @@ from research_agent.mcp_servers.common import (
     RetryPolicy,
     SleepFn,
     get_with_retry,
+    parse_retry_after,
     user_agent,
 )
 from research_agent.mcp_servers.crossref.parser import (
@@ -89,22 +90,21 @@ class CrossrefClient:
         *,
         params: dict[str, str | int] | None = None,
     ) -> dict[str, Any]:
-        response = await get_with_retry(
-            self.http_client,
-            f"{self.api_url}{path}",
-            params=params,
-            headers={"User-Agent": user_agent()},
-            retry_policy=self.retry_policy,
-            cache=self.cache,
+        try:
+            response = await get_with_retry(
+                self.http_client,
+                f"{self.api_url}{path}",
+                params=params,
+                headers={"User-Agent": user_agent()},
+                retry_policy=self.retry_policy,
+                cache=self.cache,
                 sleep=self.sleep,
-        )
-        if response.status_code >= 400:
-            retry_after = response.headers.get("retry-after")
-            retry_after_seconds = (
-                int(retry_after)
-                if retry_after and retry_after.isdigit()
-                else None
             )
+        except httpx.HTTPError as exc:
+            raise CrossrefClientError(f"Crossref request failed: {exc}") from exc
+        if response.status_code >= 400:
+            delay = parse_retry_after(response.headers.get("retry-after"))
+            retry_after_seconds = None if delay is None else int(delay)
             raise CrossrefClientError(
                 f"Crossref request failed with status {response.status_code}",
                 status_code=response.status_code,

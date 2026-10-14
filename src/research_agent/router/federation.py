@@ -64,16 +64,20 @@ async def search_sources(
 
     Variants are merged in the order given and then truncated, so the first
     variant fills the budget and later ones only contribute papers it missed.
-    **The caller must therefore order variants best first.** Measured example:
-    on csai_007 the full question ranks the gold papers at position 13 and the
-    stopword-stripped form at 17, so at ``max_results_per_source=20`` putting
-    the question first keeps them while interleaving the variants would drop
-    both, since each would only be allotted ten slots.
+    **The caller must therefore order variants best first.** The raw ``query``
+    is not sent again: Planner already puts the normalized question first in
+    ``query_variants``, and a whitespace difference would otherwise search the
+    unnormalized text before those variants. When no variant is supplied, the
+    raw query is used by itself.
     """
 
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be at least 1")
-    effective_queries = tuple(dict.fromkeys([query, *query_variants]))
+    effective_queries = tuple(
+        dict.fromkeys(variant for variant in query_variants if variant)
+    )
+    if not effective_queries:
+        effective_queries = (query,)
     source_names = list(clients)
     semaphore = asyncio.Semaphore(max_concurrency)
 

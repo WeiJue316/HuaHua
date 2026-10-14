@@ -36,4 +36,6 @@ def test_parse_crossref_search_response() -> None:
 
 def test_normalize_crossref_doi() -> None:
     assert normalize_crossref_doi("https://doi.org/10.1145/ABC") == "10.1145/abc"
+    assert normalize_crossref_doi("https://dx.doi.org/10.1145/ABC") == "10.1145/abc"
+    assert normalize_crossref_doi("https://www.doi.org/10.1145/ABC") == "10.1145/abc"
     assert normalize_crossref_doi("10.1145/ABC") == "10.1145/abc"

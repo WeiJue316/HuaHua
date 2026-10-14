@@ -5,6 +5,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from research_agent.mcp_servers.common import RetryPolicy
 from research_agent.mcp_servers.dblp.client import DblpClient
 from research_agent.mcp_servers.dblp.server import create_dblp_server
 
@@ -60,3 +61,25 @@ async def test_dblp_server_search_returns_envelope() -> None:
     assert payload["ok"] is True
     assert payload["source"] == "dblp"
     assert payload["items"][0]["source_record_id"] == "conf/example/paper"
+
+
+@pytest.mark.asyncio
+async def test_dblp_server_reports_timeout_as_failed_envelope() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.TimeoutException("timed out")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        server = create_dblp_server(
+            DblpClient(
+                http_client=http_client,
+                retry_policy=RetryPolicy(max_attempts=1),
+            )
+        )
+        result = await server.call_tool(
+            "dblp_search_papers",
+            {"query": "evidence chain"},
+        )
+
+    assert result.structured_content is not None
+    assert result.structured_content["ok"] is False
+    assert result.structured_content["error"]["code"] == "upstream_unavailable"

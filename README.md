@@ -23,7 +23,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 - **证据链断口**：报告仍列出被相关性过滤的论文；全文 locator 页码写死为 1、偏移不可重新定位；补全摘要挂在错误的 Source Record 上；步骤重试会重复写入（`EC-01`–`EC-04`）。
 - **安全**：OpenAlex API key 会随 URL 写入源站缓存文件（`SR-01`）。
 - 评测在有模型网关时用 `synthesis-v1` 从已存储 Evidence Span 写 Claim 和 Findings；模型失败或 CLI 未加 `--synthesis` 时退回模板首句。
-- 只输出 Markdown 报告；JSON/CSV 证据表、BibTeX 导出、下载 Policy 尚未实现（`SC-01`、`SC-02`）。
+- 一次 `research` 会写 Markdown 报告、JSON/CSV 证据表和 BibTeX。PDF 下载只允许开放获取且主机在白名单内，并写入审计。Zotero 导出尚未实现。
 - 目前只有 CLI。用户前端按 ADR-0016 分两步：第一版证据链查看器对齐 M4（2027-01-15），第二版面向普通用户的完整前端在 M7 之后（M8，`FE-01`–`FE-10`）。
 - 正式 30 题集尚未实现。
 - 真实源站限制：arXiv 间歇 406/429、Semantic Scholar 429、DBLP 返回 bot challenge，三者当前无法稳定完成真实烟测；CI 全部使用 fixture 离线验证。
@@ -33,7 +33,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 ### 验证状态
 
 - 2026-09-26 已通过：Ruff、mypy（strict）、pytest（261 passed）、`research-agent --help`、`python scripts/check_docs.py`。
-- 受限环境下 pytest 默认临时目录可能无写权限，可加 `--basetemp <可写目录>`（`CL-08`）。
+- 受限环境下 pytest 默认临时目录可能无写权限。处理方式见下方「开发验证」，不改测试代码。
 - 一键本地检查：`uv run python scripts/check_all.py`，执行与 CI 相同的命令组。
 ## 快速开始
 
@@ -52,15 +52,28 @@ uv run research-agent --help
 uv run research-agent research "evidence chain" --sources arxiv,openalex --max-results 5 --download-pdf
 ```
 
-`research` 默认开启语义相关性过滤，需要环境变量 `DEEPSEEK_API_KEY`；没有密钥时加 `--no-relevance-filter`。加 `--synthesis` 可用模型从已存储证据写 Claim。
+`doctor` 检查 Python 3.12、项目内 `data/` 与 `reports/` 是否可写、迁移能否在临时数据库执行，以及 `DEEPSEEK_API_KEY`、`OPENALEX_API_KEY`、`RESEARCH_AGENT_CONTACT`、`SEMANTIC_SCHOLAR_API_KEY` 是否已设置。它不打印变量的值，也不修改已有数据库。
+
+`research` 在设置了 `DEEPSEEK_API_KEY` 时默认做语义相关性过滤。没有密钥时自动跳过过滤，并在输出里写明 `DEEPSEEK_API_KEY is not set`。显式传入 `--relevance-filter` 或 `--synthesis` 时仍然需要密钥，命令会在检索开始前停止。加 `--synthesis` 可用模型从已存储证据写 Claim。
 
 ### 开发验证
 
 ```powershell
 uv run ruff check .
-uv run mypy src
+uv run mypy src scripts
 uv run pytest
 python scripts/check_docs.py
+uv run python scripts/check_web.py
+```
+
+`check_web.py` 会安装并检查 `web/`。没有 Node.js 时它退出 0，上面的 Python 检查不受影响。Node.js 版本固定为 24。
+
+受限环境下 pytest 可能写不了默认临时目录。不要为此修改测试。把 `TEMP`、`TMP` 和 `--basetemp` 指到同一个可写目录。Windows 示例：
+
+```powershell
+$env:TEMP = "$env:LOCALAPPDATA\Temp"
+$env:TMP = "$env:LOCALAPPDATA\Temp"
+uv run pytest --basetemp "$env:LOCALAPPDATA\Temp\ra-pytest"
 ```
 
 运行时数据默认写入当前工作目录下的 `data/` 和 `reports/`，请在项目根目录运行命令（改为按项目根目录解析见 `CL-01`）；这两个目录及其内容不提交到 Git。密钥只能来自环境变量或系统凭据管理器。
@@ -70,10 +83,11 @@ GitHub Actions 配置位于 `.github/workflows/ci.yml`。工作流在 Windows、
 
 - `uv sync --dev --python 3.12`
 - `uv run ruff check .`
-- `uv run mypy src`
+- `uv run mypy src scripts`
 - `uv run pytest`
 - `uv run python scripts/check_docs.py`
 - `uv run research-agent --help`
+- `uv run python scripts/check_web.py`（需要 Node.js 24；没有 Node.js 时退出 0）
 
 CI 已通过 Windows、Linux 和 macOS 三个平台的首轮验证。
 

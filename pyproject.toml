@@ -51,6 +51,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+files = ["src", "scripts"]
 packages = ["research_agent"]
 
 [tool.pytest.ini_options]

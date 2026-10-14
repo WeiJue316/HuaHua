@@ -11,7 +11,7 @@ from uuid import uuid4
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, optional_env
 from research_agent.mcp_servers.semantic_scholar.client import (
     SemanticScholarClient,
     SemanticScholarClientError,
@@ -258,7 +258,10 @@ def main() -> None:
     async def run() -> None:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
             server = create_semantic_scholar_server(
-                SemanticScholarClient(http_client=http_client)
+                SemanticScholarClient(
+                    http_client=http_client,
+                    api_key=optional_env("SEMANTIC_SCHOLAR_API_KEY"),
+                )
             )
             await server.run_stdio_async()
 

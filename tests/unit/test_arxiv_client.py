@@ -74,7 +74,42 @@ async def test_arxiv_client_downloads_pdf_with_hash(tmp_path: Path) -> None:
     assert artifact.size_bytes == len(pdf_bytes)
     assert artifact.content_type == "application/pdf"
     assert artifact.artifact_uri == "artifact://arxiv/2407.18940"
+    assert artifact.status == "stored"
     assert (tmp_path / artifact.filename).read_bytes() == pdf_bytes
+
+
+@pytest.mark.asyncio
+async def test_non_pdf_download_is_quarantined(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"<html>not a pdf</html>", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        artifact = await ArxivClient(http_client=http_client).download_pdf(
+            "https://arxiv.org/pdf/2407.18940",
+            tmp_path,
+            artifact_id="2407.18940",
+        )
+
+    assert artifact.status == "quarantined"
+    assert (tmp_path / artifact.filename).read_bytes() == b"<html>not a pdf</html>"
+
+
+@pytest.mark.asyncio
+async def test_oversized_pdf_download_is_quarantined(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"%PDF-" + b"x" * 40, request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        artifact = await ArxivClient(http_client=http_client).download_pdf(
+            "https://arxiv.org/pdf/2407.18940",
+            tmp_path,
+            artifact_id="2407.18940",
+            max_bytes=8,
+        )
+
+    assert artifact.status == "quarantined"
+    assert artifact.size_bytes > 8
+    assert list(tmp_path.iterdir()) == []
 
 @pytest.mark.asyncio
 async def test_arxiv_client_maps_rate_limit() -> None:

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Run lightweight structural checks over the Markdown documentation."""
 
+from __future__ import annotations
+
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP_DIRS = {".git", ".venv", "data", "reports", "local", "__pycache__"}
+SKIP_DIRS = {".git", ".venv", "data", "reports", "local", "__pycache__", "node_modules"}
 REQUIRED_FILES = [
     "AGENTS.md",
     "README.md",
@@ -29,9 +32,13 @@ BANNED_TERMS = {
 TERM_CHECK_SKIP_PARTS = {"evaluation"}
 LINK_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)\s]+)(?:\s+['\"][^'\"]*['\"])?\)")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+SECTION_HEADING = "## 4. 目录规范"
+TREE_ENTRY = re.compile(
+    r"^(?P<prefix>.*?)(?:├──|└──) (?P<name>\S+)(?:\s+#\s*(?P<comment>.*))?$"
+)
 
 
-def iter_markdown_files():
+def iter_markdown_files() -> Iterator[Path]:
     for path in sorted(ROOT.rglob("*.md")):
         rel = path.relative_to(ROOT)
         if any(part in SKIP_DIRS for part in rel.parts):
@@ -39,17 +46,17 @@ def iter_markdown_files():
         yield path
 
 
-def read_text(path):
+def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def check_required(errors):
+def check_required(errors: list[str]) -> None:
     for rel in REQUIRED_FILES:
         if not (ROOT / rel).is_file():
             errors.append(f"missing required file: {rel}")
 
 
-def check_code_fences(path, text, errors):
+def check_code_fences(path: Path, text: str, errors: list[str]) -> None:
     opened = None
     for line_no, line in enumerate(text.splitlines(), 1):
         match = FENCE_RE.match(line)
@@ -67,7 +74,7 @@ def check_code_fences(path, text, errors):
         )
 
 
-def check_links(path, text, errors):
+def check_links(path: Path, text: str, errors: list[str]) -> None:
     in_fence = False
     for line_no, line in enumerate(text.splitlines(), 1):
         fence = FENCE_RE.match(line)
@@ -92,7 +99,7 @@ def check_links(path, text, errors):
                 )
 
 
-def split_table_row(line):
+def split_table_row(line: str) -> list[str] | None:
     stripped = line.strip()
     if not stripped.startswith("|") or not stripped.endswith("|"):
         return None
@@ -119,7 +126,7 @@ def split_table_row(line):
     return cells
 
 
-def check_tables(path, text, errors):
+def check_tables(path: Path, text: str, errors: list[str]) -> None:
     in_fence = False
     table_start = None
     expected_columns = None
@@ -147,7 +154,7 @@ def check_tables(path, text, errors):
             )
 
 
-def check_terms(path, text, errors):
+def check_terms(path: Path, text: str, errors: list[str]) -> None:
     if TERM_CHECK_SKIP_PARTS & set(path.relative_to(ROOT).parts):
         return
     for line_no, line in enumerate(text.splitlines(), 1):
@@ -158,7 +165,7 @@ def check_terms(path, text, errors):
                 )
 
 
-def check_adr_numbers(errors):
+def check_adr_numbers(errors: list[str]) -> None:
     adr_dir = ROOT / "docs" / "adr"
     numbers = []
     for path in sorted(adr_dir.glob("[0-9][0-9][0-9][0-9]-*.md")):
@@ -167,8 +174,83 @@ def check_adr_numbers(errors):
         errors.append(f"ADR numbering is not continuous: {numbers}")
 
 
-def main():
-    errors = []
+def _is_tree_placeholder(name: str) -> bool:
+    return "NNNN" in name or "*" in name
+
+
+def directory_tree_files(agents_text: str) -> list[str]:
+    """Return concrete file paths from the AGENTS.md section 4 tree."""
+
+    heading = agents_text.find(SECTION_HEADING)
+    if heading < 0:
+        raise ValueError("AGENTS.md is missing the section 4 directory tree")
+    rest = agents_text[heading:]
+    fence_start = rest.find("```text\n")
+    if fence_start < 0:
+        raise ValueError("AGENTS.md is missing the section 4 directory tree")
+    body_start = fence_start + len("```text\n")
+    fence_end = rest.find("```", body_start)
+    if fence_end < 0:
+        raise ValueError("AGENTS.md is missing the section 4 directory tree")
+    return _parse_directory_tree(rest[body_start:fence_end])
+
+
+def _parse_directory_tree(body: str) -> list[str]:
+    parents: list[str] = []
+    files: list[str] = []
+    skip_deeper_than: int | None = None
+    for line in body.splitlines():
+        found = TREE_ENTRY.match(line.rstrip())
+        if found is None:
+            continue
+        depth = len(found.group("prefix")) // 4
+        name = found.group("name")
+        comment = found.group("comment") or ""
+        if skip_deeper_than is not None:
+            if depth > skip_deeper_than:
+                continue
+            skip_deeper_than = None
+        parents = parents[:depth]
+        if name.endswith("/"):
+            if "尚未创建" in comment:
+                skip_deeper_than = depth
+                continue
+            parents.append(name)
+            continue
+        if _is_tree_placeholder(name) or "尚未创建" in comment:
+            continue
+        files.append("".join(parents) + name)
+    return files
+
+
+def check_directory_tree(
+    errors: list[str],
+    *,
+    root: Path | None = None,
+    text: str | None = None,
+) -> None:
+    """Report section 4 tree files that are not in the repository."""
+
+    project = ROOT if root is None else root
+    agents = text
+    if agents is None:
+        agents_path = project / "AGENTS.md"
+        if not agents_path.is_file():
+            errors.append("missing required file: AGENTS.md")
+            return
+        agents = agents_path.read_text(encoding="utf-8")
+    try:
+        listed = directory_tree_files(agents)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return
+    for relative in listed:
+        if not (project / relative).is_file():
+            errors.append(f"missing tree file: {relative}")
+
+
+def main() -> int:
+    errors: list[str] = []
     check_required(errors)
     files = list(iter_markdown_files())
     for path in files:
@@ -178,6 +260,7 @@ def main():
         check_tables(path, text, errors)
         check_terms(path, text, errors)
     check_adr_numbers(errors)
+    check_directory_tree(errors)
 
     if errors:
         print("DOC_CHECKS_FAILED")

@@ -17,6 +17,7 @@ from research_agent.evidence.claims import (
     detach_unknown_span_ids,
     validate_claim_evidence,
 )
+from research_agent.evidence.exports import render_bibtex, render_evidence_csv, render_evidence_json
 from research_agent.evidence.synthesis import ClaimSynthesizer
 from research_agent.executor.executor import Executor, StepSpec
 from research_agent.identity import identity_aliases
@@ -24,7 +25,13 @@ from research_agent.mcp_servers.arxiv.client import ArxivClient
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.planner.planner import ResearchPlan
-from research_agent.policy.relevance import RelevanceJudge, RelevanceVerdict
+from research_agent.policy.download import decide_download
+from research_agent.policy.relevance import (
+    THRESHOLD_LOOSE,
+    RelevanceJudge,
+    RelevanceVerdict,
+    kept_under,
+)
 from research_agent.router.federation import (
     FederatedSearchResult,
     SearchClient,
@@ -207,6 +214,15 @@ def _md_cell(value: str | None) -> str:
     return " ".join(value.replace("|", "\\|").split())
 
 
+def _usable_evidence_rows(
+    context: _RunContext,
+) -> list[tuple[str, str, str, str, str, str]]:
+    """Evidence that relevance filtering kept. Synthesis and citation checks share it."""
+
+    dropped_ids = context.dropped_source_record_ids
+    return [row for row in context.evidence_rows if row[2] not in dropped_ids]
+
+
 def _report_inputs(
     context: _RunContext,
 ) -> tuple[
@@ -236,9 +252,7 @@ def _report_inputs(
         for paper, source_record_id in context.source_records
         if source_record_id in dropped_ids
     ]
-    kept_evidence = [
-        row for row in context.evidence_rows if row[2] not in dropped_ids
-    ]
+    kept_evidence = _usable_evidence_rows(context)
     dropped_files = {
         (paper.title, paper.source)
         for paper, source_record_id in context.source_records
@@ -417,6 +431,7 @@ async def run_federated_research(
     evidence_chain: bool = True,
     claim_synthesizer: ClaimSynthesizer | None = None,
     citation_constraint: bool = True,
+    relevance_threshold: str = THRESHOLD_LOOSE,
 ) -> ResearchRunResult:
     """Run a source search and report pipeline through the Executor."""
 
@@ -453,6 +468,7 @@ async def run_federated_research(
                     else "template"
                 ),
                 "citation_constraint": citation_constraint,
+                "relevance_threshold": relevance_threshold,
                 "plan": plan.to_dict(),
             },
         )
@@ -619,14 +635,83 @@ async def run_federated_research(
                         and candidate.pdf_url
                         and isinstance(client, ArxivClient)
                     ):
+                        decision = decide_download(
+                            url=candidate.pdf_url,
+                            is_open_access=candidate.open_access.is_oa,
+                            open_access_status=candidate.open_access.status,
+                        )
+                        if not decision.allowed:
+                            repository.record_audit_event(
+                                run_id=run_id,
+                                action="download_pdf",
+                                target_type="paper",
+                                target_id=paper_id,
+                                decision="denied",
+                                details={
+                                    "reason": decision.reason,
+                                    "host": decision.host,
+                                    "open_access_status": candidate.open_access.status,
+                                },
+                            )
+                            continue
                         temp_dir = archive_root / "cache" / "downloads"
                         artifact = await client.download_pdf(
                             candidate.pdf_url,
                             temp_dir,
                             artifact_id=candidate.source_record_id,
                         )
+                        final_decision = decide_download(
+                            url=artifact.final_url,
+                            is_open_access=candidate.open_access.is_oa,
+                            open_access_status=candidate.open_access.status,
+                        )
+                        saved = temp_dir / artifact.filename
+                        if not final_decision.allowed:
+                            if saved.is_file():
+                                saved.unlink()
+                            repository.record_audit_event(
+                                run_id=run_id,
+                                action="download_pdf",
+                                target_type="paper",
+                                target_id=paper_id,
+                                decision="denied",
+                                details={
+                                    "reason": "redirect_host_not_allowed",
+                                    "host": final_decision.host,
+                                    "open_access_status": candidate.open_access.status,
+                                },
+                            )
+                            continue
+                        repository.record_audit_event(
+                            run_id=run_id,
+                            action="download_pdf",
+                            target_type="paper",
+                            target_id=paper_id,
+                            decision="allowed",
+                            details={
+                                "reason": final_decision.reason,
+                                "host": final_decision.host,
+                                "sha256": artifact.sha256,
+                                "open_access_status": candidate.open_access.status,
+                            },
+                        )
+                        if artifact.status == "quarantined" and not saved.is_file():
+                            repository.record_file(
+                                paper_id=paper_id,
+                                kind="pdf",
+                                sha256=artifact.sha256,
+                                path="",
+                                size_bytes=artifact.size_bytes,
+                                content_type=artifact.content_type,
+                                source_url=artifact.source_url,
+                                final_url=artifact.final_url,
+                                retrieved_at=artifact.retrieved_at,
+                                license=artifact.license,
+                                status="quarantined",
+                            )
+                            continue
                         final_path = archive_downloaded_file(
-                            source_path=temp_dir / artifact.filename,
+                            source_path=saved,
                             archive_dir=archive_root / project_id / "papers",
                             sha256=artifact.sha256,
                             suffix=".pdf",
@@ -642,7 +727,10 @@ async def run_federated_research(
                             final_url=artifact.final_url,
                             retrieved_at=artifact.retrieved_at,
                             license=artifact.license,
+                            status=artifact.status,
                         )
+                        if artifact.status != "stored":
+                            continue
                         context.file_rows.append(
                             (
                                 candidate.title,
@@ -728,13 +816,13 @@ async def run_federated_research(
                 return {"judged": 0, "dropped": 0, "skipped": True}
 
             failures = 0
-            for candidate, stored_source_record_id in context.source_records:
-                verdict, response = await relevance_judge.judge(
-                    question=question,
-                    subquestions=subquestions,
-                    paper=candidate,
-                )
-                context.verdicts.append(verdict)
+            batches = await relevance_judge.judge_batch(
+                question=question,
+                subquestions=subquestions,
+                papers=[paper for paper, _source_record_id in context.source_records],
+            )
+            records = iter(context.source_records)
+            for verdicts, response in batches:
                 if response is not None:
                     repository.record_model_call(
                         run_id=run_id,
@@ -742,7 +830,7 @@ async def run_federated_research(
                         model=response.model,
                         purpose="semantic_relevance",
                         prompt_hash=response.prompt_hash,
-                        prompt_version=relevance_judge.prompt_version,
+                        prompt_version=relevance_judge.batch_prompt_version,
                         response_hash=response.response_hash,
                         input_tokens=response.input_tokens,
                         output_tokens=response.output_tokens,
@@ -750,35 +838,43 @@ async def run_federated_research(
                         status="success",
                     )
                 else:
-                    failures += 1
+                    failures += len(verdicts)
                     repository.record_model_call(
                         run_id=run_id,
                         provider="deepseek",
                         model="unknown",
                         purpose="semantic_relevance",
                         prompt_hash="",
-                        prompt_version=relevance_judge.prompt_version,
+                        prompt_version=relevance_judge.batch_prompt_version,
                         status="failed",
-                        error_code=verdict.reason[:120],
+                        error_code="model_gateway_error",
                     )
-                repository.record_audit_event(
-                    run_id=run_id,
-                    action="semantic_relevance",
-                    target_type="paper",
-                    target_id=stored_source_record_id,
-                    decision="allowed" if verdict.keep else "denied",
-                    details={
-                        "paper_key": verdict.paper_key,
-                        "domain_scope": verdict.domain_scope,
-                        "answer_role": verdict.answer_role,
-                        "abstract_available": verdict.abstract_available,
-                        "reason": verdict.reason,
-                        "failed": verdict.failed,
-                    },
-                )
-                if not verdict.keep:
-                    context.dropped_source_record_ids.add(stored_source_record_id)
-                    context.dropped_keys.add(verdict.paper_key)
+                for verdict in verdicts:
+                    _candidate, stored_source_record_id = next(records)
+                    context.verdicts.append(verdict)
+                    repository.record_audit_event(
+                        run_id=run_id,
+                        action="semantic_relevance",
+                        target_type="paper",
+                        target_id=stored_source_record_id,
+                        decision=(
+                            "allowed"
+                            if kept_under(verdict, relevance_threshold)
+                            else "denied"
+                        ),
+                        details={
+                            "paper_key": verdict.paper_key,
+                            "domain_scope": verdict.domain_scope,
+                            "answer_role": verdict.answer_role,
+                            "abstract_available": verdict.abstract_available,
+                            "reason": verdict.reason,
+                            "failed": verdict.failed,
+                            "threshold": relevance_threshold,
+                        },
+                    )
+                    if not kept_under(verdict, relevance_threshold):
+                        context.dropped_source_record_ids.add(stored_source_record_id)
+                        context.dropped_keys.add(verdict.paper_key)
 
             context.relevance_failures = failures
             return {
@@ -788,11 +884,7 @@ async def run_federated_research(
             }
 
         async def synthesize_claims_step() -> dict[str, object]:
-            usable = [
-                row
-                for row in context.evidence_rows
-                if row[2] not in context.dropped_source_record_ids
-            ]
+            usable = _usable_evidence_rows(context)
             available_evidence_ids = {row[4] for row in usable}
             mode = "template"
             if not evidence_chain:
@@ -871,7 +963,9 @@ async def run_federated_research(
         async def validate_citations_step() -> dict[str, object]:
             if not citation_constraint:
                 return {"validated_claims": 0, "citation_constraint": False}
-            available_evidence_ids = {row[4] for row in context.evidence_rows}
+            available_evidence_ids = {
+                row[4] for row in _usable_evidence_rows(context)
+            }
             for claim in context.claims:
                 validate_claim_evidence(claim, available_evidence_ids)
             return {
@@ -903,6 +997,22 @@ async def run_federated_research(
             )
             for claim in context.claims:
                 repository.record_claim(report_id=report_id, claim=claim)
+            export_dir = report_path.parent
+            evidence_rows = repository.evidence_export_rows(report_id)
+            bibliography = repository.bibliography_entries(report_id)
+            export_files = {
+                "json": (export_dir / "evidence.json", render_evidence_json(evidence_rows)),
+                "csv": (export_dir / "evidence.csv", render_evidence_csv(evidence_rows)),
+                "bibtex": (export_dir / "references.bib", render_bibtex(bibliography)),
+            }
+            for export_format, (export_path, content) in export_files.items():
+                export_path.write_text(content, encoding="utf-8", newline="\n")
+                repository.record_export(
+                    report_id=report_id,
+                    format=export_format,
+                    path=export_path.as_posix(),
+                    content=content,
+                )
             context.report_path = report_path
             context.report_id = report_id
             return {"report_path": report_path.as_posix()}

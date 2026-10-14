@@ -209,13 +209,14 @@ async def add_paper(
     if quote_override:
         quote = quote_override.strip()
     else:
-        quote = usable_evidence_sentence(paper.abstract, prefer_terms=prefer_terms)
-        if quote is None:
+        found = usable_evidence_sentence(paper.abstract, prefer_terms=prefer_terms)
+        if found is None:
             raise SystemExit(
                 "this record has no usable abstract sentence for the "
                 "subquestion. Read the paper and pass --quote \"<verbatim "
                 "sentence>\"."
             )
+        quote = found
 
     annotation: dict[str, Any] = {
         "paper_key": key,

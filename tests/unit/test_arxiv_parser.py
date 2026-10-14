@@ -49,4 +49,5 @@ def test_parse_search_response_rejects_invalid_xml() -> None:
 def test_normalize_arxiv_id_handles_urls_and_versions() -> None:
     assert normalize_arxiv_id("http://arxiv.org/abs/2407.18940v2") == "2407.18940"
     assert normalize_arxiv_id("https://arxiv.org/pdf/2501.00001v1") == "2501.00001"
+    assert normalize_arxiv_id("https://arxiv.org/pdf/2312.10997v2.pdf") == "2312.10997"
     assert normalize_arxiv_id(" 2407.18940 ") == "2407.18940"

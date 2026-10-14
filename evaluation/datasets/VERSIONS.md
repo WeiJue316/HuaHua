@@ -8,9 +8,13 @@
 |---|---|---:|---:|---:|---|---|---|
 | v1 | `pilot_questions.v1.jsonl` | 2026-09-23 | 10 | 24 | `ce5516b789fbfc347ec6c97c972bdcc9eea99e3d562d9ab4d9cf862240eff0e3` | LYY | 冻结 |
 | v2 | `pilot_questions.v2.jsonl` | 2026-09-24 | 10 | 106 | `f0ce2276db698bf0e13754a8ec357fa8c37234ab687dd53d37f59a89d7dd18ac` | Codex（AI 审计） | 冻结（AI 审计） |
+| formal v1 设计 | `formal_v1_design.md` | 2026-10-14 | 30 | 未标注 | 不适用（问题文件未创建） | 设计冻结 | 设计冻结，标注未开始 |
 
 `pilot_questions.seed.jsonl` 不是评测集，它是 `research_agent.evaluator.pilot_seed`
 的可再生草稿，供后续重新生成使用。评测与论文引用一律以带版本号的冻结文件为准。
+
+正式 30 题集目前只有设计，没有 `formal_questions.v1.jsonl`。配额、题型和金标门槛见
+`formal_v1_design.md`。标注完成前不得把该设计文件当作评测输入。
 
 ## v1 冻结说明
 

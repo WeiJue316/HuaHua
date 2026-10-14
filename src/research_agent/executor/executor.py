@@ -61,9 +61,33 @@ class Executor:
                 if dependency not in completed_keys
             ]
             if missing_dependencies:
-                raise ValueError(
-                    f"step {step.step_key} has unresolved dependencies: "
-                    f"{missing_dependencies}"
+                error_code = "unresolved_dependencies"
+                step_id = self.repository.record_plan_step(
+                    plan_id=plan_id,
+                    step_key=step.step_key,
+                    step_type=step.step_type,
+                    depends_on=list(step.depends_on),
+                    status="FAILED",
+                    input_json=step.input_json,
+                )
+                self.repository.update_plan_step_status(
+                    step_id=step_id,
+                    status="FAILED",
+                    attempt_count=0,
+                    error_code=error_code,
+                    finished_at=utc_now(),
+                )
+                self.repository.update_run_status(
+                    run_id=run_id,
+                    status="FAILED",
+                    error_code=error_code,
+                    finished_at=utc_now(),
+                )
+                self.repository.connection.commit()
+                return ExecutionResult(
+                    status="FAILED",
+                    completed_steps=tuple(completed),
+                    failed_step=step.step_key,
                 )
 
             step_id = self.repository.record_plan_step(

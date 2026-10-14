@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.utils import format_datetime
 from pathlib import Path
 
 import httpx
@@ -10,6 +12,7 @@ from research_agent.mcp_servers.common import (
     RetryPolicy,
     count_http_attempts,
     get_with_retry,
+    parse_retry_after,
 )
 
 
@@ -18,6 +21,15 @@ def test_retry_policy_respects_retry_after() -> None:
 
     assert policy.delay_for_attempt(1, retry_after_seconds=10) == 10.0
     assert policy.delay_for_attempt(2) == 1.0
+
+
+def test_parse_retry_after_reads_an_http_date() -> None:
+    now = datetime(2026, 10, 14, 1, 0, tzinfo=UTC)
+
+    assert parse_retry_after("Wed, 14 Oct 2026 01:00:30 GMT", now=now) == 30.0
+    assert parse_retry_after("30", now=now) == 30.0
+    assert parse_retry_after("Wed, 14 Oct 2026 00:00:00 GMT", now=now) == 0.0
+    assert parse_retry_after("not a date", now=now) is None
 
 
 @pytest.mark.asyncio
@@ -52,6 +64,40 @@ async def test_get_with_retry_retries_rate_limit_then_succeeds() -> None:
     assert calls == 2
     assert attempts.calls == 2
     assert delays == [1.0]
+
+
+@pytest.mark.asyncio
+async def test_get_with_retry_waits_for_an_http_date() -> None:
+    delays: list[float] = []
+    calls = 0
+    later = datetime.now(UTC).timestamp() + 30
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            when = format_datetime(datetime.fromtimestamp(later, UTC), usegmt=True)
+            return httpx.Response(
+                429,
+                headers={"retry-after": when},
+                request=request,
+            )
+        return httpx.Response(200, json={"ok": True}, request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        response = await get_with_retry(
+            http_client,
+            "https://example.org/works",
+            retry_policy=RetryPolicy(jitter_ratio=0.0),
+            sleep=fake_sleep,
+        )
+
+    assert response.status_code == 200
+    assert len(delays) == 1
+    assert delays[0] == pytest.approx(30, abs=1)
 
 
 @pytest.mark.asyncio

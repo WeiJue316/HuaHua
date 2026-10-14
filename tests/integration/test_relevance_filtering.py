@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from research_agent.evidence.claims import validate_claim_evidence
 from research_agent.llm.gateway import ModelResponse
 from research_agent.mcp_servers.common import PaperCandidate
 from research_agent.planner.planner import plan_research
@@ -17,6 +18,7 @@ from research_agent.policy.relevance import (
     DOMAIN_OUT_OF_SCOPE,
     ROLE_DIRECT,
     ROLE_NONE,
+    ROLE_SUPPORTING,
     RelevanceJudge,
     RelevanceVerdict,
 )
@@ -53,12 +55,14 @@ class StubJudge(RelevanceJudge):
         *,
         deny_all: bool = False,
         deny_titles: frozenset[str] = frozenset(),
+        answer_role: str = ROLE_DIRECT,
     ) -> None:
         # The parent sets prompt_version, which the runtime records on every
         # model_call row, so the stub must go through it.
         super().__init__(gateway=_UnusedGateway())
         self.deny_all = deny_all
         self.deny_titles = deny_titles
+        self.answer_role = answer_role
         self.judged: list[str] = []
 
     async def judge(
@@ -78,7 +82,7 @@ class StubJudge(RelevanceJudge):
         verdict = RelevanceVerdict(
             paper_key=key,
             domain_scope=DOMAIN_OUT_OF_SCOPE if deny else DOMAIN_IN_SCOPE,
-            answer_role=ROLE_NONE if deny else ROLE_DIRECT,
+            answer_role=ROLE_NONE if deny else self.answer_role,
             abstract_available=True,
             reason="stub decision",
         )
@@ -93,6 +97,21 @@ class StubJudge(RelevanceJudge):
             latency_ms=1,
             finish_reason="stop",
         )
+
+    async def judge_batch(
+        self,
+        *,
+        question: str,
+        subquestions: Sequence[str],
+        papers: Sequence[PaperCandidate],
+    ) -> list[tuple[list[RelevanceVerdict], ModelResponse]]:
+        groups: list[tuple[list[RelevanceVerdict], ModelResponse]] = []
+        for paper in papers:
+            verdict, response = await self.judge(
+                question=question, subquestions=subquestions, paper=paper
+            )
+            groups.append(([verdict], response))
+        return groups
 
 
 def _handler(request: httpx.Request) -> httpx.Response:
@@ -119,6 +138,7 @@ async def _run(
     judge: RelevanceJudge | None,
     *,
     evidence_chain: bool = True,
+    relevance_threshold: str = "loose",
 ) -> object:
     db_path = tmp_path / f"{name}.db"
     async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as http_client:
@@ -139,6 +159,7 @@ async def _run(
             relevance_judge=judge,
             subquestions=("How is evaluation performed?",),
             evidence_chain=evidence_chain,
+            relevance_threshold=relevance_threshold,
         )
 
 
@@ -232,3 +253,49 @@ async def test_denied_papers_leave_the_report_tables(tmp_path: Path) -> None:
     with connect_database(tmp_path / "partial.db") as conn:
         stored = conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0]
     assert stored > result.evidence_count  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_citation_check_uses_the_same_evidence_as_synthesis(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: set[str] = set()
+
+    def spy(claim: object, available_evidence_ids: set[str]) -> None:
+        seen.update(available_evidence_ids)
+        validate_claim_evidence(claim, available_evidence_ids)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        "research_agent.runtime.research_service.validate_claim_evidence",
+        spy,
+    )
+    judge = StubJudge(deny_titles=frozenset({"Another Paper"}))
+    await _run(tmp_path, "same-evidence", judge)
+
+    with connect_database(tmp_path / "same-evidence.db") as conn:
+        rows = conn.execute(
+            "SELECT id, quote FROM evidence_span WHERE evidence_level = 'abstract'"
+        ).fetchall()
+    dropped = {row[0] for row in rows if "A second abstract." in row[1]}
+    kept = {row[0] for row in rows if "A second abstract." not in row[1]}
+
+    assert kept
+    assert dropped
+    assert kept <= seen
+    assert seen.isdisjoint(dropped)
+
+
+@pytest.mark.asyncio
+async def test_strict_threshold_drops_supporting_papers(tmp_path: Path) -> None:
+    judge = StubJudge(answer_role=ROLE_SUPPORTING)
+    loose = await _run(tmp_path, "loose", judge, relevance_threshold="loose")
+    strict = await _run(
+        tmp_path,
+        "strict",
+        StubJudge(answer_role=ROLE_SUPPORTING),
+        relevance_threshold="strict",
+    )
+
+    assert loose.relevance_dropped == 0  # type: ignore[attr-defined]
+    assert strict.relevance_dropped == strict.relevance_judged > 0  # type: ignore[attr-defined]

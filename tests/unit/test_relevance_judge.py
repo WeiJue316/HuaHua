@@ -12,6 +12,7 @@ from research_agent.policy.relevance import (
     DOMAIN_OUT_OF_SCOPE,
     ROLE_DIRECT,
     RelevanceJudge,
+    kept_under,
     parse_verdict,
 )
 
@@ -226,3 +227,86 @@ async def test_every_subquestion_is_sent_to_the_model() -> None:
     assert "How is planning represented?" in sent
     assert "How is state retained?" in sent
     assert "How do agents plan and remember?" in sent
+
+
+def _labelled(role: str, domain: str = "in_scope", *, failed: bool = False) -> object:
+    verdict = parse_verdict(
+        "k",
+        json.dumps(
+            {
+                "abstract_available": True,
+                "domain_scope": domain,
+                "answer_role": role,
+                "reason": "labelled",
+            }
+        ),
+    )
+    if failed:
+        return parse_verdict("k", "not json")
+    return verdict
+
+
+def test_strict_threshold_keeps_only_direct_answers() -> None:
+    supporting = _labelled("supporting")
+    direct = _labelled("direct")
+    out_of_scope = _labelled("none", "out_of_scope")
+    failed = _labelled("none", failed=True)
+
+    assert kept_under(supporting, "loose") is True  # type: ignore[arg-type]
+    assert kept_under(supporting, "strict") is False  # type: ignore[arg-type]
+    assert kept_under(direct, "strict") is True  # type: ignore[arg-type]
+    assert kept_under(out_of_scope, "loose") is False  # type: ignore[arg-type]
+    assert kept_under(out_of_scope, "strict") is False  # type: ignore[arg-type]
+    assert kept_under(failed, "strict") is True  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_judge_batch_makes_one_call_per_chunk() -> None:
+    class BatchGateway(StubGateway):
+        async def complete(
+            self,
+            *,
+            prompt_hash: str,
+            system: str,
+            user: str,
+            max_output_tokens: int = 900,
+            temperature: float = 0.0,
+            json_output: bool = False,
+        ) -> ModelResponse:
+            count = user.count("Paper index:")
+            self.content = json.dumps(
+                [
+                    {
+                        "paper_index": index,
+                        "abstract_available": True,
+                        "domain_scope": "in_scope",
+                        "answer_role": "direct",
+                        "reason": "ok",
+                    }
+                    for index in range(1, count + 1)
+                ]
+            )
+            return await super().complete(
+                prompt_hash=prompt_hash,
+                system=system,
+                user=user,
+                max_output_tokens=max_output_tokens,
+                temperature=temperature,
+                json_output=json_output,
+            )
+
+    gateway = BatchGateway()
+    judge = RelevanceJudge(gateway, batch_size=2)
+    papers = [_paper(doi=f"10.1/{index}") for index in range(3)]
+
+    batches = await judge.judge_batch(
+        question="How are RAG systems evaluated?",
+        subquestions=["Which metrics are used?"],
+        papers=papers,
+    )
+
+    assert len(gateway.calls) == 2
+    verdicts = [verdict for group, _response in batches for verdict in group]
+    assert len(verdicts) == 3
+    assert all(verdict.keep for verdict in verdicts)
+    assert "Paper index:" in str(gateway.calls[0]["user"])

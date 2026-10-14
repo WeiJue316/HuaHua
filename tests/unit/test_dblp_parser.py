@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from research_agent.mcp_servers.dblp.parser import parse_search_response
+from research_agent.mcp_servers.dblp.parser import (
+    normalize_dblp_doi,
+    parse_search_response,
+)
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "dblp_search.json"
 
@@ -26,3 +29,8 @@ def test_parse_dblp_search_response() -> None:
         "Bob Example",
     ]
     assert paper.raw["type"] == "Conference and Workshop Papers"
+
+
+def test_normalize_dblp_doi_strips_resolver_hosts() -> None:
+    assert normalize_dblp_doi("https://dx.doi.org/10.1/AbC") == "10.1/abc"
+    assert normalize_dblp_doi("https://www.doi.org/10.1/AbC") == "10.1/abc"

@@ -157,6 +157,7 @@ class ResearchCaseRunner:
             evidence_chain=system_id != "A1",
             claim_synthesizer=synthesizer,
             citation_constraint=config.citation_constraint,
+            relevance_threshold=config.relevance_threshold,
         )
 
         usage = load_model_usage_checked(self.settings.db_path, result.run_id)

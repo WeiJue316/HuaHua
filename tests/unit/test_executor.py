@@ -128,3 +128,47 @@ async def test_executor_marks_run_failed_after_retry_budget(tmp_path: Path) -> N
         assert conn.execute(
             "SELECT status FROM run WHERE id = ?", (run_id,)
         ).fetchone()[0] == "FAILED"
+
+
+@pytest.mark.asyncio
+async def test_executor_fails_the_run_when_a_dependency_is_missing(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    run_id, plan_id = _seed_plan(db_path)
+    ran: list[str] = []
+
+    async def first() -> None:
+        ran.append("first")
+
+    async def blocked() -> None:
+        ran.append("blocked")
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        result = await Executor(repo).execute_plan(
+            run_id=run_id,
+            plan_id=plan_id,
+            steps=[
+                StepSpec(step_key="one", step_type="route_sources", handler=first),
+                StepSpec(
+                    step_key="later",
+                    step_type="search_sources",
+                    depends_on=("missing",),
+                    handler=blocked,
+                ),
+            ],
+        )
+        row = conn.execute(
+            "SELECT status, error_code FROM run WHERE id = ?",
+            (run_id,),
+        ).fetchone()
+        step = conn.execute(
+            "SELECT status, error_code FROM plan_step WHERE step_key = 'later'"
+        ).fetchone()
+
+    assert ran == ["first"]
+    assert result.status == "FAILED"
+    assert result.failed_step == "later"
+    assert row["status"] == "FAILED"
+    assert row["error_code"] == "unresolved_dependencies"
+    assert step["status"] == "FAILED"
+    assert step["error_code"] == "unresolved_dependencies"

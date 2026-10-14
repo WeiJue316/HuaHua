@@ -57,7 +57,7 @@ def test_estimated_budget_covers_relevance_and_synthesis() -> None:
         source_count=3,
         relevance_filter=True,
         synthesis=True,
-    ) == 61
+    ) == 9
     assert estimated_model_call_budget(
         k=5,
         source_count=0,

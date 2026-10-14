@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from research_agent.evidence.claims import ClaimDraft
+from research_agent.evidence.exports import BibliographyEntry, EvidenceExportRow
 from research_agent.identity import (
     arxiv_id_from_doi,
     normalize_doi,
@@ -17,6 +18,7 @@ from research_agent.identity import (
     strip_arxiv_version,
 )
 from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.paths import stored_project_path
 
 
 def utc_now() -> str:
@@ -43,6 +45,18 @@ def canonical_key(candidate: PaperCandidate) -> str:
     """Build the canonical paper key from stable identifiers."""
 
     return primary_identity(candidate)
+
+
+def _is_blank(value: str | None) -> bool:
+    return value is None or not value.strip()
+
+
+def _explicit_arxiv_id(candidate: PaperCandidate) -> str | None:
+    raw = candidate.raw.get("arxiv_id")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    normalized = strip_arxiv_version(raw).lower()
+    return normalized or None
 
 
 class ResearchRepository:
@@ -240,6 +254,8 @@ class ResearchRepository:
         existing_id = self._find_existing_paper(candidate)
         if existing_id is not None:
             self._record_identifiers(existing_id, candidate)
+            self._fill_blank_metadata(existing_id, candidate)
+            self._record_authors(existing_id, candidate)
             return existing_id, False
 
         paper_id = str(uuid4())
@@ -268,7 +284,41 @@ class ResearchRepository:
             ),
         )
         self._record_identifiers(paper_id, candidate)
+        self._record_authors(paper_id, candidate)
         return paper_id, True
+
+    def _fill_blank_metadata(self, paper_id: str, candidate: PaperCandidate) -> None:
+        """Fill abstract, year, and venue only where the stored paper has none."""
+
+        row = self.connection.execute(
+            "SELECT abstract, year, venue FROM paper WHERE id = ?",
+            (paper_id,),
+        ).fetchone()
+        if row is None:
+            return
+        abstract = row["abstract"]
+        year = row["year"]
+        venue = row["venue"]
+        if _is_blank(abstract) and not _is_blank(candidate.abstract):
+            abstract = candidate.abstract
+        if year is None and candidate.year is not None:
+            year = candidate.year
+        if _is_blank(venue) and not _is_blank(candidate.venue):
+            venue = candidate.venue
+        if (
+            abstract == row["abstract"]
+            and year == row["year"]
+            and venue == row["venue"]
+        ):
+            return
+        self.connection.execute(
+            """
+            UPDATE paper
+            SET abstract = ?, year = ?, venue = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (abstract, year, venue, utc_now(), paper_id),
+        )
 
     def _find_existing_paper(self, candidate: PaperCandidate) -> str | None:
         lookups: list[tuple[str, str]] = []
@@ -278,7 +328,12 @@ class ResearchRepository:
             if arxiv_id is not None:
                 lookups.append(("arxiv_id", arxiv_id))
         if candidate.source == "arxiv":
-            lookups.append(("arxiv_id", strip_arxiv_version(candidate.source_record_id).lower()))
+            lookups.append(
+                ("arxiv_id", strip_arxiv_version(candidate.source_record_id).lower())
+            )
+        explicit_arxiv_id = _explicit_arxiv_id(candidate)
+        if explicit_arxiv_id is not None:
+            lookups.append(("arxiv_id", explicit_arxiv_id))
         lookups.append((f"{candidate.source}_id", candidate.source_record_id))
         for identifier_type, normalized_value in lookups:
             row = self.connection.execute(
@@ -303,6 +358,9 @@ class ResearchRepository:
             arxiv_id = arxiv_id_from_doi(candidate.doi)
             if arxiv_id is not None:
                 identifiers.append(("arxiv_id", arxiv_id, arxiv_id, 0))
+        explicit_arxiv_id = _explicit_arxiv_id(candidate)
+        if explicit_arxiv_id is not None:
+            identifiers.append(("arxiv_id", explicit_arxiv_id, explicit_arxiv_id, 0))
         source_normalized = candidate.source_record_id
         if candidate.source == "arxiv":
             source_normalized = strip_arxiv_version(candidate.source_record_id).lower()
@@ -370,6 +428,7 @@ class ResearchRepository:
         license: str | None = None,
         status: str = "stored",
     ) -> str:
+        path = stored_project_path(path)
         file_id = str(uuid4())
         self.connection.execute(
             """
@@ -408,6 +467,7 @@ class ResearchRepository:
         locator_scheme: str,
         parse_status: str,
     ) -> str:
+        text_path = stored_project_path(text_path)
         document_id = document_id or str(uuid4())
         self.connection.execute(
             """
@@ -753,6 +813,7 @@ class ResearchRepository:
         format: str = "markdown",
         status: str = "validated",
     ) -> str:
+        path = stored_project_path(path)
         report_id = str(uuid4())
         version_row = self.connection.execute(
             "SELECT COALESCE(MAX(version), 0) + 1 FROM report WHERE run_id = ?",
@@ -777,3 +838,197 @@ class ResearchRepository:
             ),
         )
         return report_id
+
+    def _record_authors(self, paper_id: str, candidate: PaperCandidate) -> None:
+        existing = self.connection.execute(
+            "SELECT 1 FROM paper_author WHERE paper_id = ? LIMIT 1",
+            (paper_id,),
+        ).fetchone()
+        if existing is not None:
+            return
+        for position, author in enumerate(candidate.authors):
+            name = author.name.strip()
+            if not name:
+                continue
+            author_id = str(uuid4())
+            self.connection.execute(
+                """
+                INSERT INTO author
+                    (id, name, name_normalized, orcid, source_author_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    author_id,
+                    name,
+                    " ".join(name.lower().split()),
+                    author.orcid,
+                    author.source_author_id,
+                    utc_now(),
+                ),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO paper_author (paper_id, author_id, position, is_corresponding)
+                VALUES (?, ?, ?, NULL)
+                """,
+                (paper_id, author_id, position),
+            )
+
+    def evidence_export_rows(self, report_id: str) -> list[EvidenceExportRow]:
+        """Return the claim-to-evidence rows for one report."""
+
+        rows = self.connection.execute(
+            """
+            SELECT
+                claim.id AS claim_id,
+                claim.claim_text,
+                claim.support_status,
+                COALESCE(paper.id, '') AS paper_id,
+                COALESCE(paper.title, '') AS paper_title,
+                COALESCE((
+                    SELECT normalized_value FROM paper_identifier
+                    WHERE paper_id = paper.id AND type = 'doi'
+                    ORDER BY is_primary DESC, normalized_value
+                    LIMIT 1
+                ), '') AS doi,
+                COALESCE((
+                    SELECT normalized_value FROM paper_identifier
+                    WHERE paper_id = paper.id AND type = 'arxiv_id'
+                    ORDER BY is_primary DESC, normalized_value
+                    LIMIT 1
+                ), '') AS arxiv_id,
+                COALESCE(file.sha256, '') AS file_sha256,
+                COALESCE(evidence_span.id, '') AS evidence_id,
+                COALESCE(evidence_span.quote, '') AS quote,
+                COALESCE(evidence_span.locator_json, '') AS locator,
+                COALESCE(evidence_span.evidence_level, '') AS evidence_level,
+                COALESCE(evidence_span.extraction_method, '') AS extraction_method,
+                evidence_span.confidence AS confidence,
+                COALESCE(source_record.source, '') AS source,
+                COALESCE(source_record.retrieved_at, '') AS retrieved_at
+            FROM claim
+            LEFT JOIN claim_evidence ON claim_evidence.claim_id = claim.id
+            LEFT JOIN evidence_span ON evidence_span.id = claim_evidence.evidence_span_id
+            LEFT JOIN paper ON paper.id = evidence_span.paper_id
+            LEFT JOIN source_record ON source_record.id = evidence_span.source_record_id
+            LEFT JOIN file ON file.id = evidence_span.file_id
+            WHERE claim.report_id = ?
+            ORDER BY claim.created_at, claim.id, claim_evidence.rank, evidence_span.id
+            """,
+            (report_id,),
+        ).fetchall()
+        exported: list[EvidenceExportRow] = []
+        for row in rows:
+            confidence = row["confidence"]
+            exported.append(
+                EvidenceExportRow(
+                    claim_id=str(row["claim_id"]),
+                    claim_text=str(row["claim_text"]),
+                    support_status=str(row["support_status"]),
+                    paper_id=str(row["paper_id"]),
+                    paper_title=str(row["paper_title"]),
+                    doi=str(row["doi"]),
+                    arxiv_id=str(row["arxiv_id"]),
+                    file_sha256=str(row["file_sha256"]),
+                    evidence_id=str(row["evidence_id"]),
+                    quote=str(row["quote"]),
+                    locator=str(row["locator"]),
+                    evidence_level=str(row["evidence_level"]),
+                    extraction_method=str(row["extraction_method"]),
+                    confidence=None if confidence is None else float(confidence),
+                    source=str(row["source"]),
+                    retrieved_at=str(row["retrieved_at"]),
+                )
+            )
+        return exported
+
+    def bibliography_entries(self, report_id: str) -> list[BibliographyEntry]:
+        """Return one bibliography entry per paper cited by a report."""
+
+        rows = self.connection.execute(
+            """
+            SELECT
+                paper.id AS paper_id,
+                paper.title,
+                paper.year,
+                paper.venue,
+                COALESCE((
+                    SELECT normalized_value FROM paper_identifier
+                    WHERE paper_id = paper.id AND type = 'doi'
+                    ORDER BY is_primary DESC, normalized_value
+                    LIMIT 1
+                ), '') AS doi,
+                COALESCE((
+                    SELECT normalized_value FROM paper_identifier
+                    WHERE paper_id = paper.id AND type = 'arxiv_id'
+                    ORDER BY is_primary DESC, normalized_value
+                    LIMIT 1
+                ), '') AS arxiv_id,
+                COALESCE((
+                    SELECT group_concat(name, '||')
+                    FROM (
+                        SELECT author.name AS name
+                        FROM paper_author
+                        JOIN author ON author.id = paper_author.author_id
+                        WHERE paper_author.paper_id = paper.id
+                        ORDER BY paper_author.position
+                    )
+                ), '') AS authors
+            FROM paper
+            WHERE paper.id IN (
+                SELECT evidence_span.paper_id
+                FROM claim
+                JOIN claim_evidence ON claim_evidence.claim_id = claim.id
+                JOIN evidence_span
+                    ON evidence_span.id = claim_evidence.evidence_span_id
+                WHERE claim.report_id = ?
+            )
+            ORDER BY paper.id
+            """,
+            (report_id,),
+        ).fetchall()
+        entries: list[BibliographyEntry] = []
+        for row in rows:
+            year = row["year"]
+            authors = tuple(
+                part for part in str(row["authors"]).split("||") if part
+            )
+            venue = row["venue"]
+            entries.append(
+                BibliographyEntry(
+                    paper_id=str(row["paper_id"]),
+                    title=str(row["title"]),
+                    authors=authors,
+                    year="" if year is None else str(year),
+                    venue="" if venue is None else str(venue),
+                    doi=str(row["doi"]),
+                    arxiv_id=str(row["arxiv_id"]),
+                )
+            )
+        return entries
+
+    def record_export(
+        self,
+        *,
+        report_id: str,
+        format: str,
+        path: str,
+        content: str,
+    ) -> str:
+        path = stored_project_path(path)
+        export_id = str(uuid4())
+        self.connection.execute(
+            """
+            INSERT INTO export (id, report_id, format, path, sha256, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                export_id,
+                report_id,
+                format,
+                path,
+                sha256_text(content),
+                utc_now(),
+            ),
+        )
+        return export_id

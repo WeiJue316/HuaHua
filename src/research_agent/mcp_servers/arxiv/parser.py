@@ -35,7 +35,13 @@ def normalize_arxiv_id(value: str) -> str:
     """Normalize an arXiv identifier from a URL or raw value."""
 
     candidate = value.strip().rstrip("/")
-    candidate = re.sub(r"^https?://arxiv\.org/(?:abs|pdf)/", "", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(
+        r"^https?://arxiv\.org/(?:abs|pdf)/",
+        "",
+        candidate,
+        flags=re.IGNORECASE,
+    )
+    candidate = re.sub(r"\.pdf$", "", candidate, flags=re.IGNORECASE)
     candidate = VERSION_PATTERN.sub("", candidate)
     if not (NEW_ID_PATTERN.fullmatch(candidate) or OLD_ID_PATTERN.fullmatch(candidate)):
         raise ArxivParseError(f"invalid arXiv identifier: {value!r}")

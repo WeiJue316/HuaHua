@@ -172,6 +172,40 @@ def write_rows(path: Path, rows: list[dict[str, object]]) -> None:
     path.write_text(payload, encoding="utf-8")
 
 
+def _string_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return list(value)
+    raise ValueError("expected a list of strings")
+
+
+def _record_list(value: object) -> list[dict[str, object]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("expected a list of records")
+    records: list[dict[str, object]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError("expected a list of records")
+        records.append({str(key): item[key] for key in item})
+    return records
+
+
+def _year_range(value: object) -> tuple[int, int] | None:
+    if value is None:
+        return None
+    if (
+        isinstance(value, list)
+        and len(value) == 2
+        and isinstance(value[0], int)
+        and isinstance(value[1], int)
+    ):
+        return value[0], value[1]
+    return None
+
+
 async def apply_worksheet(
     *,
     client: object,
@@ -189,18 +223,11 @@ async def apply_worksheet(
     if target is None:
         raise ValueError(f"数据集里没有 {question_id}")
 
-    gold_papers: list[str] = list(target.get("gold_papers") or [])  # type: ignore[arg-type]
-    gold_evidence: list[dict[str, object]] = list(
-        target.get("gold_evidence") or []  # type: ignore[arg-type]
-    )
+    gold_papers = _string_list(target.get("gold_papers"))
+    gold_evidence = _record_list(target.get("gold_evidence"))
     known = set(gold_papers)
-    subquestions: list[str] = list(target.get("subquestions") or [])  # type: ignore[arg-type]
-    year_range = target.get("year_range")
-    parsed_range = (
-        (int(year_range[0]), int(year_range[1]))
-        if isinstance(year_range, list) and len(year_range) == 2
-        else None
-    )
+    subquestions = _string_list(target.get("subquestions"))
+    parsed_range = _year_range(target.get("year_range"))
 
     added = 0
     notes: list[str] = []
@@ -241,12 +268,13 @@ async def apply_worksheet(
             )
             continue
 
-        existing_subquestions = {
-            int(item["supports_subquestion"])
-            for item in gold_evidence
-            if item.get("paper_key") == key
-            and isinstance(item.get("supports_subquestion"), int)
-        }
+        existing_subquestions: set[int] = set()
+        for item in gold_evidence:
+            if item.get("paper_key") != key:
+                continue
+            supported = item.get("supports_subquestion")
+            if isinstance(supported, int):
+                existing_subquestions.add(supported)
         annotations: list[dict[str, object]] = []
         for sub_index in row.subquestions:
             if sub_index in existing_subquestions:

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from typing import Any
 
 from research_agent.evaluator.dataset import EvaluationQuestion
 from research_agent.llm.gateway import ModelGateway, ModelGatewayError
+from research_agent.policy.relevance import RELEVANCE_BATCH_SIZE
 from research_agent.storage.repository import sha256_text
 
 _JSON_OBJECT = re.compile(r"\{.*\}", re.S)
@@ -28,10 +30,10 @@ def estimated_model_call_budget(
 ) -> int:
     """Upper bound on system model calls for one case.
 
-    A relevance judgement is one call per kept paper, and each source keeps at
-    most K papers. Synthesis is one call. The ReAct baseline may call the model
-    once per step plus one retry after a rejected action. A system that uses
-    none of these still makes one summary call.
+    A relevance judgement is one model call per batch of papers, and each
+    source keeps at most K papers. Synthesis is one call. The ReAct baseline
+    may call the model once per step plus one retry after a rejected action.
+    A system that uses none of these still makes one summary call.
     """
 
     if k < 1:
@@ -40,7 +42,8 @@ def estimated_model_call_budget(
         raise ValueError("source_count must not be negative")
     calls = 0
     if relevance_filter:
-        calls += k * max(source_count, 1)
+        papers = k * max(source_count, 1)
+        calls += math.ceil(papers / RELEVANCE_BATCH_SIZE)
     if synthesis:
         calls += 1
     if react:

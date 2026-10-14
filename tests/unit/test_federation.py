@@ -78,10 +78,24 @@ async def test_search_sources_runs_every_query_variant_once() -> None:
         max_results_per_source=10,
     )
 
-    assert client.queries == ["evidence chain", "evidence chain scientific"]
+    assert client.queries == ["evidence chain scientific", "evidence chain"]
     assert result.source_counts == {"openalex": 2}
     assert result.errors == {}
     assert result.variant_errors == {}
+
+
+@pytest.mark.asyncio
+async def test_search_sources_uses_planner_variants_without_the_raw_query() -> None:
+    client = VariantClient("openalex")
+
+    await search_sources(
+        {"openalex": client},
+        query="evidence  chain",
+        query_variants=("evidence chain", "evidence chain scientific"),
+        max_results_per_source=10,
+    )
+
+    assert client.queries == ["evidence chain", "evidence chain scientific"]
 
 
 @pytest.mark.asyncio
@@ -105,8 +119,8 @@ async def test_search_sources_surfaces_partial_variant_failures() -> None:
 
     result = await search_sources(
         {"openalex": client},
-        query="evidence chain",
-        query_variants=("evidence chain scientific",),
+        query="evidence  chain",
+        query_variants=("evidence chain", "evidence chain scientific"),
     )
 
     assert result.errors == {}
@@ -116,7 +130,7 @@ async def test_search_sources_surfaces_partial_variant_failures() -> None:
 
 @pytest.mark.asyncio
 async def test_search_sources_reports_error_only_when_every_variant_fails() -> None:
-    client = VariantClient("openalex", fail_on=frozenset({"a", "b"}))
+    client = VariantClient("openalex", fail_on=frozenset({"b"}))
 
     result = await search_sources(
         {"openalex": client},
@@ -124,6 +138,6 @@ async def test_search_sources_reports_error_only_when_every_variant_fails() -> N
         query_variants=("b",),
     )
 
-    assert result.errors == {"openalex": "openalex failed for a"}
+    assert result.errors == {"openalex": "openalex failed for b"}
     assert result.variant_errors == {}
     assert result.source_counts == {"openalex": 0}

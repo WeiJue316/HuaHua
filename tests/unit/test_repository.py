@@ -99,6 +99,65 @@ def test_repository_persists_paper_provenance_and_evidence(tmp_path: Path) -> No
         assert evidence["evidence_level"] == "abstract"
 
 
+def test_new_artifact_paths_are_stored_relative_to_the_project(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("research_agent.paths.project_root", lambda: tmp_path)
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+    report = tmp_path / "reports" / "run" / "report.md"
+    pdf = tmp_path / "data" / "papers" / "a.pdf"
+    text = tmp_path / "data" / "parsed" / "a.txt"
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        project_id = repo.create_project("project")
+        question_id = repo.create_research_question(project_id, "question")
+        run_id = repo.create_run(project_id, question_id)
+        paper_id, _ = repo.upsert_paper(_candidate())
+        repo.record_report(run_id=run_id, path=report.as_posix(), content="# Report\n")
+        file_id = repo.record_file(
+            paper_id=paper_id,
+            kind="pdf",
+            sha256="a" * 64,
+            path=pdf.as_posix(),
+            size_bytes=1,
+            content_type="application/pdf",
+            source_url="https://arxiv.org/pdf/2407.18940",
+            retrieved_at="2026-01-01T00:00:00Z",
+        )
+        repo.record_file(
+            paper_id=paper_id,
+            kind="pdf",
+            sha256="b" * 64,
+            path="",
+            size_bytes=0,
+            content_type="application/pdf",
+            source_url="https://arxiv.org/pdf/too-big",
+            retrieved_at="2026-01-01T00:00:00Z",
+            status="quarantined",
+        )
+        repo.record_document(
+            file_id=file_id,
+            parser="pypdf",
+            parser_version="1",
+            text_path=text.as_posix(),
+            text_sha256="c" * 64,
+            locator_scheme="page_paragraph",
+            parse_status="success",
+        )
+        report_path = conn.execute("SELECT path FROM report").fetchone()[0]
+        file_paths = [
+            row[0] for row in conn.execute("SELECT path FROM file ORDER BY path")
+        ]
+        text_path = conn.execute("SELECT text_path FROM document").fetchone()[0]
+
+    assert report_path == "reports/run/report.md"
+    assert file_paths == ["", "data/papers/a.pdf"]
+    assert text_path == "data/parsed/a.txt"
+
+
 def test_repository_deduplicates_paper_by_canonical_key(tmp_path: Path) -> None:
     db_path = tmp_path / "research_agent.db"
     apply_migrations(db_path)
@@ -111,6 +170,94 @@ def test_repository_deduplicates_paper_by_canonical_key(tmp_path: Path) -> None:
         assert first_created is True
         assert second_created is False
         assert first_id == second_id
+        assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 1
+
+
+def test_repository_fills_blank_metadata_without_overwriting(tmp_path: Path) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+    sparse = _candidate().model_copy(
+        update={"abstract": None, "year": None, "venue": None}
+    )
+    filled = _candidate().model_copy(
+        update={
+            "source": "openalex",
+            "source_record_id": "W999",
+            "abstract": "Backfilled abstract about evidence chains.",
+            "year": 2024,
+            "venue": "Backfilled Venue",
+            "landing_url": "https://openalex.org/W999",
+        }
+    )
+    conflicting = filled.model_copy(
+        update={
+            "source": "crossref",
+            "source_record_id": "10.1000/example",
+            "abstract": "A later abstract that must stay out.",
+            "year": 1999,
+            "venue": "Other Venue",
+            "landing_url": "https://doi.org/10.1000/example",
+        }
+    )
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        paper_id, created = repo.upsert_paper(sparse)
+        same_id, filled_created = repo.upsert_paper(filled)
+        row = conn.execute(
+            "SELECT abstract, year, venue FROM paper WHERE id = ?",
+            (paper_id,),
+        ).fetchone()
+        indexed = conn.execute(
+            "SELECT COUNT(*) FROM paper_fts WHERE paper_fts MATCH 'backfilled'"
+        ).fetchone()[0]
+        repo.upsert_paper(conflicting)
+        kept = conn.execute(
+            "SELECT abstract, year, venue FROM paper WHERE id = ?",
+            (paper_id,),
+        ).fetchone()
+
+    assert created is True
+    assert filled_created is False
+    assert same_id == paper_id
+    assert row["abstract"] == "Backfilled abstract about evidence chains."
+    assert row["year"] == 2024
+    assert row["venue"] == "Backfilled Venue"
+    assert indexed == 1
+    assert kept["abstract"] == "Backfilled abstract about evidence chains."
+    assert kept["year"] == 2024
+    assert kept["venue"] == "Backfilled Venue"
+
+
+def test_repository_merges_openalex_record_by_arxiv_id_without_doi(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "research_agent.db"
+    apply_migrations(db_path)
+    arxiv = _candidate().model_copy(
+        update={
+            "doi": None,
+            "source_record_id": "2312.10997",
+            "landing_url": "https://arxiv.org/abs/2312.10997",
+        }
+    )
+    openalex = _candidate().model_copy(
+        update={
+            "source": "openalex",
+            "source_record_id": "W1",
+            "doi": None,
+            "landing_url": "https://openalex.org/W1",
+            "raw": {"arxiv_id": "2312.10997"},
+        }
+    )
+
+    with connect_database(db_path) as conn:
+        repo = ResearchRepository(conn)
+        first_id, _ = repo.upsert_paper(arxiv)
+        second_id, created = repo.upsert_paper(openalex)
+
+        assert created is False
+        assert second_id == first_id
         assert conn.execute("SELECT COUNT(*) FROM paper").fetchone()[0] == 1
 
 

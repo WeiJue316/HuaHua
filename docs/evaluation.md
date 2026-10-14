@@ -62,19 +62,20 @@
 - Pilot v2：10 个问题、106 个 question-specific gold paper 链接，由模型初审 + Codex
   逐条审计 + 摘要逐字引文核验生成；用于工程迭代、回归测试、baseline 对比和消融实验。
 - v2 不是独立人工金标；论文使用其支撑最终质量结论前，必须补充独立人工抽检并报告一致率。
-- 正式集：30 个问题，最终版本冻结后不再修改。
-- 每个问题包含 1–3 个可验证的子问题。
+- 正式集：30 题。设计已冻结，见 [formal v1 设计](../evaluation/datasets/formal_v1_design.md)。标注文件尚未创建。
+- 领域题数按设计冻结为 `llm_rag` 9、`vision_multimodal` 6、`nlp_ir` 6、`ml_systems` 5、`datasets_repro` 4。两个 15% 配额合计 9 题，多出的 1 题给机器学习系统。
+- 正式集每题恰好 2 个子问题。Pilot 同样是每题 2 个。
 - 核心配置固定为 8 个：B0、B1、B2、B3、A1、A2、A3、A4。每个配置在每个问题上运行 3 次，共 `30 × 8 × 3 = 720` 次 Run。B1 的 arXiv 变体和 A5 为可选扩展，不计入核心 720 次。
 
-领域分布：
+领域分布以设计冻结的题数为准，不再使用无法整除的百分比：
 
-| 子领域 | 比例 |
+| 子领域 | 题数 |
 |---|---:|
-| LLM / RAG / Agent | 30% |
-| 计算机视觉 / 多模态 | 20% |
-| NLP / 信息检索 | 20% |
-| 机器学习系统 / 效率 | 15% |
-| 数据集、评测与可复现性 | 15% |
+| LLM / RAG / Agent | 9 |
+| 计算机视觉 / 多模态 | 6 |
+| NLP / 信息检索 | 6 |
+| 机器学习系统 / 效率 | 5 |
+| 数据集、评测与可复现性 | 4 |
 
 问题类型：
 
@@ -195,8 +196,7 @@ csai_007 的金标只有 2 篇，而系统在 K=20 下保留 31 篇候选。此�
 - 状态机 + Plan-and-Execute。
 - 五源 MCP + Federation Router。
 - 完整证据链和引用校验。
-- 输出 Markdown、JSON/CSV 和 BibTeX。当前只有 Markdown 报告；JSON/CSV 证据表与 BibTeX
-  导出见路线图 `SC-01`。
+- 输出 Markdown、JSON/CSV 和 BibTeX。一次 Run 在报告旁边写入 `evidence.json`、`evidence.csv` 和 `references.bib`，并记入 `export` 表。Zotero 仍未实现。
 - Router 每题最多选择 3 个源站（ADR-0015），其余源站作为降级备选。
 
 ## 5. 消融实验
@@ -224,7 +224,13 @@ A1–A4 与 A6 是核心消融；A5 作为多源联邦的补充实验。若时�
 - A4 相对 B3 自动可比的是 `dangling_support_count`（标成有支持、但没有 Evidence Span 的
   Claim 数）与 Unsupported Claim Rate；后者只在约束打开时上升，因为降级发生在代码侧。
 - A3 已实现：不设路由预算，查询全部五个源站。B3 每题最多选择 3 个源站，其余进入 `fallback_sources`（ADR-0015，路线图 `EV-04`）。
-- A6 已实现开关；严格 / 宽松两种阈值尚未实现（路线图 `EC-08`）。A5 仍延后。
+- A6 已实现开关。过滤阈值是系统配置 `relevance_threshold`，默认 `loose`。
+  宽松只剔除 `domain_scope=out_of_scope`，`direct`、`supporting` 和 `none` 都保留。
+  严格在此之外还要求 `answer_role=direct`，`supporting` 和 `none` 被剔除。
+  两种阈值在摘要不可用或判断失败时都 fail-open。预实验里严格对应“仅 relevant”
+  （precision 高、recall 低），宽松对应“relevant + tangential”（precision 低、recall 高），
+  正式对比两种都要报告（ADR-0012）。A6 本身关闭过滤。判断按批进行，每批最多 8 篇、
+  一次模型调用，`model_call` 按批记录。A5 仍延后。
 - 无模型网关时综合退回模板首句；模板路径的结果不得与 LLM 综合的结果混合比较。
 
 A6 的依据见 `docs/adr/0012-semantic-relevance-filtering.md`：人工复核 pilot 数据集时发现，
@@ -366,11 +372,13 @@ TaskCompletionRate = 满足 baseline-neutral 任务完成清单的 Run 数 / 总
 
 ```text
 budget = 0
-       + K × 源站数          仅当启用相关性过滤
+       + ceil(K × 源站数 / 8)  仅当启用相关性过滤（每批最多 8 篇，一次模型调用）
        + 1                   仅当启用 Claim 综合
        + 8 × 2               仅 B2（8 步，每步最多 1 次拒绝后重试）
 若以上都是 0，则 budget = 1   B0 的一次总结
 ```
+
+K=20、3 个源、过滤加综合时预算为 9。相关性过滤在 `EC-08` 之前按每篇一次调用估算，当时同一条件的预算是 61。
 
 显式传入 `--model-call-budget` 时，所有系统改用该上限。judge 读取报告前 12000 个字符，
 其自身调用不计入系统成本。judge 失败时记录 `task_completion_judge_failed=1` 和

@@ -117,6 +117,22 @@ def test_directory_hash_detects_tampering(tmp_path: Path) -> None:
     assert cache.directory_hash() != before
 
 
+def test_directory_hash_ignores_expired_entries(tmp_path: Path) -> None:
+    live = ResponseCache(tmp_path / "live", ttl_seconds=10)
+    fresh = "https://x/fresh"
+    stale = "https://x/stale"
+    live.put(method="GET", url=fresh, response=_response(fresh, text="F"), now=100.0)
+    live.put(method="GET", url=stale, response=_response(stale, text="S"), now=1.0)
+
+    only_fresh = ResponseCache(tmp_path / "fresh", ttl_seconds=10)
+    only_fresh.put(
+        method="GET", url=fresh, response=_response(fresh, text="F"), now=100.0
+    )
+
+    assert live.directory_hash(now=100.0) == only_fresh.directory_hash(now=100.0)
+    assert live.directory_hash(now=5.0) != only_fresh.directory_hash(now=5.0)
+
+
 def test_reset_stats_clears_counters(tmp_path: Path) -> None:
     cache = ResponseCache(tmp_path / "cache")
     cache.get(method="GET", url="https://x/a", now=1.0)
@@ -125,6 +141,35 @@ def test_reset_stats_clears_counters(tmp_path: Path) -> None:
 
     assert cache.stats.hits == 0
     assert cache.stats.misses == 0
+
+
+def test_cache_drops_api_keys_from_the_stored_url(tmp_path: Path) -> None:
+    cache = ResponseCache(tmp_path / "cache", ttl_seconds=None)
+    secret = "openalex-secret-value"
+    with_key = f"https://api.openalex.org/works?search=rag&api_key={secret}"
+    without_key = "https://api.openalex.org/works?search=rag"
+
+    cache.put(
+        method="GET",
+        url=with_key,
+        response=_response(with_key, text='{"results": []}'),
+        now=1.0,
+    )
+    stored = list(cache.root.glob("*.json"))
+    assert len(stored) == 1
+    text = stored[0].read_text(encoding="utf-8")
+
+    assert secret not in text
+    assert cache_key("GET", with_key) == cache_key("GET", without_key)
+    hit = cache.get(method="GET", url=without_key, now=2.0)
+    assert hit is not None
+    assert hit.text == '{"results": []}'
+    other = cache.get(
+        method="GET",
+        url="https://api.openalex.org/works?search=other",
+        now=3.0,
+    )
+    assert other is None
 
 
 @pytest.mark.asyncio

@@ -18,11 +18,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 STEPS: list[tuple[str, list[str]]] = [
-    ("Check formatting", ["ruff", "check", "."]),
-    ("Type check", ["mypy", "src"]),
+    ("Lint", ["ruff", "check", "."]),
+    ("Type check", ["mypy", "src", "scripts"]),
     ("Run tests", ["pytest"]),
     ("Check documentation", ["python", "scripts/check_docs.py"]),
     ("Check CLI", ["research-agent", "--help"]),
+    ("Check web", ["python", "scripts/check_web.py"]),
 ]
 
 

@@ -17,14 +17,19 @@ from research_agent.mcp_servers.arxiv.parser import (
 )
 from research_agent.mcp_servers.cache import ResponseCache
 from research_agent.mcp_servers.common import (
+    DEFAULT_RATE_LIMITER,
     PaperCandidate,
     RetryPolicy,
     SleepFn,
+    _http_attempts,
     get_with_retry,
+    parse_retry_after,
     user_agent,
 )
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
+MAX_PDF_BYTES = 32 * 1024 * 1024
+PDF_MAGIC = b"%PDF-"
 
 
 class ArxivClientError(RuntimeError):
@@ -59,6 +64,7 @@ class ArtifactRef:
     final_url: str
     retrieved_at: str
     license: str | None = None
+    status: str = "stored"
 
 
 def _build_search_query(query: str) -> str:
@@ -176,43 +182,109 @@ class ArxivClient:
         destination_dir: Path,
         *,
         artifact_id: str,
+        max_bytes: int = MAX_PDF_BYTES,
     ) -> ArtifactRef:
-        """Download a PDF into a temporary destination and return its handle."""
+        """Download a PDF, stopping once it exceeds the size limit.
 
-        try:
-            response = await get_with_retry(
-                self.http_client,
-                url,
-                headers={"User-Agent": user_agent()},
-                retry_policy=self.retry_policy,
-                cache=self.cache,
-                sleep=self.sleep,
+        A body that is too large is not written. A body that does not start
+        with the PDF magic is written and marked quarantined so it cannot be
+        used as evidence.
+        """
+
+        content, size_bytes, final_url = await self._read_bounded(url, max_bytes)
+        retrieved_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        if content is None:
+            digest = hashlib.sha256(
+                f"oversized\n{size_bytes}\n{url}".encode()
+            ).hexdigest()
+            return ArtifactRef(
+                artifact_id=artifact_id,
+                artifact_uri=f"artifact://arxiv/{artifact_id}",
+                filename=f"{digest}.pdf",
+                content_type="application/pdf",
+                size_bytes=size_bytes,
+                sha256=digest,
+                source_url=url,
+                final_url=final_url,
+                retrieved_at=retrieved_at,
+                status="quarantined",
             )
-        except httpx.HTTPError as exc:
-            raise ArxivClientError(f"arXiv PDF request failed: {exc}") from exc
 
-        if response.status_code >= 400:
-            raise ArxivClientError(
-                f"arXiv PDF request failed with status {response.status_code}",
-                status_code=response.status_code,
-            )
-
-        content = response.content
         digest = hashlib.sha256(content).hexdigest()
         destination_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{digest}.pdf"
         (destination_dir / filename).write_bytes(content)
-
+        status = "stored" if content.startswith(PDF_MAGIC) else "quarantined"
         return ArtifactRef(
             artifact_id=artifact_id,
             artifact_uri=f"artifact://arxiv/{artifact_id}",
             filename=filename,
-            content_type=response.headers.get("content-type", "application/pdf").split(
-                ";", 1
-            )[0],
+            content_type="application/pdf",
             size_bytes=len(content),
             sha256=digest,
             source_url=url,
-            final_url=str(response.url),
-            retrieved_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            final_url=final_url,
+            retrieved_at=retrieved_at,
+            status=status,
         )
+
+    async def _read_bounded(
+        self, url: str, max_bytes: int
+    ) -> tuple[bytes | None, int, str]:
+        policy = self.retry_policy
+        last_error: httpx.HTTPError | None = None
+        for attempt in range(1, policy.max_attempts + 1):
+            try:
+                await DEFAULT_RATE_LIMITER.wait(url)
+                active = _http_attempts.get()
+                if active is not None:
+                    active.calls += 1
+                async with self.http_client.stream(
+                    "GET",
+                    url,
+                    headers={"User-Agent": user_agent()},
+                ) as response:
+                    if (
+                        response.status_code in policy.retry_status_codes
+                        and attempt < policy.max_attempts
+                    ):
+                        await response.aread()
+                        retry_after = response.headers.get("retry-after")
+                        delay = parse_retry_after(retry_after)
+                        await self.sleep(
+                            policy.delay_for_attempt(attempt, delay)
+                        )
+                        continue
+                    if response.status_code >= 400:
+                        raise ArxivClientError(
+                            "arXiv PDF request failed with status "
+                            f"{response.status_code}",
+                            status_code=response.status_code,
+                        )
+                    declared = response.headers.get("content-length")
+                    if (
+                        declared is not None
+                        and declared.isdigit()
+                        and int(declared) > max_bytes
+                    ):
+                        return None, int(declared), str(response.url)
+                    chunks: list[bytes] = []
+                    total = 0
+                    async for chunk in response.aiter_bytes():
+                        if total + len(chunk) > max_bytes:
+                            return None, total + len(chunk), str(response.url)
+                        chunks.append(chunk)
+                        total += len(chunk)
+                    return b"".join(chunks), total, str(response.url)
+            except httpx.HTTPError as exc:
+                last_error = exc
+                if attempt >= policy.max_attempts:
+                    raise ArxivClientError(
+                        f"arXiv PDF request failed: {exc}"
+                    ) from exc
+                await self.sleep(policy.delay_for_attempt(attempt))
+        if last_error is not None:
+            raise ArxivClientError(
+                f"arXiv PDF request failed: {last_error}"
+            ) from last_error
+        raise ArxivClientError("arXiv PDF request failed without a response")

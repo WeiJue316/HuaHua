@@ -19,6 +19,7 @@ from typing import Any
 import httpx
 
 from research_agent.llm.gateway import ModelGatewayError, ModelResponse
+from research_agent.mcp_servers.common import parse_retry_after
 
 DEEPSEEK_API_URL = "https://api.deepseek.com"
 DEEPSEEK_API_KEY_ENV_VAR = "DEEPSEEK_API_KEY"
@@ -140,11 +141,9 @@ class DeepSeekGateway:
 
     def _retry_after(self, response: httpx.Response, attempt: int) -> float:
         header = response.headers.get("retry-after")
-        if header:
-            try:
-                return max(0.0, float(header))
-            except ValueError:
-                pass
+        parsed = parse_retry_after(header)
+        if parsed is not None:
+            return parsed
         return self._delay(attempt)
 
     def _to_model_response(

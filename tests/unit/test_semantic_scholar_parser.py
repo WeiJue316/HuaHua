@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from research_agent.mcp_servers.semantic_scholar.parser import (
+    normalize_semantic_scholar_doi,
     parse_paper,
     parse_search_response,
 )
@@ -47,3 +48,8 @@ def test_parse_semantic_scholar_paper_handles_empty_open_access() -> None:
 
     assert paper.open_access.is_oa is False
     assert paper.pdf_url is None
+
+
+def test_normalize_semantic_scholar_doi_strips_resolver_hosts() -> None:
+    assert normalize_semantic_scholar_doi("https://dx.doi.org/10.1/AbC") == "10.1/abc"
+    assert normalize_semantic_scholar_doi("https://www.doi.org/10.1/AbC") == "10.1/abc"

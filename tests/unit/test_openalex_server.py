@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from research_agent.mcp_servers.openalex.client import OpenAlexClient
-from research_agent.mcp_servers.openalex.server import create_openalex_server
+from research_agent.mcp_servers.openalex.server import create_openalex_server, main
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "openalex_search.json"
 
@@ -66,3 +66,30 @@ async def test_openalex_server_search_returns_envelope() -> None:
     assert len(payload["items"]) == 1
     assert payload["items"][0]["source_record_id"] == "W123456789"
     assert payload["items"][0]["provenance"]["source"] == "openalex"
+
+
+def test_openalex_main_reads_contact_and_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import research_agent.mcp_servers.openalex.server as server_module
+
+    created: list[dict[str, object]] = []
+    real = OpenAlexClient
+
+    class _Spy(real):
+        def __init__(self, **kwargs: object) -> None:
+            created.append(kwargs)
+            super().__init__(**kwargs)  # type: ignore[arg-type]
+
+    async def _stop(self: object) -> None:
+        return None
+
+    monkeypatch.setattr(server_module, "OpenAlexClient", _Spy)
+    monkeypatch.setattr(server_module.MCPServer, "run_stdio_async", _stop)
+    monkeypatch.setenv("RESEARCH_AGENT_CONTACT", "researcher@example.edu")
+    monkeypatch.setenv("OPENALEX_API_KEY", "test-openalex-key")
+
+    main()
+
+    assert created[-1]["mailto"] == "researcher@example.edu"
+    assert created[-1]["api_key"] == "test-openalex-key"

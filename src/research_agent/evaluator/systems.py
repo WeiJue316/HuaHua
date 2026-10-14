@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from research_agent.planner.planner import ROUTING_BUDGET
+from research_agent.policy.relevance import THRESHOLD_LOOSE, THRESHOLD_STRICT
 
 ALL_SOURCES = ("arxiv", "openalex", "crossref", "semantic_scholar", "dblp")
 
@@ -37,11 +38,16 @@ class SystemConfig:
     relevance_filter: bool
     citation_constraint: bool = True
     routing_budget: int | None = ROUTING_BUDGET
+    relevance_threshold: str = THRESHOLD_LOOSE
     implemented: bool = True
 
     def __post_init__(self) -> None:
         if not self.system_id:
             raise ValueError("system_id must not be empty")
+        if self.relevance_threshold not in {THRESHOLD_LOOSE, THRESHOLD_STRICT}:
+            raise ValueError(
+                f"unknown relevance threshold: {self.relevance_threshold}"
+            )
 
     @property
     def needs_model(self) -> bool:

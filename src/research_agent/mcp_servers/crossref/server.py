@@ -11,7 +11,7 @@ from uuid import uuid4
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, contact_email
 from research_agent.mcp_servers.crossref.client import (
     CrossrefClient,
     CrossrefClientError,
@@ -224,7 +224,12 @@ def main() -> None:
 
     async def run() -> None:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
-            server = create_crossref_server(CrossrefClient(http_client=http_client))
+            server = create_crossref_server(
+                CrossrefClient(
+                    http_client=http_client,
+                    mailto=contact_email(),
+                )
+            )
             await server.run_stdio_async()
 
     asyncio.run(run())

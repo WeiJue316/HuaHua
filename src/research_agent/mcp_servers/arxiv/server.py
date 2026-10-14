@@ -17,6 +17,7 @@ from mcp.server.mcpserver import MCPServer
 from research_agent.mcp_servers.arxiv.client import ArxivClient, ArxivClientError
 from research_agent.mcp_servers.arxiv.parser import normalize_arxiv_id
 from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.paths import resolve_project_path
 
 SCHEMA_VERSION = "1.0"
 SOURCE_ID = "arxiv"
@@ -271,12 +272,17 @@ def create_arxiv_server(
 
     return server
 
+def artifact_directory() -> Path:
+    """Download directory for the standalone arXiv server."""
+
+    configured = os.environ.get("RESEARCH_AGENT_ARTIFACT_DIR", "data/cache/downloads")
+    return resolve_project_path(Path(configured))
+
+
 def main() -> None:
     """Run the arXiv MCP server over stdio."""
 
-    artifact_dir = Path(
-        os.environ.get("RESEARCH_AGENT_ARTIFACT_DIR", "data/cache/downloads")
-    )
+    artifact_dir = artifact_directory()
 
     async def run() -> None:
         async with httpx.AsyncClient(timeout=30.0) as http_client:

@@ -342,7 +342,7 @@ Paper 与源站记录的关联，保留合并依据。
 | `paper_id` | TEXT | FK | Paper |
 | `kind` | TEXT | NOT NULL | `pdf`, `html`, `text` |
 | `sha256` | TEXT | NOT NULL | 文件哈希 |
-| `path` | TEXT | NOT NULL | 项目相对路径（当前实现保存传入路径，常为绝对路径，见路线图 `CL-02`） |
+| `path` | TEXT | NOT NULL | 新写入：项目内为相对 POSIX 路径，项目外保持绝对路径，空路径保持空。已有行不迁移（D6） |
 | `size_bytes` | INTEGER | NOT NULL | 文件大小 |
 | `content_type` | TEXT | NOT NULL | MIME type |
 | `source_url` | TEXT | NOT NULL | 原始下载地址 |
@@ -375,7 +375,7 @@ PDF 或 HTML 解析后的文本表示。
 | `file_id` | TEXT | FK | File |
 | `parser` | TEXT | NOT NULL | 例如 PyMuPDF、pdfplumber |
 | `parser_version` | TEXT | NOT NULL | 解析器版本 |
-| `text_path` | TEXT | NOT NULL | 解析文本路径 |
+| `text_path` | TEXT | NOT NULL | 解析文本路径。新写入规则与 File.`path` 相同 |
 | `text_sha256` | TEXT | NOT NULL | 解析文本哈希 |
 | `locator_scheme` | TEXT | NOT NULL | `page_char`, `page_paragraph` 等 |
 | `parse_status` | TEXT | NOT NULL | `success`, `partial`, `failed` |
@@ -476,7 +476,7 @@ Claim 与 Evidence Span 的多对多关系。
 | `run_id` | TEXT | FK | Run |
 | `version` | INTEGER | NOT NULL | 从 1 开始 |
 | `format` | TEXT | NOT NULL | `markdown`, `json`, `csv` |
-| `path` | TEXT | NOT NULL | 项目相对路径 |
+| `path` | TEXT | NOT NULL | 新写入规则与 File.`path` 相同 |
 | `sha256` | TEXT | NOT NULL | 报告哈希 |
 | `status` | TEXT | NOT NULL | `draft`, `validated`, `published` |
 | `created_at` | TEXT | NOT NULL | UTC |
@@ -490,7 +490,7 @@ Claim 与 Evidence Span 的多对多关系。
 | `id` | TEXT | PK | UUID |
 | `report_id` | TEXT | FK | Report |
 | `format` | TEXT | NOT NULL | bibtex、zotero、csv、json |
-| `path` | TEXT | NOT NULL | 导出路径 |
+| `path` | TEXT | NOT NULL | 新写入规则与 File.`path` 相同 |
 | `sha256` | TEXT | NOT NULL | 文件哈希 |
 | `created_at` | TEXT | NOT NULL | UTC |
 

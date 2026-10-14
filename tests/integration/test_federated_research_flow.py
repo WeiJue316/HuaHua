@@ -100,6 +100,9 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
     assert "openalex" in report
     assert "## Claims" in report
     assert "page 1" in report
+    assert (result.report_path.parent / "evidence.json").is_file()
+    assert (result.report_path.parent / "evidence.csv").is_file()
+    assert (result.report_path.parent / "references.bib").is_file()
 
     with connect_database(tmp_path / "research_agent.db") as conn:
         assert conn.execute("SELECT COUNT(*) FROM source_record").fetchone()[0] == 3
@@ -108,7 +111,17 @@ async def test_federated_research_merges_doi_and_keeps_provenance(tmp_path: Path
         assert conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM claim").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM claim_evidence").fetchone()[0] == 5
+        assert conn.execute("SELECT COUNT(*) FROM export").fetchone()[0] == 3
+        assert {
+            row[0] for row in conn.execute("SELECT format FROM export")
+        } == {"json", "csv", "bibtex"}
         assert conn.execute("SELECT COUNT(*) FROM file").fetchone()[0] == 2
+        assert conn.execute(
+            """
+            SELECT COUNT(*) FROM audit_event
+            WHERE action = 'download_pdf' AND decision = 'allowed'
+            """
+        ).fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM document").fetchone()[0] == 2
         assert conn.execute("SELECT COUNT(*) FROM plan").fetchone()[0] == 1
         # route, search, persist, judge_relevance, synthesize, validate, report
@@ -339,4 +352,45 @@ async def test_retry_after_a_failed_persist_does_not_duplicate_rows(
             """
         ).fetchone()[0]
     assert attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_non_pdf_download_is_recorded_as_quarantined(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/pdf/" in request.url.path:
+            return httpx.Response(
+                200,
+                content=b"<html>not a pdf</html>",
+                headers={"content-type": "text/html"},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            text=ARXIV_FIXTURE.read_text(encoding="utf-8"),
+            headers={"content-type": "application/atom+xml"},
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        plan = plan_research(
+            "evidence chain",
+            available_sources=("arxiv",),
+            max_results_per_source=5,
+            max_sources=1,
+        )
+        result = await run_federated_research(
+            question="evidence chain",
+            db_path=tmp_path / "quarantine.db",
+            reports_root=tmp_path / "reports",
+            clients={"arxiv": ArxivClient(http_client=http_client)},
+            max_results_per_source=5,
+            download_pdf=True,
+            artifact_root=tmp_path / "archive",
+            plan=plan,
+        )
+
+    assert result.document_count == 0
+    with connect_database(tmp_path / "quarantine.db") as conn:
+        statuses = {row[0] for row in conn.execute("SELECT status FROM file")}
+    assert statuses == {"quarantined"}
 

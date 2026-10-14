@@ -6,6 +6,8 @@ import json
 import re
 from typing import Any
 
+from research_agent.identity import normalize_doi as _normalize_doi
+from research_agent.mcp_servers.arxiv.parser import ArxivParseError, normalize_arxiv_id
 from research_agent.mcp_servers.common import Author, OpenAccessInfo, PaperCandidate
 
 OPENALEX_ID_PATTERN = re.compile(r"W\d+$", re.IGNORECASE)
@@ -30,10 +32,7 @@ def normalize_doi(value: str | None) -> str | None:
 
     if not value:
         return None
-    normalized = value.strip().lower()
-    normalized = normalized.removeprefix("https://doi.org/")
-    normalized = normalized.removeprefix("http://doi.org/")
-    normalized = normalized.removeprefix("doi:")
+    normalized = _normalize_doi(value)
     return normalized or None
 
 
@@ -85,6 +84,22 @@ def _pdf_url(work: dict[str, Any]) -> str | None:
     return str(value) if value else None
 
 
+def _arxiv_id(work: dict[str, Any]) -> str | None:
+    ids = work.get("ids")
+    if not isinstance(ids, dict):
+        return None
+    raw = ids.get("arxiv")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    text = raw.strip()
+    if text.lower().startswith("arxiv:"):
+        text = text.split(":", 1)[1].strip()
+    try:
+        return normalize_arxiv_id(text).lower()
+    except ArxivParseError:
+        return None
+
+
 def parse_work(work: dict[str, Any]) -> PaperCandidate:
     """Normalize one OpenAlex work object."""
 
@@ -134,6 +149,7 @@ def parse_work(work: dict[str, Any]) -> PaperCandidate:
         ),
         raw={
             "openalex_id": openalex_id,
+            "arxiv_id": _arxiv_id(work),
             "doi": work.get("doi"),
             "display_name": title,
             "publication_year": work.get("publication_year"),

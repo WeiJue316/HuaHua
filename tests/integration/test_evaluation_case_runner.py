@@ -57,17 +57,38 @@ class StubGateway:
         json_output: bool = False,
     ) -> ModelResponse:
         self.prompts.append(user)
-        denied = bool(self.deny_title_fragment and self.deny_title_fragment in user)
-        payload = {
-            "abstract_available": True,
-            "domain_scope": "out_of_scope" if denied else "in_scope",
-            "answer_role": "none" if denied else "direct",
-            "reason": "stub",
-        }
+        if "Paper index:" in user:
+            verdicts = []
+            for index, chunk in enumerate(user.split("Paper index:")[1:], start=1):
+                denied = bool(
+                    self.deny_title_fragment and self.deny_title_fragment in chunk
+                )
+                verdicts.append(
+                    {
+                        "paper_index": index,
+                        "abstract_available": True,
+                        "domain_scope": "out_of_scope" if denied else "in_scope",
+                        "answer_role": "none" if denied else "direct",
+                        "reason": "stub",
+                    }
+                )
+            content = json.dumps(verdicts)
+        else:
+            denied = bool(
+                self.deny_title_fragment and self.deny_title_fragment in user
+            )
+            content = json.dumps(
+                {
+                    "abstract_available": True,
+                    "domain_scope": "out_of_scope" if denied else "in_scope",
+                    "answer_role": "none" if denied else "direct",
+                    "reason": "stub",
+                }
+            )
         return ModelResponse(
             provider="stub",
             model="stub-model",
-            content=json.dumps(payload),
+            content=content,
             prompt_hash=prompt_hash,
             response_hash="stub",
             input_tokens=1,

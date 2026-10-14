@@ -33,6 +33,10 @@ from research_agent.llm.gateway import ModelGateway, ModelGatewayError, ModelRes
 from research_agent.mcp_servers.common import PaperCandidate
 
 PROMPT_VERSION = "relevance-v1"
+BATCH_PROMPT_VERSION = "relevance-batch-v1"
+RELEVANCE_BATCH_SIZE = 8
+THRESHOLD_LOOSE = "loose"
+THRESHOLD_STRICT = "strict"
 
 DOMAIN_IN_SCOPE = "in_scope"
 DOMAIN_OUT_OF_SCOPE = "out_of_scope"
@@ -75,7 +79,39 @@ Reply with JSON only:
 {"abstract_available": true, "domain_scope": "in_scope|out_of_scope|unknown",
  "answer_role": "direct|supporting|none|unknown", "reason": "<one short sentence>"}"""
 
+BATCH_SYSTEM_PROMPT = """You screen academic papers for a literature-review assistant.
+
+You are given one research question, its subquestions, and several candidate
+papers. Judge each paper on two independent axes and report whether its
+abstract is available. Use the same rules for every paper.
+
+domain_scope:
+- "in_scope": the paper belongs to the field the subquestion comes from.
+- "out_of_scope": the paper belongs to a different field.
+- "unknown": you cannot tell from the material provided.
+
+answer_role:
+- "direct": the abstract states evidence that answers the subquestion.
+- "supporting": the abstract offers related evidence that helps answer the
+  subquestion without answering it outright.
+- "none": the abstract offers no evidence for this subquestion.
+- "unknown": you cannot tell from the material provided.
+
+Rules:
+- Judge from the title and abstract only. Never infer content from the title.
+- Read the whole abstract, including its final sentences.
+- If the abstract contains no research content, set abstract_available to false
+  and both axes to "unknown".
+- paper_index is the number given with that candidate. Return every paper once.
+
+Reply with a JSON array only:
+[{"paper_index": 1, "abstract_available": true,
+  "domain_scope": "in_scope|out_of_scope|unknown",
+  "answer_role": "direct|supporting|none|unknown",
+  "reason": "<one short sentence>"}]"""
+
 _JSON_BLOCK = re.compile(r"\{.*\}", re.S)
+_JSON_ARRAY = re.compile(r"\[.*\]", re.S)
 
 
 def build_prompt_hash(
@@ -120,12 +156,28 @@ class RelevanceVerdict:
         Fails open: a judgement that could not be made, or a paper whose
         abstract the source does not publish, must never be dropped on that
         basis alone. Only a paper positively placed in another field is
-        removed.
+        removed. This is the loose threshold.
         """
 
-        if self.failed or not self.abstract_available:
-            return True
-        return self.domain_scope != DOMAIN_OUT_OF_SCOPE
+        return kept_under(self, THRESHOLD_LOOSE)
+
+
+def kept_under(verdict: RelevanceVerdict, threshold: str) -> bool:
+    """Apply the loose or strict keep rule. Both fail open.
+
+    Loose keeps every in-scope paper, including supporting evidence that does
+    not answer the question outright. Strict keeps only a direct answer.
+    """
+
+    if threshold not in {THRESHOLD_LOOSE, THRESHOLD_STRICT}:
+        raise ValueError(f"unknown relevance threshold: {threshold}")
+    if verdict.failed or not verdict.abstract_available:
+        return True
+    if verdict.domain_scope == DOMAIN_OUT_OF_SCOPE:
+        return False
+    if threshold == THRESHOLD_STRICT:
+        return verdict.answer_role == ROLE_DIRECT
+    return True
 
 
 def parse_verdict(paper_key: str, content: str) -> RelevanceVerdict:
@@ -181,6 +233,51 @@ def parse_verdict(paper_key: str, content: str) -> RelevanceVerdict:
     )
 
 
+def parse_batch_verdicts(
+    papers: Sequence[PaperCandidate],
+    content: str,
+) -> list[RelevanceVerdict]:
+    """Align a JSON array of judgements with the papers in one batch."""
+
+    def failed(paper: PaperCandidate, reason: str) -> RelevanceVerdict:
+        return RelevanceVerdict(
+            paper_key=paper_key(paper),
+            domain_scope=DOMAIN_UNKNOWN,
+            answer_role=ROLE_UNKNOWN,
+            abstract_available=bool(paper.abstract),
+            reason=reason,
+            failed=True,
+        )
+
+    match = _JSON_ARRAY.search(content or "")
+    payload: Any = None
+    if match:
+        try:
+            payload = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            payload = None
+    by_index: dict[int, RelevanceVerdict] = {}
+    if isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            index = item.get("paper_index")
+            if isinstance(index, bool) or not isinstance(index, int):
+                continue
+            if index < 1 or index > len(papers) or index in by_index:
+                continue
+            by_index[index] = parse_verdict(paper_key(papers[index - 1]), json.dumps(item))
+    verdicts: list[RelevanceVerdict] = []
+    for index, paper in enumerate(papers, start=1):
+        verdicts.append(
+            by_index.get(index)
+            or failed(paper, "model reply omitted this paper")
+        )
+    if not isinstance(payload, list):
+        return [failed(paper, "model reply contained no JSON array") for paper in papers]
+    return verdicts
+
+
 class RelevanceJudge:
     """Judge candidates with a model gateway."""
 
@@ -190,10 +287,16 @@ class RelevanceJudge:
         *,
         system_prompt: str = SYSTEM_PROMPT,
         prompt_version: str = PROMPT_VERSION,
+        batch_prompt_version: str = BATCH_PROMPT_VERSION,
+        batch_size: int = RELEVANCE_BATCH_SIZE,
     ) -> None:
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
         self.gateway = gateway
         self.system_prompt = system_prompt
         self.prompt_version = prompt_version
+        self.batch_prompt_version = batch_prompt_version
+        self.batch_size = batch_size
 
     def build_user_message(
         self,
@@ -267,6 +370,103 @@ class RelevanceJudge:
                 response,
             )
         return parse_verdict(key, response.content), response
+
+    def build_batch_user_message(
+        self,
+        *,
+        question: str,
+        subquestions: Sequence[str],
+        papers: Sequence[PaperCandidate],
+    ) -> str:
+        blocks = [
+            self.build_user_message(
+                question=question, subquestions=subquestions, paper=paper
+            )
+            for paper in papers
+        ]
+        numbered = []
+        for index, block in enumerate(blocks, start=1):
+            body = block.split("\n\nCandidate paper\n", 1)[-1]
+            numbered.append(f"Paper index: {index}\n{body}")
+        header = blocks[0].split("\n\nCandidate paper\n", 1)[0]
+        return header + "\n\n" + "\n\n".join(numbered)
+
+    async def judge_batch(
+        self,
+        *,
+        question: str,
+        subquestions: Sequence[str],
+        papers: Sequence[PaperCandidate],
+    ) -> list[tuple[list[RelevanceVerdict], ModelResponse | None]]:
+        """Judge papers in chunks. Each chunk is one model call."""
+
+        batch: list[tuple[list[RelevanceVerdict], ModelResponse | None]] = []
+        pending = list(papers)
+        while pending:
+            chunk = pending[: self.batch_size]
+            pending = pending[self.batch_size :]
+            batch.append(
+                await self._judge_chunk(
+                    question=question, subquestions=subquestions, papers=chunk
+                )
+            )
+        return batch
+
+    async def _judge_chunk(
+        self,
+        *,
+        question: str,
+        subquestions: Sequence[str],
+        papers: Sequence[PaperCandidate],
+    ) -> tuple[list[RelevanceVerdict], ModelResponse | None]:
+        user = self.build_batch_user_message(
+            question=question, subquestions=subquestions, papers=papers
+        )
+        prompt_hash = build_batch_prompt_hash(question, subquestions, papers)
+
+        def failed(reason: str) -> list[RelevanceVerdict]:
+            return [
+                RelevanceVerdict(
+                    paper_key=paper_key(paper),
+                    domain_scope=DOMAIN_UNKNOWN,
+                    answer_role=ROLE_UNKNOWN,
+                    abstract_available=bool(paper.abstract),
+                    reason=reason,
+                    failed=True,
+                )
+                for paper in papers
+            ]
+
+        try:
+            response = await self.gateway.complete(
+                prompt_hash=prompt_hash,
+                system=BATCH_SYSTEM_PROMPT,
+                user=user,
+                max_output_tokens=900 * len(papers),
+                json_output=True,
+            )
+        except ModelGatewayError as exc:
+            return failed(f"model call failed: {exc}"), None
+        if response.truncated:
+            return failed("model ran out of output budget before answering"), response
+        return parse_batch_verdicts(papers, response.content), response
+
+
+def build_batch_prompt_hash(
+    question: str,
+    subquestions: Sequence[str],
+    papers: Sequence[PaperCandidate],
+) -> str:
+    """Return a stable hash of one batch judgement."""
+
+    from research_agent.storage.repository import sha256_text
+
+    parts = [BATCH_PROMPT_VERSION, question, *subquestions]
+    for paper in papers:
+        parts.extend(
+            [paper.source, paper.source_record_id, paper.title, paper.abstract or ""]
+        )
+    return sha256_text("\x00".join(parts))
 
 
 def paper_key(paper: PaperCandidate) -> str:

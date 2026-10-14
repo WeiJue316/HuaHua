@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import httpx
@@ -125,6 +126,40 @@ async def test_openalex_client_gets_references() -> None:
     assert result.query == "references:W123456789"
     assert result.total_count == 1
     assert result.papers[0].source_record_id == "W123456789"
+
+
+@pytest.mark.asyncio
+async def test_openalex_detail_requests_include_mailto_and_api_key() -> None:
+    work = json.loads(FIXTURE.read_text(encoding="utf-8"))["results"][0]
+    work = dict(work)
+    work["referenced_works"] = ["https://openalex.org/W222222222"]
+    detail_urls: list[httpx.URL] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/works/W123456789":
+            detail_urls.append(request.url)
+            return httpx.Response(200, json=work, request=request)
+        return httpx.Response(
+            200,
+            text=FIXTURE.read_text(encoding="utf-8"),
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        client = OpenAlexClient(
+            http_client=http_client,
+            mailto="researcher@example.edu",
+            api_key="test-openalex-key",
+        )
+        await client.get_paper("W123456789")
+        await client.resolve_open_access("W123456789")
+        await client.get_references("W123456789")
+
+    assert len(detail_urls) == 3
+    for url in detail_urls:
+        assert url.params["mailto"] == "researcher@example.edu"
+        assert url.params["api_key"] == "test-openalex-key"
+
 
 @pytest.mark.asyncio
 async def test_openalex_client_retries_rate_limit_then_succeeds() -> None:

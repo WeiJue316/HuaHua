@@ -14,8 +14,10 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -28,6 +30,9 @@ CACHEABLE_STATUS = range(200, 300)
 # meaningless once the body is stored decoded.
 HEADERS_NOT_TO_REPLAY = frozenset(
     {"content-encoding", "content-length", "transfer-encoding"}
+)
+SECRET_QUERY_PARAMS = frozenset(
+    {"api_key", "apikey", "api-key", "access_token", "token", "secret"}
 )
 
 
@@ -42,14 +47,28 @@ class CacheStats:
         return {"cache_hits": self.hits, "cache_misses": self.misses}
 
 
+def redact_cache_url(url: str) -> str:
+    """Remove credential query parameters before a URL is stored or hashed."""
+
+    parts = urlsplit(url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if key.lower() not in SECRET_QUERY_PARAMS
+    ]
+    encoded = urlencode(query, doseq=True)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, encoded, parts.fragment))
+
+
 def cache_key(method: str, url: str) -> str:
     """Return the storage key for one request.
 
-    Authentication headers are deliberately excluded: an API key changes the
-    quota, not the content. The URL already carries every parameter that does.
+    Authentication headers and credential query parameters are excluded: an
+    API key changes the quota, not the content.
     """
 
-    return hashlib.sha256(f"{method.upper()}\n{url}".encode()).hexdigest()
+    safe_url = redact_cache_url(url)
+    return hashlib.sha256(f"{method.upper()}\n{safe_url}".encode()).hexdigest()
 
 
 class ResponseCache:
@@ -85,6 +104,7 @@ class ResponseCache:
         """Return a stored response, or None when the request is a miss."""
 
         path = self._path(cache_key(method, url))
+        safe_url = redact_cache_url(url)
         if not path.is_file():
             self._misses += 1
             return None
@@ -115,7 +135,7 @@ class ResponseCache:
             status_code=int(payload.get("status_code", 200)),
             content=content,
             headers=headers,
-            request=httpx.Request(method.upper(), url),
+            request=httpx.Request(method.upper(), safe_url),
         )
 
     def put(
@@ -130,10 +150,11 @@ class ResponseCache:
 
         if response.status_code not in CACHEABLE_STATUS:
             return
+        safe_url = redact_cache_url(url)
         self.root.mkdir(parents=True, exist_ok=True)
         payload = {
             "method": method.upper(),
-            "url": url,
+            "url": safe_url,
             "status_code": response.status_code,
             "headers": {
                 key: value
@@ -152,15 +173,17 @@ class ResponseCache:
         )
         temporary.replace(path)
 
-    def directory_hash(self) -> str:
-        """Hash of every entry's key and content.
+    def directory_hash(self, *, now: float | None = None) -> str:
+        """Hash of every unexpired entry's key and content.
 
         Timestamps are excluded so that re-running a warm cache does not change
-        the hash, while any change to a stored response does.
+        the hash, while any change to a stored response does. Entries past the
+        TTL are ignored, matching a cache read.
         """
 
         if not self.root.is_dir():
             return hashlib.sha256(b"").hexdigest()
+        current = time.time() if now is None else now
         digest = hashlib.sha256()
         for path in sorted(self.root.glob("*.json")):
             try:
@@ -169,6 +192,14 @@ class ResponseCache:
             except (OSError, json.JSONDecodeError, ValueError, TypeError):
                 digest.update(path.name.encode())
                 digest.update(b"corrupt")
+                continue
+            stored_at = payload.get("stored_at")
+            if (
+                self.ttl_seconds is not None
+                and isinstance(stored_at, int | float)
+                and not isinstance(stored_at, bool)
+                and current - float(stored_at) > self.ttl_seconds
+            ):
                 continue
             digest.update(path.stem.encode())
             digest.update(hashlib.sha256(content).digest())

@@ -1,6 +1,7 @@
 """Command-line entry point for the research agent."""
 
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
@@ -8,6 +9,7 @@ import httpx
 import typer
 
 from . import __version__
+from .doctor import collect_doctor_checks, doctor_exit_code
 from .evaluator.bm25 import Bm25Index
 from .evaluator.case_runner import (
     SYSTEM_VERSION,
@@ -23,9 +25,11 @@ from .evaluator.runner import (
 from .evaluator.snapshot import SourceSnapshot
 from .evaluator.systems import SYSTEMS
 from .evidence.synthesis import ClaimSynthesizer
-from .llm.deepseek import DeepSeekGateway
+from .interfaces.app import LOCAL_API_HOSTS, serve_local_api
+from .llm.deepseek import DeepSeekGateway, api_key_from_environment
 from .llm.gateway import ModelGatewayError
 from .mcp_servers.cache import ResponseCache
+from .paths import project_root, resolve_project_path
 from .planner.planner import ROUTING_BUDGET, ResearchPlan, plan_research
 from .policy.relevance import RelevanceJudge
 from .router.federation import search_sources
@@ -51,6 +55,56 @@ app = typer.Typer(
 )
 
 
+@dataclass(frozen=True)
+class _ResearchModelUse:
+    """How one research command should use the model provider."""
+
+    relevance_filter: bool
+    synthesis: bool
+    relevance_notice: str | None = None
+    error: str | None = None
+
+
+def _option_was_explicit(ctx: typer.Context, name: str) -> bool:
+    source = ctx.get_parameter_source(name)
+    return source is not None and source.name != "DEFAULT"
+
+
+def _research_model_use(
+    *,
+    relevance_filter: bool,
+    relevance_filter_explicit: bool,
+    synthesis: bool,
+    api_key_present: bool,
+) -> _ResearchModelUse:
+    """Skip the default relevance filter when no model key is configured."""
+
+    if api_key_present:
+        return _ResearchModelUse(relevance_filter, synthesis)
+    requested: list[str] = []
+    if relevance_filter and relevance_filter_explicit:
+        requested.append("--relevance-filter")
+    if synthesis:
+        requested.append("--synthesis")
+    if requested:
+        requested_text = " or ".join(requested)
+        return _ResearchModelUse(
+            relevance_filter,
+            synthesis,
+            error=(
+                "DEEPSEEK_API_KEY is not set. "
+                f"Set it before using {requested_text}."
+            ),
+        )
+    if relevance_filter:
+        return _ResearchModelUse(
+            False,
+            False,
+            relevance_notice="relevance: skipped (DEEPSEEK_API_KEY is not set)",
+        )
+    return _ResearchModelUse(False, synthesis)
+
+
 @app.command()
 def version() -> None:
     """Print the installed package version."""
@@ -60,13 +114,23 @@ def version() -> None:
 
 @app.command()
 def doctor() -> None:
-    """Check the minimum local runtime requirements."""
+    """Check Python, writable directories, migrations, and optional variables."""
 
-    typer.echo("environment: ok")
+    root = project_root()
+    checks = collect_doctor_checks(
+        data_dir=root / "data",
+        reports_dir=root / "reports",
+    )
+    for check in checks:
+        typer.echo(f"{check.name}: {check.detail}")
+    exit_code = doctor_exit_code(checks)
+    if exit_code:
+        raise typer.Exit(code=exit_code)
 
 
 @app.command()
 def research(
+    ctx: typer.Context,
     question: Annotated[
         str,
         typer.Argument(help="Research question to investigate."),
@@ -109,6 +173,13 @@ def research(
             help="Judge candidate relevance with a language model before claims.",
         ),
     ] = True,
+    relevance_threshold: Annotated[
+        str,
+        typer.Option(
+            "--relevance-threshold",
+            help="loose keeps in-scope papers; strict keeps only direct answers.",
+        ),
+    ] = "loose",
     synthesis: Annotated[
         bool,
         typer.Option(
@@ -125,6 +196,11 @@ def research(
     ] = None,
 ) -> None:
     """Run the federated research flow and write a traceable report."""
+
+    db = resolve_project_path(db)
+    reports_dir = resolve_project_path(reports_dir)
+    if cache_dir is not None:
+        cache_dir = resolve_project_path(cache_dir)
 
     source_text = sources.strip().lower()
     plan: ResearchPlan
@@ -152,6 +228,19 @@ def research(
             max_results_per_source=max_results,
             max_sources=len(source_ids),
         )
+    if relevance_threshold not in {"loose", "strict"}:
+        raise typer.BadParameter("relevance threshold must be loose or strict")
+    model_use = _research_model_use(
+        relevance_filter=relevance_filter,
+        relevance_filter_explicit=_option_was_explicit(ctx, "relevance_filter"),
+        synthesis=synthesis,
+        api_key_present=api_key_from_environment() is not None,
+    )
+    if model_use.error is not None:
+        typer.echo(model_use.error, err=True)
+        raise typer.Exit(code=1)
+    relevance_filter = model_use.relevance_filter
+    synthesis = model_use.synthesis
 
     async def run() -> ResearchRunResult:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
@@ -179,6 +268,7 @@ def research(
                 relevance_judge=judge,
                 claim_synthesizer=synthesizer,
                 response_cache=cache,
+                relevance_threshold=relevance_threshold,
             )
 
     try:
@@ -215,7 +305,9 @@ def research(
     typer.echo(f"claims: {result.claim_count}")
     typer.echo(f"files: {result.file_count}")
     typer.echo(f"documents: {result.document_count}")
-    if result.relevance_skipped:
+    if model_use.relevance_notice is not None:
+        typer.echo(model_use.relevance_notice)
+    elif result.relevance_skipped:
         typer.echo("relevance: skipped (--no-relevance-filter)")
     else:
         typer.echo(
@@ -224,6 +316,14 @@ def research(
             f"failures={result.relevance_failures}"
         )
     typer.echo(f"report: {result.report_path}")
+    for label, filename in (
+        ("evidence_json", "evidence.json"),
+        ("evidence_csv", "evidence.csv"),
+        ("bibtex", "references.bib"),
+    ):
+        export_path = result.report_path.with_name(filename)
+        if export_path.is_file():
+            typer.echo(f"{label}: {export_path}")
 
 
 @app.command()
@@ -288,6 +388,14 @@ def evaluate(
     ] = None,
 ) -> None:
     """Run an evaluation matrix over a frozen question set."""
+
+    dataset = resolve_project_path(dataset)
+    db = resolve_project_path(db)
+    reports_dir = resolve_project_path(reports_dir)
+    cache_dir = resolve_project_path(cache_dir)
+    b0_corpus = resolve_project_path(b0_corpus)
+    if source_snapshot is not None:
+        source_snapshot = resolve_project_path(source_snapshot)
 
     if not dataset.is_file():
         typer.echo(f"dataset not found: {dataset}", err=True)
@@ -433,6 +541,9 @@ def warm_cache(
 ) -> None:
     """Fill the response cache so every evaluation arm sees identical input."""
 
+    dataset = resolve_project_path(dataset)
+    cache_dir = resolve_project_path(cache_dir)
+
     if not dataset.is_file():
         typer.echo(f"dataset not found: {dataset}", err=True)
         raise typer.Exit(code=1)
@@ -472,6 +583,28 @@ def warm_cache(
     typer.echo(f"cache_entries: {cache.entry_count()}")
     typer.echo(f"cache_hash: {cache.directory_hash()}")
     typer.echo(f"hits={cache.stats.hits} misses={cache.stats.misses}")
+
+
+@app.command()
+def serve(
+    db: Annotated[
+        Path,
+        typer.Option("--db", help="SQLite database path."),
+    ] = Path("data/research_agent.db"),
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Bind address. Must stay on this machine."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", min=1, max=65535),
+    ] = 8765,
+) -> None:
+    """Serve the local read-only evidence API."""
+
+    if host not in LOCAL_API_HOSTS:
+        raise typer.BadParameter("API host must stay on the local machine")
+    serve_local_api(resolve_project_path(db), host=host, port=port)
 
 
 def main() -> None:

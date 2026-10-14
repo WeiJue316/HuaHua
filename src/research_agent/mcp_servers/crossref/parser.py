@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from research_agent.identity import normalize_doi as _normalize_doi
 from research_agent.mcp_servers.common import Author, OpenAccessInfo, PaperCandidate
 
 TAG_PATTERN = re.compile(r"<[^>]+>")
@@ -28,10 +29,7 @@ class CrossrefSearchPage:
 def normalize_crossref_doi(value: str) -> str:
     """Normalize a Crossref DOI value."""
 
-    normalized = value.strip().lower()
-    normalized = normalized.removeprefix("https://doi.org/")
-    normalized = normalized.removeprefix("http://doi.org/")
-    normalized = normalized.removeprefix("doi:")
+    normalized = _normalize_doi(value)
     if not normalized:
         raise CrossrefParseError("Crossref DOI must not be empty")
     return normalized

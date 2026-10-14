@@ -59,6 +59,9 @@
 │   ├── PRD.md                    # 产品目标、用户、需求、验收标准
 │   ├── architecture.md           # 系统架构、模块边界、运行流程
 │   ├── mcp-contract.md           # MCP 公共契约与源站适配规范
+│   ├── local-api.md              # 本地只读 API 契约（FE-01）
+│   ├── evidence-viewer.md        # 证据链查看器设计（FE-04）
+│   ├── evidence-viewer-plan.md   # 证据链查看器实现计划（FE-04）
 │   ├── data-model.md             # 核心实体、关系、状态和存储约定
 │   ├── evaluation.md             # 数据集、baseline、指标和消融实验
 │   ├── roadmap.md                # 开发与评测的里程碑、问题清单和风险控制
@@ -72,7 +75,9 @@
 ├── .github/workflows/ci.yml      # 三平台 CI；修改属于红线
 ├── src/research_agent/           # Python 包
 │   ├── cli.py                   # research / evaluate / warm-cache / doctor 命令
+│   ├── doctor.py                # doctor 的 Python、目录、迁移与环境变量检查
 │   ├── identity.py              # 论文身份键：DOI、arXiv ID、arXiv DOI、OpenAlex ID
+│   ├── paths.py                 # 项目根目录与配置路径解析
 │   ├── runtime/
 │   │   ├── research_service.py  # 七步 Run 编排与 Markdown 报告
 │   │   └── enrichment.py        # 缺摘要时按 DOI 从 OpenAlex 补全
@@ -88,9 +93,11 @@
 │   │   ├── gateway.py           # ModelGateway 协议
 │   │   └── deepseek.py          # DeepSeek provider
 │   ├── policy/
+│   │   ├── download.py          # 下载域名白名单、开放获取检查
 │   │   └── relevance.py         # 语义相关性判断（ADR-0012）
 │   ├── evaluator/
 │   │   ├── dataset.py           # JSONL 问题集加载与哈希
+│   │   ├── formal_design.py     # 正式 30 题集的设计配额
 │   │   ├── pilot_seed.py        # Pilot 种子问题与 OpenAlex 标注草稿
 │   │   ├── runner.py            # EvaluationRun/Case 矩阵调度
 │   │   ├── case_runner.py       # 把各系统接到评测回调
@@ -104,6 +111,7 @@
 │   │   └── snapshot.py          # 冻结源站快照
 │   ├── evidence/
 │   │   ├── claims.py            # Evidence → Claim 与引用校验
+│   │   ├── exports.py           # JSON/CSV 证据表与 BibTeX
 │   │   └── synthesis.py         # LLM Claim 综合（synthesis-v1）
 │   ├── storage/                 # 迁移、repository、不可变文件归档
 │   │   ├── migrations/          # NNNN_*.sql
@@ -135,8 +143,16 @@
 │   │       ├── client.py
 │   │       ├── parser.py
 │   │       └── server.py
-│   └── interfaces/              # 空包；计划放 FastAPI 本地 API（ADR-0016，路线图 FE-02）
-├── web/                          # 用户前端（React + Vite + TypeScript，ADR-0016）；尚未创建，见路线图 FE-03
+│   └── interfaces/              # FastAPI 本地只读 API（ADR-0016）
+│       ├── __init__.py
+│       ├── app.py               # /v1 路由、CORS 与错误格式
+│       └── queries.py           # 只读查询
+├── web/                          # React + Vite + TypeScript（ADR-0016）
+│   ├── package.json             # 前端依赖与检查脚本
+│   ├── package-lock.json        # npm 依赖锁定
+│   ├── .nvmrc                   # Node.js 24
+│   └── src/
+│       └── App.tsx              # 脚手架页面；证据链查看器见 FE-04
 ├── tests/
 │   ├── fixtures/                # 可公开的脱敏测试响应
 │   ├── unit/
@@ -201,10 +217,18 @@ uv sync --dev
 
 ```powershell
 uv run ruff check .
-uv run mypy src
+uv run mypy src scripts
 uv run pytest
 uv run research-agent --help
 python scripts/check_docs.py
+```
+
+受限环境下 pytest 可能写不了默认临时目录。不要为此修改测试。把 `TEMP`、`TMP` 和 `--basetemp` 指到同一个可写目录。Windows 示例：
+
+```powershell
+$env:TEMP = "$env:LOCALAPPDATA\Temp"
+$env:TMP = "$env:LOCALAPPDATA\Temp"
+uv run pytest --basetemp "$env:LOCALAPPDATA\Temp\ra-pytest"
 ```
 
 ## 7. 红线：必须先获得用户确认

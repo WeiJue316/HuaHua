@@ -11,7 +11,7 @@ from uuid import uuid4
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, contact_email, optional_env
 from research_agent.mcp_servers.openalex.client import OpenAlexClient, OpenAlexClientError
 
 SCHEMA_VERSION = "1.0"
@@ -39,7 +39,7 @@ def _candidate_item(candidate: PaperCandidate, retrieved_at: str) -> dict[str, A
         "source_version": candidate.source_version,
         "identifiers": {
             "doi": candidate.doi,
-            "arxiv_id": None,
+            "arxiv_id": candidate.raw.get("arxiv_id"),
             "openalex_id": candidate.source_record_id,
             "semantic_scholar_id": None,
             "dblp_key": None,
@@ -237,7 +237,13 @@ def main() -> None:
 
     async def run() -> None:
         async with httpx.AsyncClient(timeout=30.0) as http_client:
-            server = create_openalex_server(OpenAlexClient(http_client=http_client))
+            server = create_openalex_server(
+                OpenAlexClient(
+                    http_client=http_client,
+                    mailto=contact_email(),
+                    api_key=optional_env("OPENALEX_API_KEY"),
+                )
+            )
             await server.run_stdio_async()
 
     asyncio.run(run())

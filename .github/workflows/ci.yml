@@ -36,11 +36,11 @@ jobs:
       - name: Sync dependencies
         run: uv sync --dev --python 3.12
 
-      - name: Check formatting
+      - name: Lint
         run: uv run ruff check .
 
       - name: Type check
-        run: uv run mypy src
+        run: uv run mypy src scripts
 
       - name: Run tests
         run: uv run pytest
@@ -50,3 +50,13 @@ jobs:
 
       - name: Check CLI
         run: uv run research-agent --help
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Check web
+        run: uv run python scripts/check_web.py

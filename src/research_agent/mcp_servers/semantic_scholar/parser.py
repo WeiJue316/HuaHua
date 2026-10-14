@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from research_agent.identity import normalize_doi as _normalize_doi
 from research_agent.mcp_servers.common import Author, OpenAccessInfo, PaperCandidate
 
 
@@ -27,10 +28,7 @@ def normalize_semantic_scholar_doi(value: str | None) -> str | None:
 
     if not value:
         return None
-    normalized = value.strip().lower()
-    normalized = normalized.removeprefix("https://doi.org/")
-    normalized = normalized.removeprefix("http://doi.org/")
-    normalized = normalized.removeprefix("doi:")
+    normalized = _normalize_doi(value)
     return normalized or None
 
 

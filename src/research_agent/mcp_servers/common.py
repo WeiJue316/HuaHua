@@ -10,13 +10,15 @@ from collections.abc import Awaitable, Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, Field
 
-from research_agent.mcp_servers.cache import ResponseCache
+from research_agent.mcp_servers.cache import ResponseCache, redact_cache_url
 
 SleepFn = Callable[[float], Awaitable[None]]
 RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
@@ -50,11 +52,17 @@ CONTACT_ENV_VAR = "RESEARCH_AGENT_CONTACT"
 DEFAULT_CONTACT_URL = "https://github.com/WeiJue316/HuaHua"
 
 
+def optional_env(name: str) -> str | None:
+    """Return a stripped environment value, or None when it is missing."""
+
+    value = os.environ.get(name, "").strip()
+    return value or None
+
+
 def contact_email() -> str | None:
     """Return the operator contact email used for polite API pools."""
 
-    value = os.environ.get(CONTACT_ENV_VAR, "").strip()
-    return value or None
+    return optional_env(CONTACT_ENV_VAR)
 
 
 def user_agent() -> str:
@@ -155,14 +163,41 @@ class RetryPolicy:
         return float(min(self.max_delay_seconds, exponential + jitter))
 
 
-def _retry_after_seconds(response: httpx.Response) -> float | None:
-    value = response.headers.get("retry-after")
+def parse_retry_after(
+    value: str | None,
+    *,
+    now: datetime | None = None,
+) -> float | None:
+    """Return the delay implied by a Retry-After header.
+
+    The header is either a number of seconds or an HTTP date. A date in the
+    past waits zero seconds. An unreadable value returns None so the caller
+    can fall back to its own backoff.
+    """
+
     if value is None:
         return None
-    try:
-        return float(value)
-    except ValueError:
+    text = value.strip()
+    if not text:
         return None
+    try:
+        return max(0.0, float(text))
+    except ValueError:
+        pass
+    try:
+        parsed = parsedate_to_datetime(text)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    current = now if now is not None else datetime.now(UTC)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=UTC)
+    return max(0.0, (parsed - current).total_seconds())
+
+
+def _retry_after_seconds(response: httpx.Response) -> float | None:
+    return parse_retry_after(response.headers.get("retry-after"))
 
 
 async def get_with_retry(
@@ -180,8 +215,8 @@ async def get_with_retry(
 
     policy = retry_policy or RetryPolicy()
     limiter = rate_limiter or DEFAULT_RATE_LIMITER
-    request_url = str(
-        http_client.build_request("GET", url, params=params, headers=headers).url
+    request_url = redact_cache_url(
+        str(http_client.build_request("GET", url, params=params, headers=headers).url)
     )
     if cache is not None:
         cached = cache.get(method="GET", url=request_url, now=time.time())
