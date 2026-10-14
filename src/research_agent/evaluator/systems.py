@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from research_agent.planner.planner import ROUTING_BUDGET
+
 ALL_SOURCES = ("arxiv", "openalex", "crossref", "semantic_scholar", "dblp")
 
 
@@ -34,11 +36,18 @@ class SystemConfig:
     sources: tuple[str, ...] | None
     relevance_filter: bool
     citation_constraint: bool = True
+    routing_budget: int | None = ROUTING_BUDGET
     implemented: bool = True
 
     def __post_init__(self) -> None:
         if not self.system_id:
             raise ValueError("system_id must not be empty")
+
+    @property
+    def needs_model(self) -> bool:
+        """Whether this system calls a language model."""
+
+        return self.system_id in {"B0", "B2"} or self.relevance_filter
 
 
 SYSTEMS: dict[str, SystemConfig] = {
@@ -59,6 +68,7 @@ SYSTEMS: dict[str, SystemConfig] = {
         description="去路由器：无条件查询全部源站",
         sources=ALL_SOURCES,
         relevance_filter=True,
+        routing_budget=None,
     ),
     "A6": SystemConfig(
         system_id="A6",

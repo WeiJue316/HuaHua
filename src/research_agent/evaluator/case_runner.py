@@ -19,6 +19,7 @@ from research_agent.evaluator.metrics import (
     retrieval_metrics,
     source_coverage,
 )
+from research_agent.evaluator.ranking import candidate_list
 from research_agent.evaluator.react import PureReActBaseline
 from research_agent.evaluator.runner import EvaluationCaseOutcome
 from research_agent.evaluator.snapshot import SourceSnapshot
@@ -27,10 +28,14 @@ from research_agent.evaluator.systems import (
     get_system,
     restrict_sources,
 )
-from research_agent.evaluator.task_completion import TaskCompletionJudge
+from research_agent.evaluator.task_completion import (
+    TaskCompletionJudge,
+    estimated_model_call_budget,
+)
 from research_agent.evidence.synthesis import ClaimSynthesizer
 from research_agent.llm.gateway import ModelGateway
 from research_agent.mcp_servers.cache import ResponseCache
+from research_agent.mcp_servers.common import count_http_attempts
 from research_agent.planner.planner import ResearchPlan, plan_research
 from research_agent.policy.relevance import RelevanceJudge
 from research_agent.router.federation import SearchClient
@@ -54,7 +59,7 @@ class CaseRunnerSettings:
     dataset_version: str = "pilot-v2"
     allowed_sources: tuple[str, ...] | None = None
     enable_task_completion_judge: bool = True
-    model_call_budget: int = 20
+    model_call_budget: int | None = None
 
 
 class ResearchCaseRunner:
@@ -109,22 +114,26 @@ class ResearchCaseRunner:
             return EvaluationCaseOutcome(error_code="no_sources")
 
         clients = self._build_clients(source_ids)
+        budget = (
+            len(source_ids)
+            if config.routing_budget is None
+            else config.routing_budget
+        )
+        plan = plan_research(
+            question.question,
+            available_sources=tuple(source_ids),
+            max_results_per_source=self.settings.max_results_per_source,
+            max_sources=budget,
+        )
         if system_id == "A2":
             plan = ResearchPlan(
                 question=question.question,
                 query_variants=(question.question,),
-                selected_sources=tuple(source_ids),
-                fallback_sources=(),
-                max_results_per_source=self.settings.max_results_per_source,
-                max_concurrency=len(source_ids),
+                selected_sources=plan.selected_sources,
+                fallback_sources=plan.fallback_sources,
+                max_results_per_source=plan.max_results_per_source,
+                max_concurrency=plan.max_concurrency,
                 reason="A2_fixed_pipeline",
-            )
-        else:
-            plan = plan_research(
-                question.question,
-                available_sources=tuple(source_ids),
-                max_results_per_source=self.settings.max_results_per_source,
-                max_sources=len(source_ids),
             )
         judge = None
         if config.relevance_filter:
@@ -155,6 +164,7 @@ class ResearchCaseRunner:
             question=question,
             report_text=result.report_path.read_text(encoding="utf-8"),
             model_calls_used=usage.calls,
+            budget=self._model_budget(config, len(source_ids)),
         )
         metrics = self._metrics(question, result, usage, task_metrics)
         return EvaluationCaseOutcome(
@@ -182,11 +192,16 @@ class ResearchCaseRunner:
             question=question,
             report_text=outcome.report,
             model_calls_used=1,
+            budget=self._model_budget(get_system("B0"), 0),
+        )
+        ranked = candidate_list(
+            outcome.ranked_keys,
+            k=self.settings.max_results_per_source,
         )
         retrieval = retrieval_metrics(
-            retrieved_keys=set(outcome.retrieved_keys),
+            retrieved_keys=set(ranked),
             gold_keys=set(question.gold_papers),
-            ranked_keys=outcome.ranked_keys,
+            ranked_keys=ranked,
             k=self.settings.max_results_per_source,
         )
         return EvaluationCaseOutcome(
@@ -222,16 +237,22 @@ class ResearchCaseRunner:
             max_steps=8,
             max_results_per_search=self.settings.max_results_per_source,
         )
-        outcome = await baseline.run(question, run_number=run_number)
+        with count_http_attempts() as http_attempts:
+            outcome = await baseline.run(question, run_number=run_number)
         task_metrics = await self._task_completion_metrics(
             question=question,
             report_text=outcome.report,
             model_calls_used=outcome.model_calls,
+            budget=self._model_budget(config, len(source_ids)),
+        )
+        ranked = candidate_list(
+            outcome.ranked_keys,
+            k=self.settings.max_results_per_source,
         )
         retrieval = retrieval_metrics(
-            retrieved_keys=set(outcome.retrieved_keys),
+            retrieved_keys=set(ranked),
             gold_keys=set(question.gold_papers),
-            ranked_keys=outcome.ranked_keys,
+            ranked_keys=ranked,
             k=self.settings.max_results_per_source,
         )
         return EvaluationCaseOutcome(
@@ -252,10 +273,23 @@ class ResearchCaseRunner:
                     if outcome.source_attempts
                     else 0.0
                 ),
+                "source_http_calls": float(http_attempts.calls),
                 "report_written": 1.0,
                 "report_chars": float(len(outcome.report)),
                 **task_metrics,
             }
+        )
+
+    def _model_budget(self, config: SystemConfig, source_count: int) -> int:
+        if self.settings.model_call_budget is not None:
+            return self.settings.model_call_budget
+        return estimated_model_call_budget(
+            k=self.settings.max_results_per_source,
+            source_count=source_count,
+            relevance_filter=config.relevance_filter and self.gateway is not None,
+            synthesis=config.system_id not in {"B0", "B2", "A1"}
+            and self.gateway is not None,
+            react=config.system_id == "B2",
         )
 
     async def _task_completion_metrics(
@@ -264,6 +298,7 @@ class ResearchCaseRunner:
         question: EvaluationQuestion,
         report_text: str,
         model_calls_used: int,
+        budget: int,
     ) -> dict[str, float]:
         if self.task_judge is None:
             return {}
@@ -271,8 +306,9 @@ class ResearchCaseRunner:
             question=question,
             report_text=report_text,
             model_calls_used=model_calls_used,
+            model_call_budget=budget,
         )
-        return result.to_dict()
+        return {"model_call_budget": float(budget), **result.to_dict()}
 
     def _build_clients(
         self,
@@ -302,22 +338,22 @@ class ResearchCaseRunner:
         task_metrics: dict[str, float],
     ) -> dict[str, float]:
         stored = set(result.retrieved_paper_keys)
-        kept = stored - set(result.dropped_paper_keys)
         claims = load_claim_rows_checked(self.settings.db_path, result.run_id)
         contributing = {
             source for source, count in result.source_counts.items() if count > 0
         }
 
-        dropped = set(result.dropped_paper_keys)
-        ranked = [key for key in result.retrieved_paper_keys if key not in dropped]
+        ranked = candidate_list(
+            result.retrieved_paper_keys,
+            dropped=set(result.dropped_paper_keys),
+            k=self.settings.max_results_per_source,
+        )
         alias_map = dict(result.paper_aliases)
         extra_aliases = {
-            alias
-            for key in kept
-            for alias in alias_map.get(key, ())
+            alias for key in ranked for alias in alias_map.get(key, ())
         }
         retrieval = retrieval_metrics(
-            retrieved_keys=kept,
+            retrieved_keys=set(ranked),
             gold_keys=set(question.gold_papers),
             extra_aliases=extra_aliases,
             ranked_keys=ranked,
@@ -345,6 +381,7 @@ class ResearchCaseRunner:
             "source_successes": float(source_successes),
             "source_failures": float(source_failures),
             "source_success_rate": source_success_rate,
+            "source_http_calls": float(result.source_http_calls),
             **task_metrics,
             "retrieved_paper_count": float(result.paper_count),
             "stored_paper_count": float(len(stored)),

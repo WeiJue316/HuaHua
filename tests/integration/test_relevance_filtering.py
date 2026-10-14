@@ -48,11 +48,17 @@ class _UnusedGateway:
 class StubJudge(RelevanceJudge):
     """A judge with a fixed decision rule instead of a model call."""
 
-    def __init__(self, *, deny_all: bool) -> None:
+    def __init__(
+        self,
+        *,
+        deny_all: bool = False,
+        deny_titles: frozenset[str] = frozenset(),
+    ) -> None:
         # The parent sets prompt_version, which the runtime records on every
         # model_call row, so the stub must go through it.
         super().__init__(gateway=_UnusedGateway())
         self.deny_all = deny_all
+        self.deny_titles = deny_titles
         self.judged: list[str] = []
 
     async def judge(
@@ -68,10 +74,11 @@ class StubJudge(RelevanceJudge):
             else f"{paper.source}:{paper.source_record_id}"
         )
         self.judged.append(key)
+        deny = self.deny_all or paper.title in self.deny_titles
         verdict = RelevanceVerdict(
             paper_key=key,
-            domain_scope=DOMAIN_OUT_OF_SCOPE if self.deny_all else DOMAIN_IN_SCOPE,
-            answer_role=ROLE_NONE if self.deny_all else ROLE_DIRECT,
+            domain_scope=DOMAIN_OUT_OF_SCOPE if deny else DOMAIN_IN_SCOPE,
+            answer_role=ROLE_NONE if deny else ROLE_DIRECT,
             abstract_available=True,
             reason="stub decision",
         )
@@ -194,3 +201,34 @@ async def test_a1_direct_claims_respect_relevance_filtering(tmp_path: Path) -> N
 
     assert result.claim_count == 0  # type: ignore[attr-defined]
     assert result.evidence_count == 0  # type: ignore[attr-defined]
+
+
+def _section(report: str, heading: str) -> str:
+    marker = f"## {heading}\n"
+    start = report.index(marker) + len(marker)
+    rest = report[start:]
+    next_heading = rest.find("\n## ")
+    if next_heading == -1:
+        return rest
+    return rest[:next_heading]
+
+
+@pytest.mark.asyncio
+async def test_denied_papers_leave_the_report_tables(tmp_path: Path) -> None:
+    judge = StubJudge(deny_titles=frozenset({"Another Paper"}))
+    result = await _run(tmp_path, "partial", judge)
+    report = result.report_path.read_text(encoding="utf-8")  # type: ignore[attr-defined]
+
+    papers = _section(report, "Papers")
+    evidence = _section(report, "Evidence")
+    excluded = _section(report, "已排除候选")
+
+    assert "Traceable Retrieval for Scientific Agents" in papers
+    assert "Another Paper" not in papers
+    assert "A second abstract." not in evidence
+    assert "Another Paper" in excluded
+    assert "stub decision" in excluded
+    assert result.evidence_count > 0  # type: ignore[attr-defined]
+    with connect_database(tmp_path / "partial.db") as conn:
+        stored = conn.execute("SELECT COUNT(*) FROM evidence_span").fetchone()[0]
+    assert stored > result.evidence_count  # type: ignore[attr-defined]

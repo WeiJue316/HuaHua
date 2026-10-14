@@ -15,14 +15,18 @@ from .evaluator.case_runner import (
     ResearchCaseRunner,
 )
 from .evaluator.dataset import dataset_version_from_path, load_questions
-from .evaluator.runner import EvaluationRunner, EvaluationSummary
+from .evaluator.runner import (
+    EvaluationRunner,
+    EvaluationSummary,
+    evaluation_exit_code,
+)
 from .evaluator.snapshot import SourceSnapshot
 from .evaluator.systems import SYSTEMS
 from .evidence.synthesis import ClaimSynthesizer
 from .llm.deepseek import DeepSeekGateway
 from .llm.gateway import ModelGatewayError
 from .mcp_servers.cache import ResponseCache
-from .planner.planner import ResearchPlan, plan_research
+from .planner.planner import ROUTING_BUDGET, ResearchPlan, plan_research
 from .policy.relevance import RelevanceJudge
 from .router.federation import search_sources
 from .router.registry import (
@@ -129,6 +133,7 @@ def research(
             question,
             available_sources=SUPPORTED_SOURCES,
             max_results_per_source=max_results,
+            max_sources=ROUTING_BUDGET,
         )
         source_ids = list(plan.selected_sources)
     else:
@@ -266,14 +271,14 @@ def evaluate(
         typer.Option("--b0-corpus", help="Frozen JSONL corpus for the BM25 baseline."),
     ] = Path("evaluation/corpora/pilot_v2_b0.jsonl"),
     model_call_budget: Annotated[
-        int,
+        int | None,
         typer.Option(
             "--model-call-budget",
             min=1,
-            max=200,
-            help="Maximum system model calls for baseline-neutral task completion.",
+            max=500,
+            help="Override the estimated model-call budget. Omit to use the formula.",
         ),
-    ] = 20,
+    ] = None,
     source_snapshot: Annotated[
         Path | None,
         typer.Option(
@@ -339,9 +344,11 @@ def evaluate(
             raise typer.Exit(code=1)
         b0_index = Bm25Index.from_jsonl(b0_corpus)
 
+    needs_model = any(SYSTEMS[system_id].needs_model for system_id in system_ids)
+
     async def run() -> EvaluationSummary:
         async with httpx.AsyncClient(timeout=60.0) as http_client:
-            gateway = DeepSeekGateway(http_client=http_client)
+            gateway = DeepSeekGateway(http_client=http_client) if needs_model else None
             apply_migrations(db)
             case_runner = ResearchCaseRunner(
                 questions=questions,
@@ -367,6 +374,11 @@ def evaluate(
                         "max_results_per_source": max_results,
                         "allowed_sources": allowed_sources,
                         "model_call_budget": model_call_budget,
+                        "model_call_budget_rule": (
+                            "k * sources when relevance filtering is on, "
+                            "plus 1 when synthesis is on, "
+                            "plus 8 * 2 for the ReAct baseline, otherwise 1"
+                        ),
                         "cache_dir": cache_dir.as_posix(),
                         "b0_corpus": b0_corpus.as_posix(),
                         "b0_corpus_hash": (
@@ -396,6 +408,8 @@ def evaluate(
     )
     typer.echo(f"cache_entries: {cache.entry_count()}")
     typer.echo(f"cache_hash: {cache.directory_hash()}")
+    if evaluation_exit_code(summary):
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -444,6 +458,7 @@ def warm_cache(
                     question.question,
                     available_sources=tuple(source_ids),
                     max_results_per_source=max_results,
+                    max_sources=len(source_ids),
                 )
                 await search_sources(
                     {source: clients[source] for source in plan.selected_sources},

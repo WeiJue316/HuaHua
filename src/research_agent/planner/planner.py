@@ -6,6 +6,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+# The full system asks at most this many sources. A3 ignores the budget.
+ROUTING_BUDGET = 3
+
 SOURCE_BASE_SCORES = {
     "arxiv": 1.0,
     "openalex": 1.0,

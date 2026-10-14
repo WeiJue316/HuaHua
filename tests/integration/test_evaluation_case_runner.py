@@ -135,6 +135,7 @@ async def test_full_system_case_reports_retrieval_and_evidence_metrics(
     assert "unsupported_claim_rate" in metrics
     assert metrics["relevance_failures"] == 0.0
     assert metrics["source_attempts"] >= 1.0
+    assert metrics["source_http_calls"] >= metrics["source_attempts"]
     assert metrics["source_successes"] >= 1.0
     assert metrics["source_failures"] >= 0.0
     assert metrics["source_success_rate"] > 0.0
@@ -151,8 +152,9 @@ async def test_a6_runs_without_the_filter(tmp_path: Path) -> None:
     assert outcome.error_code is None
     metrics = outcome.metrics or {}
     assert metrics["relevance_dropped"] == 0.0
-    # without a filter the stored and kept sets are identical
-    assert metrics["stored_paper_count"] == metrics["retrieved_count"]
+    # the comparable candidate list is the ranked list truncated to K
+    assert metrics["retrieved_count"] <= metrics["stored_paper_count"]
+    assert metrics["retrieved_count"] <= 5
 
 
 @pytest.mark.asyncio
@@ -463,6 +465,7 @@ async def test_b2_runs_a_react_search_finish_loop(tmp_path: Path) -> None:
     assert gateway.calls == 2
     assert metrics["recall_kept"] == 1.0
     assert metrics["search_calls"] == 1.0
+    assert metrics["source_http_calls"] >= metrics["search_calls"]
     assert metrics["steps_used"] == 2.0
     assert metrics["llm_calls"] == 2.0
     assert metrics["report_written"] == 1.0
@@ -609,6 +612,34 @@ async def test_a1_has_claims_without_evidence_chain(tmp_path: Path) -> None:
     assert metrics["evidence_coverage"] == 0.0
     assert metrics["claims_with_evidence"] == 0.0
     assert metrics["source_success_rate"] > 0.0
+
+
+@pytest.mark.asyncio
+async def test_b3_routes_three_sources_and_a3_uses_all_five(tmp_path: Path) -> None:
+    from research_agent.router.registry import SUPPORTED_SOURCES
+    from research_agent.storage.migrations import connect_database
+
+    async def load_plan(name: str, system_id: str) -> dict[str, object]:
+        outcome = await _run(tmp_path, name, system_id, StubGateway())
+        assert outcome.error_code is None
+        assert outcome.research_run_id
+        with connect_database(tmp_path / f"{name}.db") as conn:
+            row = conn.execute(
+                "SELECT plan_json FROM plan WHERE run_id = ?",
+                (outcome.research_run_id,),
+            ).fetchone()
+        assert row is not None
+        loaded = json.loads(row["plan_json"])
+        assert isinstance(loaded, dict)
+        return loaded
+
+    routed = await load_plan("b3-budget", "B3")
+    unrouted = await load_plan("a3-budget", "A3")
+
+    assert routed["selected_sources"] == list(SUPPORTED_SOURCES[:3])
+    assert routed["fallback_sources"] == list(SUPPORTED_SOURCES[3:])
+    assert unrouted["selected_sources"] == list(SUPPORTED_SOURCES)
+    assert unrouted["fallback_sources"] == []
 
 
 @pytest.mark.asyncio

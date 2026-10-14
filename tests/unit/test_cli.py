@@ -42,6 +42,15 @@ def test_research_help_lists_sources() -> None:
     assert "--sources" in result.stdout
     assert "--download-pdf" in result.stdout
 
+def test_only_a6_can_run_without_a_model() -> None:
+    from research_agent.evaluator.systems import SYSTEMS
+
+    assert SYSTEMS["A6"].needs_model is False
+    assert SYSTEMS["B0"].needs_model is True
+    assert SYSTEMS["B2"].needs_model is True
+    assert SYSTEMS["B3"].needs_model is True
+
+
 def test_evaluate_help_lists_source_allowlist() -> None:
     result = runner.invoke(app, ["evaluate", "--help"])
 

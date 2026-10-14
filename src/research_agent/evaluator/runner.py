@@ -108,6 +108,7 @@ class EvaluationRunner:
                                 research_run_id=outcome.research_run_id,
                                 error_code=outcome.error_code,
                             )
+                            self.repository.connection.commit()
                             continue
                         for metric_name, metric_value in (outcome.metrics or {}).items():
                             self.repository.record_result(
@@ -150,3 +151,11 @@ class EvaluationRunner:
             )
             self.repository.connection.commit()
             raise
+
+
+def evaluation_exit_code(summary: EvaluationSummary) -> int:
+    """Return 1 when any case failed, so scripts do not treat that as success."""
+
+    if summary.status != "completed" or summary.failed_count:
+        return 1
+    return 0

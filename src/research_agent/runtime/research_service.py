@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
+from research_agent.evaluator.ranking import interleave_by_source
 from research_agent.evidence.claims import (
     ClaimDraft,
     build_claims_from_evidence,
@@ -31,7 +33,7 @@ from research_agent.router.federation import (
 from research_agent.runtime.enrichment import AbstractResolver
 from research_agent.storage.artifacts import archive_downloaded_file
 from research_agent.storage.migrations import apply_migrations, connect_database
-from research_agent.storage.pdf_parser import parse_pdf
+from research_agent.storage.pdf_parser import first_paragraph_locator, parse_pdf
 from research_agent.storage.repository import (
     ResearchRepository,
     canonical_key,
@@ -65,6 +67,7 @@ class ResearchRunResult:
     retrieved_paper_keys: tuple[str, ...] = ()
     dropped_paper_keys: tuple[str, ...] = ()
     paper_aliases: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    source_http_calls: int = 0
 
 
 @dataclass
@@ -104,10 +107,149 @@ class _RunContext:
     report_id: str | None = None
 
 
+@dataclass(frozen=True)
+class _ContextSnapshot:
+    """Copies of the fields one step may change, taken before that step runs."""
+
+    selected_sources: list[str]
+    federated: FederatedSearchResult | None
+    source_records: list[tuple[PaperCandidate, str]]
+    evidence_rows: list[tuple[str, str, str, str, str, str]]
+    file_rows: list[tuple[str, str, str, str]]
+    paper_ids: set[str]
+    document_count: int
+    claims: list[ClaimDraft]
+    dropped_source_record_ids: set[str]
+    retrieved_keys: set[str]
+    retrieved_order: list[str]
+    dropped_keys: set[str]
+    identity_aliases: dict[str, frozenset[str]]
+    verdicts: list[RelevanceVerdict]
+    relevance_failures: int
+    relevance_skipped: bool
+    retrieved_paper_keys: tuple[str, ...]
+    dropped_paper_keys: tuple[str, ...]
+    findings: str
+    report_path: Path | None
+    report_id: str | None
+
+
+def _capture_context(context: _RunContext) -> _ContextSnapshot:
+    return _ContextSnapshot(
+        selected_sources=list(context.selected_sources),
+        federated=context.federated,
+        source_records=list(context.source_records),
+        evidence_rows=list(context.evidence_rows),
+        file_rows=list(context.file_rows),
+        paper_ids=set(context.paper_ids),
+        document_count=context.document_count,
+        claims=list(context.claims),
+        dropped_source_record_ids=set(context.dropped_source_record_ids),
+        retrieved_keys=set(context.retrieved_keys),
+        retrieved_order=list(context.retrieved_order),
+        dropped_keys=set(context.dropped_keys),
+        identity_aliases=dict(context.identity_aliases),
+        verdicts=list(context.verdicts),
+        relevance_failures=context.relevance_failures,
+        relevance_skipped=context.relevance_skipped,
+        retrieved_paper_keys=context.retrieved_paper_keys,
+        dropped_paper_keys=context.dropped_paper_keys,
+        findings=context.findings,
+        report_path=context.report_path,
+        report_id=context.report_id,
+    )
+
+
+def _restore_context(context: _RunContext, snapshot: _ContextSnapshot) -> None:
+    context.selected_sources = snapshot.selected_sources
+    context.federated = snapshot.federated
+    context.source_records = snapshot.source_records
+    context.evidence_rows = snapshot.evidence_rows
+    context.file_rows = snapshot.file_rows
+    context.paper_ids = snapshot.paper_ids
+    context.document_count = snapshot.document_count
+    context.claims = snapshot.claims
+    context.dropped_source_record_ids = snapshot.dropped_source_record_ids
+    context.retrieved_keys = snapshot.retrieved_keys
+    context.retrieved_order = snapshot.retrieved_order
+    context.dropped_keys = snapshot.dropped_keys
+    context.identity_aliases = snapshot.identity_aliases
+    context.verdicts = snapshot.verdicts
+    context.relevance_failures = snapshot.relevance_failures
+    context.relevance_skipped = snapshot.relevance_skipped
+    context.retrieved_paper_keys = snapshot.retrieved_paper_keys
+    context.dropped_paper_keys = snapshot.dropped_paper_keys
+    context.findings = snapshot.findings
+    context.report_path = snapshot.report_path
+    context.report_id = snapshot.report_id
+
+
+def _rewind_on_failure(
+    context: _RunContext,
+    handler: Callable[[], Awaitable[Any]],
+) -> Callable[[], Awaitable[Any]]:
+    """Restore step state when the handler fails, so a retry starts clean."""
+
+    async def wrapped() -> Any:
+        snapshot = _capture_context(context)
+        try:
+            return await handler()
+        except Exception:
+            _restore_context(context, snapshot)
+            raise
+
+    return wrapped
+
+
 def _md_cell(value: str | None) -> str:
     if value is None:
         return ""
     return " ".join(value.replace("|", "\\|").split())
+
+
+def _report_inputs(
+    context: _RunContext,
+) -> tuple[
+    list[tuple[PaperCandidate, str]],
+    list[tuple[PaperCandidate, str, str]],
+    list[tuple[str, str, str, str, str, str]],
+    list[tuple[str, str, str, str]],
+]:
+    """Split persisted rows into the report body and the excluded section."""
+
+    dropped_ids = context.dropped_source_record_ids
+    reason_by_record = {
+        source_record_id: verdict.reason
+        for (_paper, source_record_id), verdict in zip(
+            context.source_records,
+            context.verdicts,
+            strict=False,
+        )
+    }
+    kept_records = [
+        (paper, source_record_id)
+        for paper, source_record_id in context.source_records
+        if source_record_id not in dropped_ids
+    ]
+    excluded = [
+        (paper, source_record_id, reason_by_record.get(source_record_id, ""))
+        for paper, source_record_id in context.source_records
+        if source_record_id in dropped_ids
+    ]
+    kept_evidence = [
+        row for row in context.evidence_rows if row[2] not in dropped_ids
+    ]
+    dropped_files = {
+        (paper.title, paper.source)
+        for paper, source_record_id in context.source_records
+        if source_record_id in dropped_ids
+    }
+    kept_file_keys = {(paper.title, paper.source) for paper, _sid in kept_records}
+    hidden_files = dropped_files - kept_file_keys
+    kept_files = [
+        row for row in context.file_rows if (row[0], row[1]) not in hidden_files
+    ]
+    return kept_records, excluded, kept_evidence, kept_files
 
 
 def render_report(
@@ -119,6 +261,7 @@ def render_report(
     claims: list[ClaimDraft],
     files: list[tuple[str, str, str, str]],
     findings: str = "",
+    excluded: Sequence[tuple[PaperCandidate, str, str]] = (),
 ) -> str:
     """Render a minimal evidence-first Markdown report."""
 
@@ -205,6 +348,25 @@ def render_report(
             f"| {_md_cell(claim.support_status)} | {references} |"
         )
 
+    if excluded:
+        lines.extend(
+            [
+                "",
+                "## 已排除候选",
+                "",
+                "这些候选被相关性过滤移除，不进入论文、证据或结论。",
+                "",
+                "| # | Title | Source | Source ID | Source Record | Reason |",
+                "|---:|---|---|---|---|---|",
+            ]
+        )
+        for index, (paper, source_record_id, reason) in enumerate(excluded, start=1):
+            lines.append(
+                f"| {index} | {_md_cell(paper.title)} | {_md_cell(paper.source)} "
+                f"| {_md_cell(paper.source_record_id)} | `{source_record_id}` "
+                f"| {_md_cell(reason)} |"
+            )
+
     lines.extend(
         [
             "",
@@ -263,14 +425,14 @@ async def run_federated_research(
     archive_root = Path(artifact_root) if artifact_root else db_path.parent
     apply_migrations(db_path)
     if plan is None:
-        from research_agent.planner.planner import plan_research
+        from research_agent.planner.planner import ROUTING_BUDGET, plan_research
 
         plan = plan_research(
             question,
             available_sources=tuple(clients),
             max_results_per_source=max_results_per_source,
             max_concurrency=min(5, len(clients)),
-            max_sources=len(clients),
+            max_sources=ROUTING_BUDGET,
         )
 
     with connect_database(db_path) as connection:
@@ -395,9 +557,7 @@ async def run_federated_research(
                     paper_id, _ = repository.upsert_paper(candidate)
                     context.paper_ids.add(paper_id)
                     paper_key = canonical_key(candidate)
-                    if paper_key not in context.retrieved_keys:
-                        context.retrieved_keys.add(paper_key)
-                        context.retrieved_order.append(paper_key)
+                    context.retrieved_keys.add(paper_key)
                     context.identity_aliases[paper_key] = identity_aliases(candidate)
                     stored_source_record_id = repository.record_source_record(
                         source_call_id=source_call_id,
@@ -418,12 +578,24 @@ async def run_federated_research(
                         (candidate, stored_source_record_id)
                     )
                     abstract = candidate.abstract
+                    evidence_source_record_id = stored_source_record_id
+                    evidence_source = candidate.source
                     if not abstract and abstract_resolver is not None:
-                        abstract = await abstract_resolver.resolve_abstract(candidate)
+                        enrichment = await abstract_resolver.resolve_abstract(candidate)
+                        if enrichment is not None and enrichment.abstract:
+                            abstract = enrichment.abstract
+                            evidence_source = enrichment.source.source
+                            evidence_source_record_id = _record_abstract_source(
+                                repository,
+                                run_id=run_id,
+                                paper_id=paper_id,
+                                source=enrichment.source,
+                                doi=candidate.doi,
+                            )
                     if evidence_chain and abstract:
                         evidence_id = repository.record_evidence_span(
                             paper_id=paper_id,
-                            source_record_id=stored_source_record_id,
+                            source_record_id=evidence_source_record_id,
                             quote=abstract,
                             locator={"section": "Abstract"},
                             evidence_level="abstract",
@@ -435,8 +607,8 @@ async def run_federated_research(
                             (
                                 candidate.title,
                                 abstract,
-                                stored_source_record_id,
-                                candidate.source,
+                                evidence_source_record_id,
+                                evidence_source,
                                 evidence_id,
                                 "Abstract",
                             )
@@ -496,19 +668,19 @@ async def run_federated_research(
                             parse_status="success",
                         )
                         context.document_count += 1
-                        full_text_quote = parse_result.text.split("\n\n", 1)[0].strip()
-                        if evidence_chain and full_text_quote:
+                        span = first_paragraph_locator(parse_result)
+                        if evidence_chain and span is not None:
                             full_text_evidence_id = repository.record_evidence_span(
                                 paper_id=paper_id,
                                 source_record_id=stored_source_record_id,
                                 document_id=document_id,
                                 file_id=file_id,
-                                quote=full_text_quote,
+                                quote=span.quote,
                                 locator={
-                                    "page": 1,
-                                    "paragraph_index": 0,
-                                    "char_start": 0,
-                                    "char_end": len(full_text_quote),
+                                    "page": span.page,
+                                    "paragraph_index": span.paragraph_index,
+                                    "char_start": span.char_start,
+                                    "char_end": span.char_end,
                                 },
                                 evidence_level="full_text",
                                 extraction_method="pdf_parser",
@@ -519,13 +691,27 @@ async def run_federated_research(
                             context.evidence_rows.append(
                                 (
                                     candidate.title,
-                                    full_text_quote,
+                                    span.quote,
                                     stored_source_record_id,
                                     candidate.source,
                                     full_text_evidence_id,
-                                    "page 1",
+                                    f"page {span.page}",
                                 )
                             )
+            groups: list[list[str]] = []
+            for source in context.selected_sources:
+                group: list[str] = []
+                seen_in_source: set[str] = set()
+                for paper in context.federated.papers:
+                    if paper.source != source:
+                        continue
+                    key = canonical_key(paper)
+                    if key in seen_in_source:
+                        continue
+                    seen_in_source.add(key)
+                    group.append(key)
+                groups.append(group)
+            context.retrieved_order = interleave_by_source(groups)
             return {
                 "papers": len(context.paper_ids),
                 "source_records": len(context.source_records),
@@ -626,7 +812,6 @@ async def run_federated_research(
                     question=question,
                     subquestions=subquestions,
                     evidence=usable,
-                    citation_constraint=citation_constraint,
                 )
                 mode = "fallback" if synthesized.used_fallback else "llm"
                 context.findings = synthesized.findings
@@ -695,14 +880,18 @@ async def run_federated_research(
             }
 
         async def generate_report_step() -> dict[str, object]:
+            kept_records, excluded, kept_evidence, kept_files = (
+                _report_inputs(context)
+            )
             report_text = render_report(
                 question=question,
                 run_id=run_id,
-                source_records=context.source_records,
-                evidence=context.evidence_rows,
+                source_records=kept_records,
+                evidence=kept_evidence,
                 claims=context.claims,
-                files=context.file_rows,
+                files=kept_files,
                 findings=context.findings,
+                excluded=excluded,
             )
             report_path = reports_root / run_id / "report.md"
             report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -722,43 +911,43 @@ async def run_federated_research(
             StepSpec(
                 step_key="route_sources",
                 step_type="route_sources",
-                handler=route_sources_step,
+                handler=_rewind_on_failure(context, route_sources_step),
             ),
             StepSpec(
                 step_key="search_sources",
                 step_type="search_sources",
                 depends_on=("route_sources",),
-                handler=search_sources_step,
+                handler=_rewind_on_failure(context, search_sources_step),
             ),
             StepSpec(
                 step_key="persist_results",
                 step_type="persist_results",
                 depends_on=("search_sources",),
-                handler=persist_results_step,
+                handler=_rewind_on_failure(context, persist_results_step),
             ),
             StepSpec(
                 step_key="judge_relevance",
                 step_type="judge_relevance",
                 depends_on=("persist_results",),
-                handler=judge_relevance_step,
+                handler=_rewind_on_failure(context, judge_relevance_step),
             ),
             StepSpec(
                 step_key="synthesize_claims",
                 step_type="synthesize_claims",
                 depends_on=("judge_relevance",),
-                handler=synthesize_claims_step,
+                handler=_rewind_on_failure(context, synthesize_claims_step),
             ),
             StepSpec(
                 step_key="validate_citations",
                 step_type="validate_citations",
                 depends_on=("synthesize_claims",),
-                handler=validate_citations_step,
+                handler=_rewind_on_failure(context, validate_citations_step),
             ),
             StepSpec(
                 step_key="generate_report",
                 step_type="generate_report",
                 depends_on=("validate_citations",),
-                handler=generate_report_step,
+                handler=_rewind_on_failure(context, generate_report_step),
             ),
         ]
         execution = await Executor(repository).execute_plan(
@@ -778,7 +967,7 @@ async def run_federated_research(
             run_id=run_id,
             report_path=context.report_path,
             paper_count=len(context.paper_ids),
-            evidence_count=len(context.evidence_rows),
+            evidence_count=len(_report_inputs(context)[2]),
             claim_count=len(context.claims),
             file_count=len(context.file_rows),
             document_count=context.document_count,
@@ -795,7 +984,42 @@ async def run_federated_research(
                 (key, tuple(sorted(aliases)))
                 for key, aliases in sorted(context.identity_aliases.items())
             ),
+            source_http_calls=context.federated.http_calls,
         )
+
+
+def _record_abstract_source(
+    repository: ResearchRepository,
+    *,
+    run_id: str,
+    paper_id: str,
+    source: PaperCandidate,
+    doi: str | None,
+) -> str:
+    """Store the source that supplied a backfilled abstract and link it to the paper."""
+
+    repository.upsert_paper(source)
+    source_call_id = repository.record_source_call(
+        run_id=run_id,
+        source=source.source,
+        tool_name=f"{source.source}_get_paper",
+        request_json={"doi": doi, "purpose": "abstract_enrichment"},
+        status="success",
+        started_at=utc_now(),
+        finished_at=utc_now(),
+    )
+    source_record_id = repository.record_source_record(
+        source_call_id=source_call_id,
+        candidate=source,
+        api_endpoint=_source_endpoint(source.source),
+        query_snapshot={"doi": doi, "purpose": "abstract_enrichment"},
+    )
+    repository.link_paper_source_record(
+        paper_id=paper_id,
+        source_record_id=source_record_id,
+        merge_reason="abstract_enrichment",
+    )
+    return source_record_id
 
 
 def _source_endpoint(source: str) -> str:

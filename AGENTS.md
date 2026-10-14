@@ -96,6 +96,7 @@
 │   │   ├── case_runner.py       # 把各系统接到评测回调
 │   │   ├── systems.py           # B0–B3、A1–A4、A6 配置
 │   │   ├── metrics.py           # 检索、证据、成本指标
+│   │   ├── ranking.py           # 候选列表轮转排序与 K 截断（ADR-0015）
 │   │   ├── task_completion.py   # baseline-neutral 任务完成 judge
 │   │   ├── bm25.py              # 本地 BM25 索引
 │   │   ├── b0.py                # B0：BM25 + 单次 LLM

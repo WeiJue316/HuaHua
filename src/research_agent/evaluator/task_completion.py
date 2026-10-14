@@ -13,6 +13,39 @@ from research_agent.storage.repository import sha256_text
 
 _JSON_OBJECT = re.compile(r"\{.*\}", re.S)
 PROMPT_VERSION = "task-completion-v1"
+# B2's loop allows this many steps, and one extra model call when an action is rejected.
+REACT_STEP_LIMIT = 8
+REACT_ACTION_RETRIES = 1
+
+
+def estimated_model_call_budget(
+    *,
+    k: int,
+    source_count: int,
+    relevance_filter: bool,
+    synthesis: bool,
+    react: bool = False,
+) -> int:
+    """Upper bound on system model calls for one case.
+
+    A relevance judgement is one call per kept paper, and each source keeps at
+    most K papers. Synthesis is one call. The ReAct baseline may call the model
+    once per step plus one retry after a rejected action. A system that uses
+    none of these still makes one summary call.
+    """
+
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    if source_count < 0:
+        raise ValueError("source_count must not be negative")
+    calls = 0
+    if relevance_filter:
+        calls += k * max(source_count, 1)
+    if synthesis:
+        calls += 1
+    if react:
+        calls += REACT_STEP_LIMIT * (REACT_ACTION_RETRIES + 1)
+    return calls or 1
 
 SYSTEM_PROMPT = """You evaluate whether a research report covers the requested subquestions.
 
@@ -36,18 +69,21 @@ class TaskCompletionResult:
     coverage_rate: float
     within_budget: int
     judge_failed: int
-    task_completion: float
+    task_completion: float | None
 
     def to_dict(self) -> dict[str, float]:
-        return {
+        payload = {
             "report_created": float(self.report_created),
             "subquestions_total": float(self.subquestions_total),
             "subquestions_covered": float(self.subquestions_covered),
             "subquestion_coverage_rate": float(self.coverage_rate),
             "within_model_budget": float(self.within_budget),
             "task_completion_judge_failed": float(self.judge_failed),
-            "task_completion": float(self.task_completion),
+            "task_completion_included": 0.0 if self.task_completion is None else 1.0,
         }
+        if self.task_completion is not None:
+            payload["task_completion"] = float(self.task_completion)
+        return payload
 
 
 class TaskCompletionJudge:
@@ -57,10 +93,10 @@ class TaskCompletionJudge:
         self,
         *,
         gateway: ModelGateway,
-        model_call_budget: int,
+        model_call_budget: int | None = None,
         max_attempts: int = 2,
     ) -> None:
-        if model_call_budget < 1:
+        if model_call_budget is not None and model_call_budget < 1:
             raise ValueError("model_call_budget must be at least 1")
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
@@ -74,9 +110,17 @@ class TaskCompletionJudge:
         question: EvaluationQuestion,
         report_text: str,
         model_calls_used: int,
+        model_call_budget: int | None = None,
     ) -> TaskCompletionResult:
+        budget = (
+            self.model_call_budget
+            if model_call_budget is None
+            else model_call_budget
+        )
+        if budget is None or budget < 1:
+            raise ValueError("model_call_budget must be at least 1")
         report_created = 1 if report_text.strip() else 0
-        within_budget = 1 if 0 <= model_calls_used <= self.model_call_budget else 0
+        within_budget = 1 if 0 <= model_calls_used <= budget else 0
         total = len(question.subquestions)
         if total == 0:
             coverage_rate = 1.0 if report_created else 0.0
@@ -186,12 +230,15 @@ class TaskCompletionJudge:
         within_budget: int,
         judge_failed: int,
     ) -> TaskCompletionResult:
-        complete = (
-            report_created == 1
-            and within_budget == 1
-            and judge_failed == 0
-            and coverage_rate >= 1.0
-        )
+        if judge_failed:
+            completed: float | None = None
+        else:
+            complete = (
+                report_created == 1
+                and within_budget == 1
+                and coverage_rate >= 1.0
+            )
+            completed = 1.0 if complete else 0.0
         return TaskCompletionResult(
             report_created=report_created,
             subquestions_total=total,
@@ -199,5 +246,5 @@ class TaskCompletionJudge:
             coverage_rate=coverage_rate,
             within_budget=within_budget,
             judge_failed=judge_failed,
-            task_completion=1.0 if complete else 0.0,
+            task_completion=completed,
         )

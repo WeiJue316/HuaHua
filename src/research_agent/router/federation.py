@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, cast
 
-from research_agent.mcp_servers.common import PaperCandidate
+from research_agent.mcp_servers.common import PaperCandidate, count_http_attempts
 
 
 class SearchResultLike(Protocol):
@@ -35,6 +35,7 @@ class FederatedSearchResult:
     source_counts: dict[str, int]
     errors: dict[str, str]
     variant_errors: dict[str, str] = field(default_factory=dict)
+    http_calls: int = 0
 
 
 def _dedupe_key(paper: PaperCandidate) -> str:
@@ -88,7 +89,8 @@ async def search_sources(
         for source in source_names
         for variant in effective_queries
     ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    with count_http_attempts() as http_attempts:
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
     papers: list[PaperCandidate] = []
     source_counts: dict[str, int] = {}
@@ -128,4 +130,5 @@ async def search_sources(
         source_counts=source_counts,
         errors=errors,
         variant_errors=variant_errors,
+        http_calls=http_attempts.calls,
     )

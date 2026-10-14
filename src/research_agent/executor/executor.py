@@ -89,6 +89,7 @@ class Executor:
                     output = await step.handler()
                 except Exception as exc:
                     last_error = exc
+                    self.repository.connection.rollback()
                     error_code = type(exc).__name__
                     self.repository.record_step_attempt(
                         step_id=step_id,

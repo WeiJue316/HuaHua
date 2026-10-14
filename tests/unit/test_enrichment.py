@@ -49,9 +49,12 @@ async def test_resolver_backfills_missing_abstract_through_doi() -> None:
     client = FakeOpenAlexClient()
     resolver = OpenAlexAbstractResolver(client)  # type: ignore[arg-type]
 
-    abstract = await resolver.resolve_abstract(_paper())
+    result = await resolver.resolve_abstract(_paper())
 
-    assert abstract == "Recovered abstract."
+    assert result is not None
+    assert result.abstract == "Recovered abstract."
+    assert result.source.source == "openalex"
+    assert result.source.doi == "10.1/example"
     assert client.requested == ["10.1/example"]
 
 
@@ -60,9 +63,9 @@ async def test_resolver_skips_papers_that_already_have_an_abstract() -> None:
     client = FakeOpenAlexClient()
     resolver = OpenAlexAbstractResolver(client)  # type: ignore[arg-type]
 
-    abstract = await resolver.resolve_abstract(_paper(abstract="Already present."))
+    result = await resolver.resolve_abstract(_paper(abstract="Already present."))
 
-    assert abstract is None
+    assert result is None
     assert client.requested == []
 
 
@@ -71,9 +74,9 @@ async def test_resolver_skips_papers_without_a_doi() -> None:
     client = FakeOpenAlexClient()
     resolver = OpenAlexAbstractResolver(client)  # type: ignore[arg-type]
 
-    abstract = await resolver.resolve_abstract(_paper(doi=None))
+    result = await resolver.resolve_abstract(_paper(doi=None))
 
-    assert abstract is None
+    assert result is None
     assert client.requested == []
 
 

@@ -142,47 +142,59 @@
 - **EV-02 排序 Top-K 指标与 nDCG**（已完成，2026-09-26）
   - 问题：`evaluator/metrics.py` 的 `retrieval_metrics` 接收无序集合，Precision 除以保留论文数；无 nDCG；测试把错误定义固定为期望值。
   - 验收：P@K 分母为 K、R@K 与 nDCG@K 有手算样例测试；现有集合指标改名为 `precision_kept`、`recall_kept`。
-  - 验证：`tests/unit/test_evaluation_metrics.py` 的手算样例。当前送入 @K 的顺序是各系统的首次出现顺序并截断到 K；ADR-0015 的轮转排序仍由 `EV-03` 完成。
-- **EV-03 统一候选列表口径**（待开始）
+  - 验证：`tests/unit/test_evaluation_metrics.py` 的手算样例。送入 @K 的顺序由 `EV-03` 规定。
+- **EV-03 统一候选列表口径**（已完成，2026-09-26）
   - 问题：B0 取 Top-K，B2（`evaluator/react.py`）计入全部搜到的论文，B3 为 K×源站数再过滤。
   - 验收：三类系统都输出长度不超过 K 的有序列表，排序规则按 ADR-0015 §1。
-- **EV-04 B3 路由预算与 A3**（待开始）
+  - 验证：`tests/unit/test_ranking.py`。B0 按 BM25 得分；B2 按首次出现顺序截到 K；B1/B3/A1–A4/A6 按源站轮转，过滤只删除不重排，再截到 K。
+- **EV-04 B3 路由预算与 A3**（已完成，2026-09-26）
   - 问题：`evaluator/case_runner.py` 中 `max_sources=len(source_ids)`，B3 与 A3 都查全部五源。
   - 验收：B3 的 Plan 快照 `selected_sources` 不超过 3 个且 `fallback_sources` 非空；A3 固定 5 个；`evaluation.md` 与系统描述同步。
-- **EV-05 A4 单因素化**（待开始）
+  - 验证：`tests/integration/test_evaluation_case_runner.py::test_b3_routes_three_sources_and_a3_uses_all_five`。平分时按源站注册顺序取前 3 个。A1/A4/A6 使用同一预算；A2 也使用该预算选择源站，但查询变体固定为原问题。
+- **EV-05 A4 单因素化**（已完成，2026-09-26）
   - 问题：`evidence/synthesis.py` 在约束关闭时追加 `CONSTRAINT_OFF_NOTE`，且 prompt hash 含约束开关。
   - 验收：B3 与 A4 对同一证据的 user message 与 prompt hash 完全相同；A4 仍能在集成测试中产生 `dangling_support_count > 0`。
-- **EV-06 源站实际请求数**（待开始）
+  - 验证：`tests/unit/test_claim_synthesis.py::test_b3_and_a4_share_one_synthesis_prompt` 与 `tests/integration/test_evaluation_case_runner.py::test_a4_keeps_dangling_support_that_b3_demotes`。
+- **EV-06 源站实际请求数**（已完成，2026-09-26）
   - 问题：`source_attempts` 是源站个数，不是请求次数，无法支撑 H2b。
   - 验收：新增 `source_http_calls`，包含查询变体与重试；B2 与 B3 口径一致。
-- **EV-07 Task Completion 预算按配置估算**（待开始）
+  - 验证：`tests/unit/test_http_retry.py` 确认一次 429 重试计为 2 次；评测里 B2 的 `source_http_calls` 不少于搜索次数，B3 的不少于被调用源站数。缓存命中不计。
+- **EV-07 Task Completion 预算按配置估算**（已完成，2026-09-26）
   - 问题：固定 `model_call_budget=20`，K=20 时 B3 几乎必然超出，Task Completion 被系统性判为 0。
   - 验收：预算由 K、源站数、是否启用过滤与综合计算，写入评测配置快照；文档给出公式；
     judge 调用失败时记录 `judge_failed` 并把该 case 排除出 Task Completion 分母，而不是计为未完成。
-- **EV-08 综合 prompt hash 与实际提示一致**（待开始）
+  - 验证：`tests/unit/test_task_completion.py`。公式见 `docs/evaluation.md` §6.3。K=20、3 源、过滤加综合时预算为 61。
+- **EV-08 综合 prompt hash 与实际提示一致**（已完成，2026-09-26）
   - 问题：`build_prompt_hash` 哈希完整摘要，user message 却把摘要截断到 1200 字符。
   - 验收：prompt hash 由实际发送的 system + user 文本计算。
-- **EV-09 评测命令可靠退出**（待开始）
+  - 验证：`tests/unit/test_claim_synthesis.py::test_prompt_hash_matches_the_truncated_text_sent_to_the_model`。只在第 1200 个字符之后不同的两段摘要，哈希相同。
+- **EV-09 评测命令可靠退出**（已完成，2026-09-26）
   - 问题：`evaluate` 有 case 失败仍以 0 退出；总是构造 DeepSeek 网关，无密钥时连 A6 也跑不了；`evaluator/runner.py` 在 `error_code` 分支未即时提交。
   - 验收：失败 case 时退出码非零；只在所选系统需要模型时构造网关；每个终态 case 立即提交。
-- **EV-10 重跑 Pilot 并记录**（待开始；预计超过 50 次模型调用，执行前按 AGENTS.md §7 第 9 条确认）
+  - 验证：`tests/unit/test_evaluation_runner.py` 用另一个数据库连接看到失败 case 已提交；`tests/unit/test_cli.py` 确认只有 A6 不需要模型。
+- **EV-10 重跑 Pilot 并记录**（已完成，2026-10-12）
   - 验收：新结果记录包含数据集哈希、快照哈希、K、系统版本、ADR 编号；旧记录顶部标注“口径作废”。
+  - 验证：`evaluation/results/pilot_v2_adr0015_2026-10-12.md`。90 个 case 完成。快照只有 3 个源，A3 与 B3 的源站集合相同；`source_http_calls` 在快照模式下为 0。
 
 ### 4.3 批次 2：证据链正确性
 
-- **EC-01 报告只列保留的论文与证据**（待开始）
+- **EC-01 报告只列保留的论文与证据**（已完成，2026-10-14）
   - 问题：`runtime/research_service.py` 的 `generate_report_step` 把全部 `source_records` 与 `evidence_rows` 交给 `render_report`，被相关性过滤的论文仍出现在 Papers、Evidence 表中；`evidence_count` 也包含它们。
   - 验收：被过滤项只出现在单独的“已排除候选”节并附过滤理由；集成测试覆盖。
-- **EC-02 全文 locator 可重新定位**（待开始）
+  - 验证：`tests/unit/test_research_report.py`；`tests/integration/test_relevance_filtering.py` 的 `test_denied_papers_leave_the_report_tables`。数据库仍保留被排除论文的 Evidence Span，报告和 `evidence_count` 只计保留项。
+- **EC-02 全文 locator 可重新定位**（已完成，2026-10-14）
   - 问题：全文证据 `page` 写死为 1，`char_start/char_end` 在 `strip()` 之后计算；`storage/pdf_parser.py` 合并页面时跳过空页，页码与内容错位。
   - 验收：新增“重新定位”测试：`document_text[char_start:char_end] == quote`，页码与 PDF 实际页一致；这是 H1c 的实现前提。
-- **EC-03 补全摘要的 provenance**（待开始）
+  - 验证：`tests/unit/test_pdf_parser.py` 的 `test_first_paragraph_locator_relocates_quote_on_its_pdf_page`；`tests/integration/test_federated_research_flow.py` 的 `test_full_text_evidence_relocates_onto_the_parsed_page`。空白首页之后的引文页码为 2，字符切片等于原文。
+- **EC-03 补全摘要的 provenance**（已完成，2026-10-14）
   - 问题：缺摘要时从 OpenAlex 补回（`runtime/enrichment.py`），证据却挂在原候选（如 Crossref）的 Source Record 上。
   - 验收：补全摘要对应一条 OpenAlex Source Record 并与 Paper 关联，Evidence Span 的 `source_record_id` 指向它。
-- **EC-04 步骤重试幂等**（待开始）
+  - 验证：`tests/integration/test_abstract_enrichment.py`。Crossref 候选没有摘要时，补回的摘要挂在 OpenAlex Source Record `W999` 上，并与同一篇 Paper 关联。
+- **EC-04 步骤重试幂等**（已完成，2026-10-14）
   - 问题：`executor/executor.py` 在一次尝试失败后先提交再重跑处理函数；`persist_results` 会重复写入 Evidence，`file` 行撞 `UNIQUE(paper_id, sha256)`；`judge_relevance` 与 `generate_report` 同样重复写入。
   - 方案：失败时回滚本次尝试的数据库写入，并重置该步骤的运行上下文；不引入新的唯一约束（避免 schema 变更）。
   - 验收：注入“首次失败、第二次成功”的步骤，确认无重复行、无约束错误。
+  - 验证：`tests/integration/test_federated_research_flow.py` 的 `test_retry_after_a_failed_persist_does_not_duplicate_rows`。PDF 解析第一次失败、第二次成功时，`file` 仍是 2 行，`persist_results` 有 2 次尝试。
 - **EC-05 引用校验与综合使用同一证据集合**（待开始）
   - 问题：`validate_citations_step` 用全部证据校验，综合只用未被过滤的证据。
   - 验收：两处共用同一可用证据集合。
@@ -329,6 +341,7 @@ React + Vite + TypeScript（`web/`），后端为 FastAPI 本地 API（`src/rese
 - 2026-09-26：问题清单从批次 1 开始实施。
 - 2026-09-26：前端分两阶段交付，技术栈为 React + Vite + TypeScript，写入 ADR-0016。
 - 2026-09-26：AGENTS.md §7 红线改为 11 条加“只需说明”一档；付费调用阈值为单次任务 50 次模型调用；本地 `git commit` 只需说明。
+- 2026-09-26：确认执行 `EV-10`，用冻结三源快照、K=20、Pilot v2 共 10 题重跑 B1/B3/A3/A4/B0/B2/A1/A2/A6，允许超过 50 次模型调用。
 
 ## 6. 阶段与里程碑
 
@@ -513,7 +526,7 @@ React + Vite + TypeScript（`web/`），后端为 FastAPI 本地 API（`src/rese
 | 风险 | 触发信号 | 影响 | 缓解措施 |
 |---|---|---|---|
 | 评测口径失真 | 指标定义与文档不符、消融无差异 | 实验结论不成立 | ADR-0015；批次 1 在正式实验前完成；旧结果标注作废 |
-| 证据链断口 | 报告含被过滤论文、locator 无法重新定位 | 主贡献无法验证 | 批次 2；重新定位测试作为 H1c 前提 |
+| 证据链断口 | 引用校验和综合使用的证据集合不一致 | 主贡献无法验证 | 批次 2 剩余项，从 EC-05 起 |
 | 密钥泄漏 | 缓存或日志中出现密钥 | 违反合规红线 | SR-01；测试扫描缓存文件 |
 | 范围膨胀 | 同时做 UI、Office、多 Agent、向量库 | 主线延期 | P0/P1/P2 分层，冻结 v1 |
 | MCP 工作量过高 | 五源契约不一致、调试时间超预期 | M3 或 M4 延期 | 冻结快照替代不稳定源站，批次 3 只修确定问题 |

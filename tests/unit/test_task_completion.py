@@ -5,7 +5,10 @@ import json
 import pytest
 
 from research_agent.evaluator.dataset import EvaluationQuestion
-from research_agent.evaluator.task_completion import TaskCompletionJudge
+from research_agent.evaluator.task_completion import (
+    TaskCompletionJudge,
+    estimated_model_call_budget,
+)
 from research_agent.llm.gateway import ModelResponse
 
 
@@ -46,6 +49,28 @@ def _question() -> EvaluationQuestion:
         question="How is the method evaluated?",
         subquestions=("Which metrics are used?", "Which datasets are used?"),
     )
+
+
+def test_estimated_budget_covers_relevance_and_synthesis() -> None:
+    assert estimated_model_call_budget(
+        k=20,
+        source_count=3,
+        relevance_filter=True,
+        synthesis=True,
+    ) == 61
+    assert estimated_model_call_budget(
+        k=5,
+        source_count=0,
+        relevance_filter=False,
+        synthesis=False,
+    ) == 1
+    assert estimated_model_call_budget(
+        k=5,
+        source_count=3,
+        relevance_filter=False,
+        synthesis=False,
+        react=True,
+    ) == 16
 
 
 @pytest.mark.asyncio
@@ -117,7 +142,9 @@ async def test_task_completion_fails_closed_when_judge_is_invalid() -> None:
 
     assert gateway.calls == 2
     assert result.judge_failed == 1
-    assert result.task_completion == 0.0
+    assert result.task_completion is None
+    assert result.to_dict()["task_completion_included"] == 0.0
+    assert "task_completion" not in result.to_dict()
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,9 @@ import asyncio
 import os
 import random
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
@@ -18,6 +20,31 @@ from research_agent.mcp_servers.cache import ResponseCache
 
 SleepFn = Callable[[float], Awaitable[None]]
 RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+class HttpAttemptCounter:
+    """Counts source HTTP calls that actually left the process."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+
+_http_attempts: ContextVar[HttpAttemptCounter | None] = ContextVar(
+    "source_http_attempts",
+    default=None,
+)
+
+
+@contextmanager
+def count_http_attempts() -> Iterator[HttpAttemptCounter]:
+    """Count network GETs made while the block runs. Cache hits are excluded."""
+
+    counter = HttpAttemptCounter()
+    token = _http_attempts.set(counter)
+    try:
+        yield counter
+    finally:
+        _http_attempts.reset(token)
 
 CONTACT_ENV_VAR = "RESEARCH_AGENT_CONTACT"
 DEFAULT_CONTACT_URL = "https://github.com/WeiJue316/HuaHua"
@@ -164,6 +191,9 @@ async def get_with_retry(
     for attempt in range(1, policy.max_attempts + 1):
         try:
             await limiter.wait(url)
+            active = _http_attempts.get()
+            if active is not None:
+                active.calls += 1
             response = await http_client.get(
                 url,
                 params=params,

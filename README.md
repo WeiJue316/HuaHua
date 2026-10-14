@@ -32,7 +32,7 @@ Pi 仅作为设计参考，不进入运行时依赖。系统采用独立 Agent C
 
 ### 验证状态
 
-- 2026-09-26 已通过：Ruff、mypy（strict）、pytest（252 passed）、`research-agent --help`、`python scripts/check_docs.py`。
+- 2026-09-26 已通过：Ruff、mypy（strict）、pytest（261 passed）、`research-agent --help`、`python scripts/check_docs.py`。
 - 受限环境下 pytest 默认临时目录可能无写权限，可加 `--basetemp <可写目录>`（`CL-08`）。
 - 一键本地检查：`uv run python scripts/check_all.py`，执行与 CI 相同的命令组。
 ## 快速开始

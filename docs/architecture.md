@@ -496,9 +496,8 @@ storage → sqlite / filesystem
 | Interface Layer 的本地 API 与用户前端 | `interfaces/` 为空包，`web/` 未创建；只有 CLI | `SC-04`、`FE-01`–`FE-10` |
 | Memory 模块 | `memory/` 为空包；项目与 Run 状态由存储层承担 | `SC-06`、D3 |
 | Policy 管理下载白名单、预算与审计 | `policy/` 只有语义相关性判断 | `SC-02` |
-| Runtime 暂停、恢复与检查点 | Executor 只支持顺序执行与步骤重试；重试尚不幂等 | `SC-05`、`EC-04` |
+| Runtime 暂停、恢复与检查点 | Executor 只支持顺序执行与步骤重试 | `SC-05` |
 | Router 按能力与预算选择源站并降级 | Planner 打分只排序；评测中不截断源站；`fallback_sources` 未使用 | `EV-04` |
 | Federation 负责跨源去重 | 跨源合并在存储层 | D1 |
-| 引用校验第 4 条：locator 可重新定位 | 全文 locator 页码写死为 1，偏移不可重新定位 | `EC-02` |
 | 导出 BibTeX、JSON、CSV | 只有 Markdown 报告 | `SC-01` |
 | FTS5 用于检索 | 索引与触发器已建，应用代码未使用 | `SC-06`、D4 |

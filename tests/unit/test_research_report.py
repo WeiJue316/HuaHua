@@ -66,6 +66,51 @@ def test_claims_reference_the_evidence_rows_that_support_them() -> None:
     assert "| C1 | Paper One reports that We study evidence chains. | supported | E1 |" in report
 
 
+def _section(report: str, heading: str) -> str:
+    marker = f"## {heading}\n"
+    start = report.index(marker) + len(marker)
+    rest = report[start:]
+    next_heading = rest.find("\n## ")
+    if next_heading == -1:
+        return rest
+    return rest[:next_heading]
+
+
+def test_filtered_papers_appear_only_in_the_excluded_section() -> None:
+    kept = _paper(source="openalex", source_record_id="W1", title="Kept Paper")
+    dropped = _paper(source="arxiv", source_record_id="2501.00001", title="Dropped Paper")
+    report = render_report(
+        question="evidence chain",
+        run_id="run-excluded",
+        source_records=[(kept, "record-kept")],
+        evidence=[
+            _evidence(
+                title=kept.title,
+                quote="Kept abstract.",
+                source_record_id="record-kept",
+                source="openalex",
+                evidence_id="evidence-kept",
+                locator="Abstract",
+            )
+        ],
+        claims=[_claim("Kept Paper reports that Kept abstract.", ["evidence-kept"])],
+        files=[],
+        excluded=[(dropped, "record-dropped", "stub decision")],
+    )
+
+    papers = _section(report, "Papers")
+    evidence = _section(report, "Evidence")
+    excluded = _section(report, "已排除候选")
+
+    assert "Kept Paper" in papers
+    assert "Dropped Paper" not in papers
+    assert "Kept abstract." in evidence
+    assert "Dropped Paper" not in evidence
+    assert "Dropped Paper" in excluded
+    assert "stub decision" in excluded
+    assert "| C1 | Kept Paper reports that Kept abstract. | supported | E1 |" in report
+
+
 def test_claims_keep_distinct_references_when_locators_repeat() -> None:
     first = _paper(source="openalex", source_record_id="W1", title="Paper One")
     second = _paper(source="crossref", source_record_id="10.1/x", title="Paper Two")

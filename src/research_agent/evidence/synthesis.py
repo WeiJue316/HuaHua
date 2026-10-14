@@ -47,12 +47,6 @@ Reply with JSON only:
              "support_status": "supported|partially_supported|unsupported",
              "evidence_labels": ["E1"]}]}"""
 
-CONSTRAINT_OFF_NOTE = (
-    "Citation checking is disabled for this run. You may include claims that "
-    "are not supported by the evidence list, including citations to labels "
-    "that do not appear below."
-)
-
 
 @dataclass(frozen=True)
 class LabeledSpan:
@@ -148,24 +142,10 @@ def parse_synthesis_payload(
     return SynthesisResult(claims=claims, findings=findings_text)
 
 
-def build_prompt_hash(
-    question: str,
-    subquestions: Sequence[str],
-    catalog: dict[str, LabeledSpan],
-    *,
-    citation_constraint: bool,
-) -> str:
-    """Return a stable hash of the synthesis inputs."""
+def build_prompt_hash(*, system: str, user: str) -> str:
+    """Hash the system and user text actually sent to the model."""
 
-    parts = [
-        PROMPT_VERSION,
-        question,
-        *subquestions,
-        "constraint-on" if citation_constraint else "constraint-off",
-    ]
-    for span in catalog.values():
-        parts.extend([span.label, span.evidence_id, span.title, span.quote])
-    return sha256_text("\x00".join(parts))
+    return sha256_text("\x00".join((PROMPT_VERSION, system, user)))
 
 
 class ClaimSynthesizer:
@@ -188,7 +168,6 @@ class ClaimSynthesizer:
         question: str,
         subquestions: Sequence[str],
         catalog: dict[str, LabeledSpan],
-        citation_constraint: bool,
     ) -> str:
         if subquestions:
             rendered = "\n".join(
@@ -201,10 +180,8 @@ class ClaimSynthesizer:
             f"Research question: {question}",
             subquestion_block,
             "",
+            "Evidence spans:",
         ]
-        if not citation_constraint:
-            lines.extend([CONSTRAINT_OFF_NOTE, ""])
-        lines.append("Evidence spans:")
         if not catalog:
             lines.append("(none)")
         for span in catalog.values():
@@ -223,7 +200,6 @@ class ClaimSynthesizer:
         question: str,
         subquestions: Sequence[str],
         evidence: Sequence[EvidenceRow],
-        citation_constraint: bool,
     ) -> SynthesisResult:
         """Synthesize claims, falling back to the template path on failure."""
 
@@ -232,15 +208,12 @@ class ClaimSynthesizer:
             question=question,
             subquestions=subquestions,
             catalog=catalog,
-            citation_constraint=citation_constraint,
         )
         try:
             response = await self.gateway.complete(
                 prompt_hash=build_prompt_hash(
-                    question,
-                    subquestions,
-                    catalog,
-                    citation_constraint=citation_constraint,
+                    system=self.system_prompt,
+                    user=user,
                 ),
                 system=self.system_prompt,
                 user=user,

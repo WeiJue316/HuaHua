@@ -6,7 +6,11 @@ import httpx
 import pytest
 
 from research_agent.mcp_servers.cache import ResponseCache
-from research_agent.mcp_servers.common import RetryPolicy, get_with_retry
+from research_agent.mcp_servers.common import (
+    RetryPolicy,
+    count_http_attempts,
+    get_with_retry,
+)
 
 
 def test_retry_policy_respects_retry_after() -> None:
@@ -36,15 +40,17 @@ async def test_get_with_retry_retries_rate_limit_then_succeeds() -> None:
         return httpx.Response(200, json={"ok": True}, request=request)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
-        response = await get_with_retry(
-            http_client,
-            "https://example.org/works",
-            retry_policy=RetryPolicy(jitter_ratio=0.0),
-            sleep=fake_sleep,
-        )
+        with count_http_attempts() as attempts:
+            response = await get_with_retry(
+                http_client,
+                "https://example.org/works",
+                retry_policy=RetryPolicy(jitter_ratio=0.0),
+                sleep=fake_sleep,
+            )
 
     assert response.status_code == 200
     assert calls == 2
+    assert attempts.calls == 2
     assert delays == [1.0]
 
 

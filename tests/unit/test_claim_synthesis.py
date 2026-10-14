@@ -201,7 +201,6 @@ async def test_synthesizer_records_prompt_version_and_answers_subquestions() -> 
         question="How do evidence chains work?",
         subquestions=("How are claims bound?",),
         evidence=EVIDENCE,
-        citation_constraint=True,
     )
 
     assert synthesizer.prompt_version == PROMPT_VERSION
@@ -212,21 +211,46 @@ async def test_synthesizer_records_prompt_version_and_answers_subquestions() -> 
     assert "Citation checking is disabled" not in gateway.calls[0]
 
 
-@pytest.mark.asyncio
-async def test_synthesizer_tells_the_model_when_citation_constraint_is_off() -> None:
-    gateway = _Gateway(
-        json.dumps({"findings": "Free generation.", "claims": []})
-    )
-    synthesizer = ClaimSynthesizer(gateway)
-
-    await synthesizer.synthesize(
+def test_b3_and_a4_share_one_synthesis_prompt() -> None:
+    catalog = labeled_evidence(EVIDENCE)
+    synthesizer = ClaimSynthesizer(_Gateway("{}"))
+    message = synthesizer.build_user_message(
         question="How do evidence chains work?",
         subquestions=(),
-        evidence=EVIDENCE,
-        citation_constraint=False,
+        catalog=catalog,
     )
 
-    assert "Citation checking is disabled" in gateway.calls[0]
+    assert "Citation checking is disabled" not in message
+
+
+def test_prompt_hash_matches_the_truncated_text_sent_to_the_model() -> None:
+    from research_agent.evidence.synthesis import QUOTE_LIMIT, SYSTEM_PROMPT, build_prompt_hash
+
+    shared = "word " * (QUOTE_LIMIT // 5 + 10)
+    longer = (
+        "Traceable Retrieval",
+        shared + "TAIL THAT THE MODEL NEVER SEES",
+        "sr-1",
+        "arxiv",
+        "span-1",
+        "Abstract",
+    )
+    shorter = (longer[0], shared, *longer[2:])
+    synthesizer = ClaimSynthesizer(_Gateway("{}"))
+    shown = [
+        synthesizer.build_user_message(
+            question="How do evidence chains work?",
+            subquestions=(),
+            catalog=labeled_evidence([row]),
+        )
+        for row in (longer, shorter)
+    ]
+
+    assert "TAIL" not in shown[0]
+    assert shown[0] == shown[1]
+    assert build_prompt_hash(system=SYSTEM_PROMPT, user=shown[0]) == build_prompt_hash(
+        system=SYSTEM_PROMPT, user=shown[1]
+    )
 
 
 @pytest.mark.asyncio
@@ -252,7 +276,6 @@ async def test_synthesizer_keeps_a_complete_json_object_when_the_call_is_truncat
         question="How do evidence chains work?",
         subquestions=(),
         evidence=EVIDENCE,
-        citation_constraint=True,
     )
 
     assert result.used_fallback is False
@@ -269,7 +292,6 @@ async def test_synthesizer_falls_back_to_template_claims_on_model_failure() -> N
         question="How do evidence chains work?",
         subquestions=(),
         evidence=EVIDENCE,
-        citation_constraint=True,
     )
 
     assert result.used_fallback is True
